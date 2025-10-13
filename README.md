@@ -51,7 +51,37 @@ Follow these steps to get your development environment running.
 3.  **Install Core Dependencies**
     With the environment activated, install the project's required packages.
     ```bash
-    uv pip install -e .
+    uv pip install -r requirements.txt
     ```
+
+***
+
+## Configuration
+
+- `PORT`: The port the server will run on. Defaults to `8000`.
+- `WORKERS`: The number of worker processes for production. Defaults to `4`.
+- `ENVIRONMENT`: Set to `development` for reload mode or `production` for multi-worker mode. Defaults to `development`.
+
+Example `.env` file:
+
+```
+PORT=8080
+WORKERS=8
+ENVIRONMENT=production
+```
+
+## Running the Server
+
+To run the server, navigate to the project root directory and use:
+
+```bash
+# For development (with auto-reload)
+python -m src.bms_ai.api.server
+
+# For production (with multiple workers, no reload)
+python -m src.bms_ai.api.server --prod
+```
+
+Or set `ENVIRONMENT=production` in your `.env` file.
 
 ***

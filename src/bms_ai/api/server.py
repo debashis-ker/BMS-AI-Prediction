@@ -1,9 +1,13 @@
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.api.routers import optimize,predict,another_optimize
+import os
+from dotenv import load_dotenv
+import uvicorn
+
+load_dotenv()
 
 log = setup_logger(__name__)
 
@@ -39,3 +43,15 @@ app.include_router(another_optimize.router)
 def root():
     '''Basic health check endpoint.'''
     return {"status": "ok", "pipeline_loaded": hasattr(app.state, 'pipeline') and app.state.pipeline is not None}
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
+    workers = int(os.getenv("WORKERS", 4))
+    
+    import sys
+    is_production = "--prod" in sys.argv or os.getenv("ENVIRONMENT", "development") == "production"
+    
+    if is_production:
+        uvicorn.run("src.bms_ai.api.server:app", host="0.0.0.0", port=port, workers=workers)
+    else:
+        uvicorn.run("src.bms_ai.api.server:app", host="0.0.0.0", port=port, reload=True)

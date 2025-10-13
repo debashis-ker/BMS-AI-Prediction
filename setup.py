@@ -66,7 +66,8 @@ setup(
         'gunicorn',
         'pydantic',
         'fastapi',
-        'uvicorn[standard]'
+        'uvicorn[standard]',
+        'python-dotenv'
     ],
     # install_requires=filter_external_packages(find_imports_in_dir("src"))
     author='Debashis Mondal',
