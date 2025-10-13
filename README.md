@@ -52,13 +52,7 @@ Follow these steps to get your development environment running.
 - `WORKERS`: The number of worker processes for production. Defaults to `4`.
 - `ENVIRONMENT`: Set to `development` for reload mode or `production` for multi-worker mode. Defaults to `development`.
 
-Example `.env` file:
 
-```
-PORT=8080
-WORKERS=8
-ENVIRONMENT=production
-```
 
 ## Running the Server
 
