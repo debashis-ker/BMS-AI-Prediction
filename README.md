@@ -1,12 +1,9 @@
 # BMS AI
 
-A brief description of what this AI project does and its primary goals.
 
 ***
 
 ## Getting Started
-
-This guide will walk you through setting up the project on your local machine for development and testing purposes.
 
 ***
 
@@ -22,7 +19,6 @@ Before you begin, ensure you have the **`uv`** Python package manager installed.
     ```powershell
     powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
     ```
-    > **Note:** You may need to restart your terminal after installation for the `uv` command to be recognized.
 
 ***
 
@@ -46,7 +42,6 @@ Follow these steps to get your development environment running.
         ```powershell
         .venv\Scripts\Activate.ps1
         ```
-    > You'll know it's active when your command prompt is prefixed with `(.venv)`.
 
 3.  **Install Core Dependencies**
     With the environment activated, install the project's required packages.
