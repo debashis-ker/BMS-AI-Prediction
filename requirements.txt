@@ -1,6 +1,5 @@
 matplotlib
 ipykernel
 gunicorn
-pydantic
 
 -e .
