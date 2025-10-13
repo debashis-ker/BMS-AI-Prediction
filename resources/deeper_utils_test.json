@@ -1,0 +1,363 @@
+{
+    "AHU": {
+        "Ground Floor": {
+            "Bag filter dirty status": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "inactive"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "inactive": 36071
+                    },
+                    "proportions": {
+                        "inactive": 1.0
+                    }
+                }
+            },
+            "Fan Power meter (KW)": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 6.3335676193237305,
+                    "max": 10.555946350097656,
+                    "mean": 8.421703885819296,
+                    "std_dev": 1.4825081806431961,
+                    "lower_quartile": 7.032095432281494,
+                    "upper_quartile": 9.85741901397705,
+                    "IQR": 2.8253235816955566,
+                    "lower_bound": 2.794110059738159,
+                    "upper_bound": 14.095404386520386
+                }
+            },
+            "OA Flow": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 820.0,
+                    "mean": 428.1182704908089,
+                    "std_dev": 396.9192874698813,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 802.0905151367188,
+                    "IQR": 802.0905151367188,
+                    "lower_bound": -1203.1357727050781,
+                    "upper_bound": 2005.2262878417969
+                }
+            },
+            "OA Humid": {
+                "count": 36077,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 50.0,
+                    "max": 70.0,
+                    "mean": 60.192518612804214,
+                    "std_dev": 7.131366693041336,
+                    "lower_quartile": 53.308692932128906,
+                    "upper_quartile": 67.43144989013672,
+                    "IQR": 14.122756958007812,
+                    "lower_bound": 32.12455749511719,
+                    "upper_bound": 88.61558532714844
+                }
+            },
+            "OA Temp": {
+                "count": 36078,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 30.0,
+                    "max": 50.0,
+                    "mean": 40.19432908853344,
+                    "std_dev": 7.13400600079178,
+                    "lower_quartile": 33.308692932128906,
+                    "upper_quartile": 47.43144989013672,
+                    "IQR": 14.122756958007812,
+                    "lower_bound": 12.124557495117188,
+                    "upper_bound": 68.61558532714844
+                }
+            },
+            "Plant enable": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "active"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "active": 36071
+                    },
+                    "proportions": {
+                        "active": 1.0
+                    }
+                }
+            },
+            "RA  temperature setpoint": {
+                "count": 36076,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 20.0,
+                    "max": 29.0,
+                    "mean": 22.080177957750713,
+                    "std_dev": 1.9823443513069172,
+                    "lower_quartile": 20.0,
+                    "upper_quartile": 24.5,
+                    "IQR": 4.5,
+                    "lower_bound": 13.25,
+                    "upper_bound": 31.25
+                }
+            },
+            "RA CO2": {
+                "count": 36077,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 900.0,
+                    "max": 1500.0,
+                    "mean": 1198.776849209081,
+                    "std_dev": 210.08526481147155,
+                    "lower_quartile": 999.2608032226562,
+                    "upper_quartile": 1400.7392578125,
+                    "IQR": 401.47845458984375,
+                    "lower_bound": 397.0431213378906,
+                    "upper_bound": 2002.9569396972656
+                }
+            },
+            "RA CO2 setpoint": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 7.0,
+                    "max": 900.0,
+                    "mean": 783.9893139293139,
+                    "std_dev": 183.90213358378102,
+                    "lower_quartile": 750.0,
+                    "upper_quartile": 900.0,
+                    "IQR": 150.0,
+                    "lower_bound": 525.0,
+                    "upper_bound": 1125.0
+                }
+            },
+            "RA Damper feedback": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 100.0,
+                    "mean": 9.102070324158223,
+                    "std_dev": 11.397596285546587,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 15.0,
+                    "IQR": 15.0,
+                    "lower_bound": -22.5,
+                    "upper_bound": 37.5
+                }
+            },
+            "RA Temp": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 21.0,
+                    "max": 27.0,
+                    "mean": 24.05506870600224,
+                    "std_dev": 2.1371390393148917,
+                    "lower_quartile": 21.99260711669922,
+                    "upper_quartile": 26.229434967041016,
+                    "IQR": 4.236827850341797,
+                    "lower_bound": 15.637365341186523,
+                    "upper_bound": 32.58467674255371
+                }
+            },
+            "RA Temp control( Valve Feedback)": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 100.0,
+                    "mean": 33.466685585509715,
+                    "std_dev": 45.684134316915134,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 96.98136901855467,
+                    "IQR": 96.98136901855467,
+                    "lower_bound": -145.472053527832,
+                    "upper_bound": 242.45342254638666
+                }
+            },
+            "RA damper control": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 10.0,
+                    "mean": 5.353083375731195,
+                    "std_dev": 4.956742449012372,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 10.0,
+                    "IQR": 10.0,
+                    "lower_bound": -15.0,
+                    "upper_bound": 25.0
+                }
+            },
+            "SA Fan Speed control": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 100.0,
+                    "mean": 54.43104643104643,
+                    "std_dev": 49.80396154164217,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 100.0,
+                    "IQR": 100.0,
+                    "lower_bound": -150.0,
+                    "upper_bound": 250.0
+                }
+            },
+            "SA Fan Speed feedback": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 0.0,
+                    "max": 100.0,
+                    "mean": 54.43104643104643,
+                    "std_dev": 49.80396154164217,
+                    "lower_quartile": 0.0,
+                    "upper_quartile": 100.0,
+                    "IQR": 100.0,
+                    "lower_bound": -150.0,
+                    "upper_bound": 250.0
+                }
+            },
+            "SA Pressure setpoint": {
+                "count": 36075,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 450.0,
+                    "max": 1000.0,
+                    "mean": 741.961191961192,
+                    "std_dev": 206.02775133522988,
+                    "lower_quartile": 500.0,
+                    "upper_quartile": 1000.0,
+                    "IQR": 500.0,
+                    "lower_bound": -250.0,
+                    "upper_bound": 1750.0
+                }
+            },
+            "SA pressure": {
+                "count": 36077,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 183.6734619140625,
+                    "max": 306.1224365234375,
+                    "mean": 244.67870569925674,
+                    "std_dev": 42.88557384919339,
+                    "lower_quartile": 203.93077087402344,
+                    "upper_quartile": 285.8651428222656,
+                    "IQR": 81.93437194824219,
+                    "lower_bound": 81.02921295166016,
+                    "upper_bound": 408.7667007446289
+                }
+            },
+            "SA temp": {
+                "count": 36076,
+                "statistics": {
+                    "stats_type": "numeric",
+                    "min": 14.699999809265137,
+                    "max": 18.899999618530277,
+                    "mean": 16.83822128145958,
+                    "std_dev": 1.4952619724973533,
+                    "lower_quartile": 15.394824981689451,
+                    "upper_quartile": 18.36060333251953,
+                    "IQR": 2.96577835083008,
+                    "lower_bound": 10.946157455444332,
+                    "upper_bound": 22.809270858764652
+                }
+            },
+            "Sup fan cmd": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "active"
+                    ],
+                    "unique_values": 2,
+                    "frequency_counts": {
+                        "active": 19639,
+                        "inactive": 16432
+                    },
+                    "proportions": {
+                        "active": 0.5445,
+                        "inactive": 0.4555
+                    }
+                }
+            },
+            "Trip status": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "active"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "active": 36071
+                    },
+                    "proportions": {
+                        "active": 1.0
+                    }
+                }
+            },
+            "airflow Status": {
+                "count": 36072,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "active"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "active": 36072
+                    },
+                    "proportions": {
+                        "active": 1.0
+                    }
+                }
+            },
+            "auto Status": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "inactive"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "inactive": 36071
+                    },
+                    "proportions": {
+                        "inactive": 1.0
+                    }
+                }
+            },
+            "pre Filter dirty staus": {
+                "count": 36071,
+                "statistics": {
+                    "stats_type": "categorical",
+                    "mode": [
+                        "inactive"
+                    ],
+                    "unique_values": 1,
+                    "frequency_counts": {
+                        "inactive": 36071
+                    },
+                    "proportions": {
+                        "inactive": 1.0
+                    }
+                }
+            },
+            "count": 829709
+        },
+        "count": 829709
+    },
+    "count": 829709
+}
