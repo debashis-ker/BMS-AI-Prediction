@@ -1,11 +1,6 @@
 # BMS AI
 
 
-***
-
-## Getting Started
-
-***
 
 ## Prerequisites
 
