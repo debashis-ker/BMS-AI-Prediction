@@ -24,7 +24,7 @@ Follow these steps to get your development environment running.
 1.  **Create a Virtual Environment**
     Navigate to the project's root directory and create a Python 3.11 virtual environment.
     ```bash
-    uv venv -p 3.11
+    uv venv -p 3.10
     ```
 
 2.  **Activate the Environment**
