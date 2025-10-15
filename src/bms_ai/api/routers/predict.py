@@ -37,10 +37,11 @@ def predict(
     try:
         if not prescriptive_pipeline.model or not prescriptive_pipeline.preprocessor:
             raise HTTPException(status_code=500, detail="Model or preprocessor not loaded.")
-
+        print("Here")
         input_df = pd.DataFrame([req.features])
         try:
             input_df_reordered = input_df[prescriptive_pipeline.preprocessor.feature_names_in_]
+            print("Input DataFrame reordered successfully.")
         except Exception as e:
             missing = [c for c in getattr(prescriptive_pipeline.preprocessor, 'feature_names_in_', []) if c not in input_df.columns]
             log.error(f"Input missing required features: {missing}. Error: {e}")
@@ -50,12 +51,14 @@ def predict(
             transformed = prescriptive_pipeline.preprocessor.transform(input_df_reordered)
             feature_out = prescriptive_pipeline.preprocessor.get_feature_names_out()
             transformed_df = pd.DataFrame(transformed, columns=feature_out)
+            print("Preprocessing successful.")
         except Exception as e:
             log.error(f"Preprocessing failed: {e}")
             raise HTTPException(status_code=400, detail=f"Preprocessing error: {e}")
 
         try:
-            prediction = pipeline.model.predict(transformed_df)
+            prediction = prescriptive_pipeline.model.predict(transformed_df)
+            print("Prediction successful.")
         except Exception as e:
             log.error(f"Model prediction failed: {e}")
             raise HTTPException(status_code=400, detail=f"Prediction error: {e}")
