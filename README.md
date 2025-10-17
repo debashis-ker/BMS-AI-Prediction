@@ -69,3 +69,43 @@ python -m src.bms_ai.api.server --prod
 Or set `ENVIRONMENT=production` in your `.env` file.
 
 ***
+
+## API Endpoints
+
+### Utilities
+
+#### POST `/utils/fetch-instances`
+Fetch process instances from IKON service.
+
+**Required Environment Variables:**
+- `IKON_BASE_URL`: Base URL for the IKON service
+- `SOFTWARE_ID`: Software identifier for IKON service (can be overridden in request body)
+
+**Request Body:**
+```json
+{
+  "ticket": "auth_ticket_string",
+  "process_name": "process_name",
+  "account_id": "account_id",
+  "software_id": "optional_software_id",
+  "predefined_filters": {},
+  "process_variable_filters": {},
+  "task_variable_filters": {},
+  "mongo_where_clause": "optional_query",
+  "projections": ["field1", "field2"],
+  "all_instances": false
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/utils/fetch-instances" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket": "your_ticket",
+    "process_name": "YourProcessName",
+    "account_id": "your_account_id"
+  }'
+```
+
+***
