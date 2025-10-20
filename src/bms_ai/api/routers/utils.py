@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from sklearn import pipeline
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from typing import Dict, Any, List, Optional
 import pandas as pd
 import os
@@ -101,18 +101,35 @@ async def fetch_instances_endpoint(request: FetchInstancesRequest) -> Dict[str, 
 
 
 @router.get("/get_actual_v_predicted_fan_power")
-def get_actual_v_predicted_fan_power(req: FanPowerRequest) -> List[Dict[str, Any]]:
+def get_actual_v_predicted_fan_power(
+    ticket: str,
+    account_id: str,
+    resampled: bool = True,
+    software_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Fetch actual vs predicted fan power data.
+    
+    Query Parameters:
+        ticket: Authentication ticket (required)
+        account_id: Account ID (required)
+        resampled: Whether to return resampled data (default: true)
+        software_id: Software ID (optional, uses env var if not provided)
+    
+    Returns:
+        List of dictionaries containing fan power data
+    """
     try:
         log.info("Received request to fetch actual vs predicted fan power data")
-        log.debug(f"Request details: ticket={req.ticket[:8]}..., account_id={req.account_id}, resampled={req.resampled}")
+        log.debug(f"Request details: ticket={ticket[:8]}..., account_id={account_id}, resampled={resampled}")
 
         projections = ["Data"]
 
         result = get_my_instances_v2(
-            ticket=req.ticket,
+            ticket=ticket,
             process_name="Predict and Store setpoint data updated",
-            software_id=req.software_id or os.getenv("SOFTWARE_ID", ""),
-            account_id=req.account_id,
+            software_id=software_id or os.getenv("SOFTWARE_ID", ""),
+            account_id=account_id,
             predefined_filters={"taskNames": ["Data Node"]},
             process_variable_filters=None,
             task_variable_filters=None,
@@ -124,18 +141,17 @@ def get_actual_v_predicted_fan_power(req: FanPowerRequest) -> List[Dict[str, Any
         if result is None:
             log.error("get_my_instances_v2 returned None")
             raise HTTPException(status_code=500, detail="Failed to fetch fan power data from IKON service")
-        #print(type(result))
-        if isinstance(result, list):
-            data = result[0].get('data') if result and isinstance(result[0], dict) else None
-            print(data['predictedData'])
-            if data and data['predictedData']:
-                return clean_actual_v_predicted_fan_power_data(data['predictedData'], resampled=False) if not req.resampled else clean_actual_v_predicted_fan_power_data(data['predictedData'], resampled=True)
+        
+        if isinstance(result, list) and result:
+            data = result[0].get('data') if isinstance(result[0], dict) else None
+            if data and data.get('predictedData'):
+                return clean_actual_v_predicted_fan_power_data(data['predictedData'], resampled=resampled)
             else:
-                log.warning("No 'data' field found in the first result item; returning blank array.")
+                log.warning("No 'predictedData' field found in the first result item; returning blank array.")
                 return []
       
-
-        return result
+        log.warning("Unexpected result format; returning blank array.")
+        return []
 
     except EnvironmentError as e:
         log.error(f"Environment error: {e}")

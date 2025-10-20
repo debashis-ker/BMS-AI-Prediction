@@ -88,7 +88,7 @@ def resample_data_dynamically(
 
         time_span = df_copy[datetime_column].max() - df_copy[datetime_column].min()
 
-        if time_span < pd.Timedelta(days=2):
+        if time_span < pd.Timedelta(days=5):
             resampling_frequency = "H" 
         elif time_span < pd.Timedelta(weeks=2):
             resampling_frequency = "D" 
@@ -104,6 +104,9 @@ def resample_data_dynamically(
         resampled_data = get_average_monitoring_data(
             df_copy, resampling_frequency, datetime_column, monitoring_columns
         )
+        
+        
+        print(f"resampling_frequency determined: {resampling_frequency} :: time_span: {time_span}")
         
         resampled_data.dropna(how='all', inplace=True)
 
