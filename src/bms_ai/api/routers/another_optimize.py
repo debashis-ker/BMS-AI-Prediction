@@ -17,32 +17,6 @@ router = APIRouter(prefix="/another_optimize", tags=["Prescriptive Optimization"
 
 # app = FastAPI()
 
-CURRENT_CONDITIONS_STATE = {
-    "Fan Power meter (KW)": 10.509812355041504,
-    "OA Flow": 819.8904418945312,
-    "OA Humid": 55.93263626098633,
-    "OA Temp": 35.93263626098633,
-    "RA temperature setpoint": 24.5,
-    "RA CO2": 500,
-    "RA CO2 setpoint": 750.0,
-    "RA Damper feedback": 15.0,
-    "RA Temp": 23.376264572143555,
-    "RA Temp control( Valve Feedback)": 1.6030502319335938,
-    "RA damper control": 10.0,
-    "SA Fan Speed control": 100.0,
-    "SA Fan Speed feedback": 100.0,
-    "SA Pressure setpoint": 750.0,
-    "SA pressure": 297.919921875,
-    "SA temp": 16.363384246826172,
-    "Trip status": 1.0,
-    'date': 22,
-    'month' : 5,
-    'year' : 2025,
-    'hour' : 6,
-    'minute': 20
-}
-
-
 log.error("Loading model and scaler...")
 
 try:
@@ -56,14 +30,15 @@ except FileNotFoundError:
 except Exception as e:
     log.error(f"Error loading model or scaler: {e}")
     print("Error loading model or scaler. Using dummy implementations.")
-    
-
+ 
 def create_input_array(conditions: Dict[str, Any], setpoints: Dict[str, float]):
     input_list = [
         conditions['OA Flow'], conditions['OA Humid'], conditions['OA Temp'],
-        setpoints['RA temperature setpoint'], conditions['RA CO2 setpoint'], 
+        setpoints['RA temperature setpoint'], 
+        setpoints['RA CO2 setpoint'], 
         conditions['RA CO2'], conditions['RA Damper feedback'], conditions['RA Temp'],
-        conditions['SA Fan Speed feedback'], setpoints['SA Pressure setpoint'],
+        conditions['SA Fan Speed feedback'], 
+        setpoints['SA Pressure setpoint'], 
         conditions['SA pressure'], conditions['SA temp'], conditions['Trip status'],
         conditions['date'], conditions['month'], conditions['year'], conditions['hour'], conditions['minute']
     ]
@@ -71,7 +46,7 @@ def create_input_array(conditions: Dict[str, Any], setpoints: Dict[str, float]):
 
 def optimize_setpoints(model, conditions: Dict[str, Any], x_scaler, n_iterations=1000):
     search_space = {
-        'RA temperature setpoint': (22.0, 27.0),
+        'RA temperature setpoint': (20.0, 27.0),
         'RA CO2 setpoint': (500.0, 800.0),
         'SA Pressure setpoint': (500.0, 1200.0)
     }
@@ -101,21 +76,17 @@ def optimize_setpoints(model, conditions: Dict[str, Any], x_scaler, n_iterations
         input_data_scaled = x_scaler.transform(input_data)
         predictions = model.predict(input_data_scaled)
         predicted_power = predictions[0][3]
-
         if predicted_power < best_power:
-            best_power = predicted_power
-            best_setpoints = random_setpoints
+                best_power = predicted_power
+                best_setpoints = random_setpoints
 
     return best_setpoints, best_power
 
 def prediction_with_optimization(current_conditions: Dict[str, Any], model, X_scaler):
-    
     start_time = time.time()
     print(f"X_Scaler: {X_scaler is not None}, Model: {model is not None}")
     optimal_setpoints, minimal_power = optimize_setpoints(model, current_conditions, X_scaler)
     log.info(f"Optimal Setpoints: {optimal_setpoints}, Minimal Fan Power: {minimal_power}")
-    
-    
     
     optimal_input = create_input_array(current_conditions, optimal_setpoints)
     optimal_input_scaled = X_scaler.transform(optimal_input)
@@ -141,7 +112,7 @@ def prediction_with_optimization(current_conditions: Dict[str, Any], model, X_sc
 
 @router.post('/')
 def predict_with_new_data(
-    current_conditions: Dict[str, Any] = Body(default=CURRENT_CONDITIONS_STATE),
+    current_conditions: Dict[str, Any] = Body(),
     model = loaded_model,
     X_scaler=loaded_scaler
 ):
@@ -151,5 +122,3 @@ def predict_with_new_data(
     end = time.time()
     print(f"Prediction completed in {end - start:.2f} seconds")
     return result
-
-
