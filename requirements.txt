@@ -2,6 +2,6 @@ matplotlib
 ipykernel
 gunicorn
 requests
-prophet
+prophet==1.2.0
 
 -e .
