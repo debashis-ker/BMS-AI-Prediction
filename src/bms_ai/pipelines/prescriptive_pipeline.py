@@ -100,49 +100,69 @@ class PrescriptivePipeline:
         log.info(f"Optimization for '{setpoint_feature}' complete. Best result: {result}")
         return result
 
-    def run_optimization(self, current_conditions: dict, search_space: dict) -> dict:
+    def run_optimization(self, current_conditions: dict, search_space: dict, 
+                         optimization_method: str = "grid", n_iterations: int = 1000) -> dict:
         """
-        Runs the optimization process testing all combinations of setpoint features.
+        Runs the optimization process using the specified method.
 
         Args:
             current_conditions (dict): The current state of the system.
-            search_space (dict): A dictionary where keys are feature names and values are iterables of test points.
+            search_space (dict): A dictionary where keys are feature names and values are either:
+                - List of discrete values (for grid search)
+                - [min, max] tuple (for random/hybrid search)
+            optimization_method (str): 'grid', 'random', or 'hybrid'
+            n_iterations (int): Number of iterations for random/hybrid methods
 
         Returns:
             dict: A dictionary containing the best combination of setpoints and minimum fan power.
         """
         
-        log.info("Starting comprehensive grid search optimization...")
+        log.info(f"Starting {optimization_method} optimization...")
         start_time = time.time()
+        
         if not self.model or not self.preprocessor:
             log.error("Model or preprocessor not loaded. Cannot run optimization.")
             return {"message": "Model or preprocessor not loaded."}
+        
+        if optimization_method == "grid":
+            result = self._grid_search_optimization(current_conditions, search_space, start_time)
+        elif optimization_method == "random":
+            result = self._random_search_optimization(current_conditions, search_space, n_iterations, start_time)
+        elif optimization_method == "hybrid":
+            result = self._hybrid_search_optimization(current_conditions, search_space, n_iterations, start_time)
+        else:
+            log.error(f"Unknown optimization method: {optimization_method}")
+            return {"message": f"Unknown optimization method: {optimization_method}"}
+        
+        return result
+    
+    def _grid_search_optimization(self, current_conditions: dict, search_space: dict, start_time: float) -> dict:
+        """Grid search: exhaustive search over all combinations."""
         feature_names = list(search_space.keys())
         feature_ranges = list(search_space.values())
+        
         total_combinations = 1
         for range_vals in feature_ranges:
             total_combinations *= len(range_vals)
-        log.info(f"Testing {total_combinations} combinations across {len(feature_names)} features:")
-        for feature, range_vals in search_space.items():
-            log.info(f"  - {feature}: {len(range_vals)} values from {min(range_vals):.1f} to {max(range_vals):.1f}")
+        
+        log.info(f"Grid Search: Testing {total_combinations} combinations across {len(feature_names)} features")
+        
         best_combination = None
         min_fan_power = float('inf')
         combination_count = 0
+        
         for combination in itertools.product(*feature_ranges):
             combination_count += 1
             test_conditions = deepcopy(current_conditions)
             current_setpoints = {}
+            
             for i, feature_name in enumerate(feature_names):
                 test_conditions[feature_name] = combination[i]
                 current_setpoints[feature_name] = combination[i]
+            
             try:
-                input_df = pd.DataFrame([test_conditions])
-                input_df_reordered = input_df[self.preprocessor.feature_names_in_]
-                transformed_data = self.preprocessor.transform(input_df_reordered)
-                feature_names_out = self.preprocessor.get_feature_names_out()
-                transformed_df = pd.DataFrame(transformed_data, columns=feature_names_out)
-                predicted_values = self.model.predict(transformed_df)
-                predicted_fan_power = predicted_values[0][3]
+                predicted_fan_power = self._predict_fan_power(test_conditions)
+                
                 if predicted_fan_power < min_fan_power:
                     min_fan_power = predicted_fan_power
                     best_combination = current_setpoints.copy()
@@ -151,28 +171,158 @@ class PrescriptivePipeline:
                 if combination_count <= 10:
                     log.error(f"Error testing combination {combination_count}: {e}")
                 continue
+        
         if best_combination is None:
             log.warning("No valid combination found that could be processed.")
             return {"message": "Could not find optimal setpoint combination."}
+        
         end_time = time.time()
         elapsed_time = end_time - start_time
-        log.info(f"Optimization completed in {elapsed_time:.2f} seconds.")
-        print(f"Optimization completed in {elapsed_time:.2f} seconds.")
-        result = {
+        
+        return {
             'best_setpoints': best_combination,
             'min_fan_power_kw': min_fan_power,
             'total_combinations_tested': combination_count,
-            'optimization_method': 'comprehensive_grid_search',
+            'optimization_method': 'grid',
             'optimization_time_seconds': elapsed_time
         }
-        log.info(f"\n\n{'='*50} OPTIMIZATION COMPLETE {'='*50}")
-        log.info(f"Tested {combination_count} combinations")
-        log.info(f"Best setpoint combination found:")
-        for feature, value in best_combination.items():
-            log.info(f"  - {feature}: {value}")
-        log.info(f"Minimum predicted fan power: {min_fan_power:.4f} KW")
-        log.info("="*100)
-        return result
+    
+    def _random_search_optimization(self, current_conditions: dict, search_space: dict, 
+                                     n_iterations: int, start_time: float) -> dict:
+        """Random search: sample random points from continuous ranges."""
+        feature_names = list(search_space.keys())
+        
+        log.info(f"Random Search: Testing {n_iterations} random combinations")
+        
+        best_combination = None
+        min_fan_power = float('inf')
+        
+        for iteration in range(n_iterations):
+            test_conditions = deepcopy(current_conditions)
+            current_setpoints = {}
+            
+            for feature_name in feature_names:
+                feature_range = search_space[feature_name]
+                
+                if len(feature_range) == 2:
+                    random_value = np.random.uniform(feature_range[0], feature_range[1])
+                else:
+                    random_value = np.random.choice(feature_range)
+                
+                test_conditions[feature_name] = random_value
+                current_setpoints[feature_name] = random_value
+            
+            try:
+                predicted_fan_power = self._predict_fan_power(test_conditions)
+                
+                if predicted_fan_power < min_fan_power:
+                    min_fan_power = predicted_fan_power
+                    best_combination = current_setpoints.copy()
+                    log.info(f"NEW BEST! Iteration {iteration+1}: {best_combination} -> {min_fan_power:.4f} KW")
+            except Exception as e:
+                if iteration < 10:
+                    log.error(f"Error in iteration {iteration+1}: {e}")
+                continue
+        
+        if best_combination is None:
+            log.warning("No valid combination found.")
+            return {"message": "Could not find optimal setpoint combination."}
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        
+        return {
+            'best_setpoints': best_combination,
+            'min_fan_power_kw': min_fan_power,
+            'total_combinations_tested': n_iterations,
+            'optimization_method': 'random',
+            'optimization_time_seconds': elapsed_time
+        }
+    
+    def _hybrid_search_optimization(self, current_conditions: dict, search_space: dict, 
+                                     n_iterations: int, start_time: float) -> dict:
+        """Hybrid search: coarse grid search followed by random refinement."""
+        feature_names = list(search_space.keys())
+        
+        log.info(f"Hybrid Search: Phase 1 - Coarse grid search")
+        
+        coarse_grid = {}
+        for feature_name in feature_names:
+            feature_range = search_space[feature_name]
+            if len(feature_range) == 2:
+                coarse_grid[feature_name] = np.linspace(feature_range[0], feature_range[1], 5)
+            else:
+                step = max(1, len(feature_range) // 5)
+                coarse_grid[feature_name] = feature_range[::step][:5]
+        
+        grid_result = self._grid_search_optimization(current_conditions, coarse_grid, start_time)
+        
+        if "message" in grid_result:
+            return grid_result
+        
+        best_grid_setpoints = grid_result['best_setpoints']
+        best_grid_power = grid_result['min_fan_power_kw']
+        grid_iterations = grid_result['total_combinations_tested']
+        
+        log.info(f"Hybrid Search: Phase 2 - Random refinement around best grid point")
+        
+        best_combination = best_grid_setpoints.copy()
+        min_fan_power = best_grid_power
+        
+        refinement_iterations = n_iterations - grid_iterations
+        
+        for iteration in range(refinement_iterations):
+            test_conditions = deepcopy(current_conditions)
+            current_setpoints = {}
+            
+            for feature_name in feature_names:
+                feature_range = search_space[feature_name]
+                grid_best_value = best_grid_setpoints[feature_name]
+                
+                if len(feature_range) == 2:
+                    range_width = feature_range[1] - feature_range[0]
+                    window = range_width * 0.2
+                    lower_bound = max(feature_range[0], grid_best_value - window)
+                    upper_bound = min(feature_range[1], grid_best_value + window)
+                    random_value = np.random.uniform(lower_bound, upper_bound)
+                else:
+                    random_value = np.random.choice(feature_range)
+                
+                test_conditions[feature_name] = random_value
+                current_setpoints[feature_name] = random_value
+            
+            try:
+                predicted_fan_power = self._predict_fan_power(test_conditions)
+                
+                if predicted_fan_power < min_fan_power:
+                    min_fan_power = predicted_fan_power
+                    best_combination = current_setpoints.copy()
+                    log.info(f"NEW BEST! Refinement {iteration+1}: {best_combination} -> {min_fan_power:.4f} KW")
+            except Exception as e:
+                if iteration < 10:
+                    log.error(f"Error in refinement iteration {iteration+1}: {e}")
+                continue
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        
+        return {
+            'best_setpoints': best_combination,
+            'min_fan_power_kw': min_fan_power,
+            'total_combinations_tested': grid_iterations + refinement_iterations,
+            'optimization_method': 'hybrid',
+            'optimization_time_seconds': elapsed_time
+        }
+    
+    def _predict_fan_power(self, conditions: dict) -> float:
+        """Helper method to predict fan power for given conditions."""
+        input_df = pd.DataFrame([conditions])
+        input_df_reordered = input_df[self.preprocessor.feature_names_in_]
+        transformed_data = self.preprocessor.transform(input_df_reordered)
+        feature_names_out = self.preprocessor.get_feature_names_out()
+        transformed_df = pd.DataFrame(transformed_data, columns=feature_names_out)
+        predicted_values = self.model.predict(transformed_df)
+        return predicted_values[0][3]
 
 def get_current_conditions():
     return {
