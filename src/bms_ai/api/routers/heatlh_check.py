@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from src.bms_ai.logger_config import setup_logger
+from pathlib import Path
 
 import pandas as pd
 import joblib
@@ -18,10 +19,23 @@ router = APIRouter(prefix="/health_check", tags=["Prescriptive Optimization"])
 forecast_model = None
 
 try:
-    forecast_model = joblib.load("artifacts/prophet_Ground_AHU_health_check.joblib")
-    log.info("Model loaded successfully.")
+    # current_file = Path(__file__).resolve()
+    # project_root = current_file.parent.parent.parent.parent
+    model_path = "artifacts/health_check_forecast_model.joblib"
+    
+    log.info(f"Loading model from: {model_path}")
+    print(f"Loading model from: {model_path}")
+    
+    if model_path:
+        forecast_model = joblib.load(model_path)
+        print("Forecast model loaded successfully.")
+        log.info("Forecast model loaded successfully.")
+    else:
+        print(f"Model file not found at: {model_path}")
+        log.error(f"Model file not found at: {model_path}")
 except Exception as e:
-    log.error("Error loading model.")
+    log.error(f"Error loading forecast model: {e}")
+    print(f"Error loading forecast model: {e}")
 
 class PredictionRequest(BaseModel):
     periods: int = Field(3, description="Number of future time periods to predict.")
@@ -122,3 +136,24 @@ def health_prediction(
     end = time.time()
     log.info(f"Prediction completed in {end - start:.2f} seconds") 
     return result
+
+
+@router.get('/status')
+def model_status():
+    """
+    Check if the forecast model is loaded and ready to use.
+    Returns model status information.
+    """
+    if forecast_model is None:
+        return {
+            "status": "unavailable",
+            "model_loaded": False,
+            "message": "Forecast model is not loaded. Please check server logs."
+        }
+    
+    return {
+        "status": "ready",
+        "model_loaded": True,
+        "model_type": type(forecast_model).__name__,
+        "message": "Forecast model is loaded and ready for predictions."
+    }
