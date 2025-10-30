@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from src.bms_ai.logger_config import setup_logger
+from pathlib import Path
 
 import pandas as pd
 import joblib
@@ -19,12 +20,11 @@ damper_forecast_model = None
 fan_forecast_model = None
 
 try:
-    damper_forecast_model = joblib.load("artifacts/health_check_forecast_model.joblib")
-    fan_forecast_model = joblib.load("artifacts/Fan_Speed_Health_Check_Model.joblib")
-    log.info("Damper Model loaded successfully.")
-    log.info("Fan Speed Model loaded successfully.")
+    forecast_model = joblib.load("artifacts/prophet_Ground_AHU_health_check.joblib")
+    log.info("Model loaded successfully.")
 except Exception as e:
-    log.error("Error loading model.")
+    log.error(f"Error loading forecast model: {e}")
+    print(f"Error loading forecast model: {e}")
 
 class PredictionRequest(BaseModel):
     periods: int = Field(3, description="Number of future time periods to predict.")
@@ -197,3 +197,24 @@ def Fan_health_prediction(
     end = time.time()
     log.info(f"Fan Prediction completed in {end - start:.2f} seconds") 
     return result
+
+
+@router.get('/status')
+def model_status():
+    """
+    Check if the forecast model is loaded and ready to use.
+    Returns model status information.
+    """
+    if forecast_model is None:
+        return {
+            "status": "unavailable",
+            "model_loaded": False,
+            "message": "Forecast model is not loaded. Please check server logs."
+        }
+    
+    return {
+        "status": "ready",
+        "model_loaded": True,
+        "model_type": type(forecast_model).__name__,
+        "message": "Forecast model is loaded and ready for predictions."
+    }
