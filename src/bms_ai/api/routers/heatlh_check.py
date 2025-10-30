@@ -20,7 +20,8 @@ damper_forecast_model = None
 fan_forecast_model = None
 
 try:
-    forecast_model = joblib.load("artifacts/prophet_Ground_AHU_health_check.joblib")
+    damper_forecast_model = joblib.load("artifacts/Damper_health_check_forecast_model.joblib")
+    fan_forecast_model = joblib.load("artifacts/Fan_Speed_Health_Check_Model.joblib")
     log.info("Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading forecast model: {e}")
@@ -205,16 +206,24 @@ def model_status():
     Check if the forecast model is loaded and ready to use.
     Returns model status information.
     """
-    if forecast_model is None:
+    if damper_forecast_model is None:
         return {
             "status": "unavailable",
             "model_loaded": False,
-            "message": "Forecast model is not loaded. Please check server logs."
+            "message": "Damper Forecast model is not loaded. Please check server logs."
         }
-    
+
+    if fan_forecast_model is None:
+        return {
+            "status": "unavailable",
+            "model_loaded": False,
+            "message": "Fan Forecast model is not loaded. Please check server logs."
+        }
+
     return {
         "status": "ready",
         "model_loaded": True,
-        "model_type": type(forecast_model).__name__,
+        "Damper_Health_model_type": type(damper_forecast_model).__name__,
+        "Fan_Health_model_type": type(fan_forecast_model).__name__,
         "message": "Forecast model is loaded and ready for predictions."
     }
