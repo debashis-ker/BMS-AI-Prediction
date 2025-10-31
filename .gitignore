@@ -205,6 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp
 
+# MLflow
+mlruns/
+mlartifacts/
+.mlflow/
+
+# Project-specific artifacts and logs
+#artifacts/
+artifacts/*.csv
+log_info/
+logs/
+
+# Notebook data files
+notebooks/data/
+notebooks/*.csv
 
 # local resources
 resources/
