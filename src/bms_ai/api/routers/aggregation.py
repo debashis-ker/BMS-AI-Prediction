@@ -29,7 +29,6 @@ def process_api_dict_to_dataframe(api_data_dict: dict) -> pd.DataFrame:
     try:
         if "queryResponse" not in api_data_dict:
             log.error("Input dictionary is missing 'queryResponse' key.")
-            raise ValueError("Input dictionary is missing 'queryResponse' key.")
             
         records = api_data_dict["queryResponse"]
         if not records:
@@ -47,7 +46,6 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
             df_ahu = process_api_dict_to_dataframe(data)
             if df_ahu.empty:
                 log.error("DataFrame is empty after processing.")
-                raise ValueError("DataFrame is empty after processing.")
         except Exception as e:
             log.error(f"Error in initial DataFrame processing: {e}")
             raise HTTPException(status_code=400, detail="Problem in the initial data processing.")
@@ -56,7 +54,6 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
             df_ahu = df_ahu[(df_ahu['system_type'] == system_type) & (df_ahu['site'] == site)].copy()
             if df_ahu.empty:
                 log.error(f"Data for system_type='{system_type}' and site='{site}' not found after filtering.")
-                raise ValueError("Data with desired system_type and site not available.")
                 
         except Exception as e:
             log.error(f"Error applying equipment filters: {e}")
@@ -65,7 +62,6 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
         try:
             if date_column not in df_ahu.columns:
                 log.error(f"Date column '{date_column}' not found.")
-                raise ValueError(f"Date column '{date_column}' not found.")
                  
             df_ahu[date_column] = pd.to_datetime(df_ahu[date_column])
             df_ahu[date_column] = df_ahu[date_column].dt.tz_localize(None)
@@ -88,7 +84,6 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
             else:
                  if col_name in ['monitoring_data', 'site']:
                     log.error(f"Required column '{col_name}' not found.")
-                    raise ValueError(f"Required column '{col_name}' not found.")
                  
         Required_Columns = ['datapoint', 'monitoring_data'] 
         
@@ -178,27 +173,42 @@ def count_max_feature_occurence(datapoint : str, data : pd.DataFrame) -> int:
         
     return int((data[datapoint] == max_val).sum())
 
-def find_min_dates(datapoint : str, data : pd.DataFrame) -> List:
-    if data.empty:
-        return []
+def format_datetime(ts: pd.Timestamp) -> str:
+    if ts.tzinfo is None:
+        ts = ts.tz_localize('UTC')
+    formatted_time = ts.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    formatted_time = formatted_time[:-3]
+    offset = ts.strftime('%z')
+    if ':' in offset:
+        offset = offset.replace(':', '')
+    return f"{formatted_time}{offset}"
 
+
+def format_timestamps_list(timestamps: pd.DatetimeIndex) -> List[str]:
+    return [format_datetime(ts) for ts in timestamps]
+
+
+def find_min_dates(datapoint : str, data : pd.DataFrame) -> List:
     min_val = find_min(datapoint, data) 
     
     if isinstance(min_val, str) and min_val == "N/A":
         return []
 
-    return data.index[data[datapoint] == min_val].tolist()
+    min_indices = pd.DatetimeIndex(data.index[data[datapoint] == min_val])
+    
+    return format_timestamps_list(min_indices)
+
 
 def find_max_dates(datapoint : str, data : pd.DataFrame) -> List:
-    if data.empty:
-        return []
-    
     max_val = find_max(datapoint, data)
     
     if isinstance(max_val, str) and max_val == "N/A":
         return []
         
-    return data.index[data[datapoint] == max_val].tolist()
+    max_indices = pd.DatetimeIndex(data.index[data[datapoint] == max_val])
+    
+    return format_timestamps_list(max_indices)
+
 
 def find_last_min_date(datapoint : str, data : pd.DataFrame) -> str:
     if data.empty:
@@ -208,10 +218,10 @@ def find_last_min_date(datapoint : str, data : pd.DataFrame) -> str:
     if isinstance(min_val, str) and min_val == "N/A":
         return "N/A"
 
-    min_indices = data.index[data[datapoint] == min_val]
+    min_indices = pd.DatetimeIndex(data.index[data[datapoint] == min_val])
     
     if not min_indices.empty:
-        return str(min_indices[-1])
+        return format_datetime(min_indices[-1])
     return "N/A"
 
 def find_last_max_date(datapoint : str, data : pd.DataFrame) -> str:
@@ -222,10 +232,10 @@ def find_last_max_date(datapoint : str, data : pd.DataFrame) -> str:
     if isinstance(max_val, str) and max_val == "N/A":
         return "N/A"
         
-    max_indices = data.index[data[datapoint] == max_val]
+    max_indices = pd.DatetimeIndex(data.index[data[datapoint] == max_val])
 
     if not max_indices.empty:
-        return str(max_indices[-1])
+        return format_datetime(max_indices[-1])
     return "N/A"
 
 def stats_checker(request_data: request_structure) -> Dict[str, Dict[str, Any]]:
