@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check
+from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation
 import os
 from dotenv import load_dotenv
 import uvicorn
@@ -36,6 +36,7 @@ app.include_router(optimize.router)
 app.include_router(predict.router)
 app.include_router(another_optimize.router)
 app.include_router(heatlh_check.router)
+app.include_router(aggregation.router)
 app.include_router(utils.router)
 
 
