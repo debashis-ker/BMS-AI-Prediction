@@ -3,5 +3,7 @@ ipykernel
 gunicorn
 requests
 prophet==1.2.0
+mlflow >= 2.9.0
+python-dotenv
 
 -e .

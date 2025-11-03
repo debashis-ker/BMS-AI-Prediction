@@ -6,12 +6,19 @@ from pathlib import Path
 load_dotenv()
 
 class MLflowConfig:
+    # Project Paths
+    PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+    MLFLOW_DIR = PROJECT_ROOT / "mlruns"
+    ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+    
+    # MLflow Configuration
     MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
     MLFLOW_HOST = os.getenv("MLFLOW_HOST", "127.0.0.1")
     MLFLOW_PORT = int(os.getenv("MLFLOW_PORT", "5000"))
     DEFAULT_EXPERIMENT_NAME = "BMS_AI_Default"
     ARTIFACT_LOCATION = os.getenv("MLFLOW_ARTIFACT_LOCATION", "./mlartifacts")
     REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI", MLFLOW_TRACKING_URI)
+    TRACKING_URI = MLFLOW_TRACKING_URI  # Alias for compatibility
     AUTOLOG_SKLEARN = os.getenv("MLFLOW_AUTOLOG_SKLEARN", "true").lower() == "true"
     AUTOLOG_XGBOOST = os.getenv("MLFLOW_AUTOLOG_XGBOOST", "true").lower() == "true"
     
