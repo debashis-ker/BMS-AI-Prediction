@@ -6,6 +6,7 @@ from src.bms_ai.logger_config import setup_logger
 from typing import Any, Dict, List, Union
 
 import pandas as pd
+import numpy as np
 
 
 
@@ -174,5 +175,134 @@ def clean_actual_v_predicted_fan_power_data(data: List[Any], resampled: bool = F
     
     df_reset = df.reset_index()
     return df_reset.to_dict(orient='records')
+
+
+
+def print_dataframe_info(df, name="DataFrame", max_unique=20):
+    """
+    Print comprehensive information about a pandas DataFrame.
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The DataFrame to analyze
+    name : str, optional
+        Name to identify the DataFrame (default: "DataFrame")
+    max_unique : int, optional
+        Maximum number of unique values to display for categorical columns (default: 20)
+    """
+    print(f"\n{'='*70}")
+    print(f"Comprehensive Analysis for: {name}")
+    print(f"{'='*70}\n")
+    
+    print("1. BASIC INFORMATION")
+    print("-" * 70)
+    print(f"Shape: {df.shape[0]} rows × {df.shape[1]} columns")
+    print(f"Memory Usage: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+    print(f"Duplicate Rows: {df.duplicated().sum()}")
+    print()
+    
+    print("2. DATAFRAME INFO")
+    print("-" * 70)
+    df.info()
+    print()
+    
+    print("3. COLUMN TYPES BREAKDOWN")
+    print("-" * 70)
+    dtype_counts = df.dtypes.value_counts()
+    for dtype, count in dtype_counts.items():
+        print(f"  {dtype}: {count} column(s)")
+    print()
+    
+    print("4. DETAILED COLUMN INFORMATION")
+    print("-" * 70)
+    for col in df.columns:
+        dtype = df[col].dtype
+        non_null = df[col].notna().sum()
+        null_count = df[col].isnull().sum()
+        null_pct = (null_count / len(df)) * 100
+        unique_count = df[col].nunique()
+        
+        print(f"\nColumn: '{col}'")
+        print(f"  Data Type: {dtype}")
+        print(f"  Non-Null: {non_null} | Null: {null_count} ({null_pct:.1f}%)")
+        print(f"  Unique Values: {unique_count}")
+        
+        if dtype == 'object' or dtype.name == 'category' or unique_count <= max_unique:
+            value_counts = df[col].value_counts()
+            print(f"  Value Counts (top {min(10, len(value_counts))}):")
+            for val, count in value_counts.head(10).items():
+                pct = (count / len(df)) * 100
+                print(f"    {val}: {count} ({pct:.1f}%)")
+    
+    print()
+    
+    # ============== MISSING VALUES SUMMARY ==============
+    print("5. MISSING VALUES SUMMARY")
+    print("-" * 70)
+    missing = df.isnull().sum()
+    if missing.sum() > 0:
+        missing_df = pd.DataFrame({
+            'Column': missing[missing > 0].index,
+            'Missing Count': missing[missing > 0].values,
+            'Missing %': (missing[missing > 0].values / len(df) * 100).round(2)
+        })
+        print(missing_df.to_string(index=False))
+    else:
+        print("No missing values found!")
+    print()
+    
+    # ============== NUMERIC COLUMNS ANALYSIS ==============
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) > 0:
+        print("6. NUMERIC COLUMNS - DESCRIPTIVE STATISTICS")
+        print("-" * 70)
+        print(df[numeric_cols].describe())
+        print()
+        
+        print("Additional Numeric Statistics:")
+        print("-" * 70)
+        for col in numeric_cols:
+            print(f"\n{col}:")
+            print(f"  Mean: {df[col].mean():.2f}")
+            print(f"  Median: {df[col].median():.2f}")
+            print(f"  Mode: {df[col].mode().values[0] if len(df[col].mode()) > 0 else 'N/A'}")
+            print(f"  Std Dev: {df[col].std():.2f}")
+            print(f"  Variance: {df[col].var():.2f}")
+            print(f"  Range: {df[col].min():.2f} to {df[col].max():.2f}")
+            print(f"  IQR: {df[col].quantile(0.75) - df[col].quantile(0.25):.2f}")
+        print()
+    
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    if len(categorical_cols) > 0:
+        print("7. CATEGORICAL COLUMNS - UNIQUE VALUES")
+        print("-" * 70)
+        for col in categorical_cols:
+            unique_count = df[col].nunique()
+            print(f"\n{col}: {unique_count} unique value(s)")
+            
+            if unique_count <= max_unique:
+                print(f"  All unique values and counts:")
+                value_counts = df[col].value_counts()
+                for val, count in value_counts.items():
+                    pct = (count / len(df)) * 100
+                    print(f"    '{val}': {count} ({pct:.1f}%)")
+            else:
+                print(f"  (Too many unique values to display. Showing top 10)")
+                value_counts = df[col].value_counts().head(10)
+                for val, count in value_counts.items():
+                    pct = (count / len(df)) * 100
+                    print(f"    '{val}': {count} ({pct:.1f}%)")
+        print()
+    
+    print("8. DATA PREVIEW")
+    print("-" * 70)
+    print("First 5 rows:")
+    print(df.head())
+    print("\nLast 5 rows:")
+    print(df.tail())
+    print()
+    
+    print(f"{'='*70}\n")
         
         
