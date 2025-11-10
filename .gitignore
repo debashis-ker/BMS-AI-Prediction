@@ -222,3 +222,6 @@ notebooks/*.csv
 
 # local resources
 resources/
+
+
+catboost_info/

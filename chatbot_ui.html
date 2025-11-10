@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMS Energy Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .llm-toggle {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4caf50;
+            transition: .4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #ff9800;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .llm-label {
+            font-size: 13px;
+            font-weight: bold;
+            opacity: 0.9;
+        }
+
+        .llm-label.active {
+            opacity: 1;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+
+        .status-indicator.connected {
+            background-color: #4caf50;
+            box-shadow: 0 0 5px #4caf50;
+        }
+
+        .status-indicator.disconnected {
+            background-color: #f44336;
+        }
+
+        .quick-questions {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .quick-questions h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .quick-btn {
+            background: white;
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-content {
+            display: inline-block;
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .bot .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .recommendations {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .recommendations h4 {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .recommendations ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .recommendations li {
+            padding: 5px 0;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .recommendations li:before {
+            content: "✓ ";
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .confidence {
+            display: inline-block;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #666;
+            padding: 3px 8px;
+            background: #e8eaf6;
+            border-radius: 10px;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #userInput:focus {
+            border-color: #667eea;
+        }
+
+        #sendBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        #sendBtn:hover {
+            transform: scale(1.05);
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 BMS Energy Assistant</h1>
+            <p>Ask me anything about energy consumption and optimization</p>
+            
+            <div class="llm-toggle">
+                <span class="llm-label" id="ollamaLabel">
+                    🦙 Ollama (Free)
+                    <span class="status-indicator" id="ollamaStatus"></span>
+                </span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="llmToggle" onchange="toggleLLM()">
+                    <span class="slider"></span>
+                </label>
+                <span class="llm-label active" id="openaiLabel">
+                    ☁️ OpenAI
+                    <span class="status-indicator" id="openaiStatus"></span>
+                </span>
+            </div>
+        </div>
+
+        <div class="quick-questions">
+            <h3>Quick Questions:</h3>
+            <button class="quick-btn" onclick="sendQuickQuestion('Which area uses the most electricity?')">
+                Most Energy Usage
+            </button>
+            <button class="quick-btn" onclick="sendQuickQuestion('How can I reduce energy consumption by 5%?')">
+                Reduce by 5%
+            </button>
+            <button class="quick-btn" onclick="sendQuickQuestion('What time of day uses the most energy?')">
+                Peak Hours
+            </button>
+            <button class="quick-btn" onclick="sendQuickQuestion('How much am I spending on electricity?')">
+                Cost Analysis
+            </button>
+            <button class="quick-btn" onclick="sendQuickQuestion('Give me a summary of my energy usage')">
+                Overall Summary
+            </button>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message bot">
+                <div class="message-content">
+                    👋 Hello! I'm your BMS Energy Assistant. I can help you with:
+                    <br><br>
+                    • <strong>Energy Analysis:</strong> Which areas consume the most?<br>
+                    • <strong>Cost Insights:</strong> How much are you spending?<br>
+                    • <strong>Optimization Tips:</strong> How to reduce consumption<br>
+                    • <strong>Trend Analysis:</strong> Peak hours and patterns<br>
+                    • <strong>Equipment Health:</strong> System performance checks<br>
+                    • <strong>Custom Questions:</strong> Ask me anything!
+                    <br><br>
+                    <strong>💡 Choose your AI:</strong>
+                    <br>
+                    🦙 <strong>Ollama</strong> - Free, local, offline (requires Ollama installed)
+                    <br>
+                    ☁️ <strong>OpenAI</strong> - Cloud-based, fastest responses
+                    <br><br>
+                    Try asking a question in natural language - I'll understand! 🎯
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="userInput" 
+                placeholder="Ask a question..." 
+                onkeypress="handleKeyPress(event)"
+            >
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let currentEndpoint = '/chatbot/ask'; // Default to OpenAI
+        
+        // Check API status on load
+        async function checkAPIStatus() {
+            try {
+                // Check Ollama
+                const ollamaResponse = await fetch(`${API_URL}/chatbot-ollama/status`);
+                const ollamaStatus = document.getElementById('ollamaStatus');
+                if (ollamaResponse.ok) {
+                    ollamaStatus.className = 'status-indicator connected';
+                    ollamaStatus.title = 'Ollama is running';
+                } else {
+                    ollamaStatus.className = 'status-indicator disconnected';
+                    ollamaStatus.title = 'Ollama is not running';
+                }
+            } catch (e) {
+                document.getElementById('ollamaStatus').className = 'status-indicator disconnected';
+                document.getElementById('ollamaStatus').title = 'Cannot connect to Ollama';
+            }
+            
+            try {
+                // Check OpenAI (just check if endpoint exists)
+                const openaiResponse = await fetch(`${API_URL}/chatbot/supported-questions`);
+                const openaiStatus = document.getElementById('openaiStatus');
+                if (openaiResponse.ok) {
+                    openaiStatus.className = 'status-indicator connected';
+                    openaiStatus.title = 'OpenAI endpoint available';
+                } else {
+                    openaiStatus.className = 'status-indicator disconnected';
+                    openaiStatus.title = 'OpenAI endpoint not available';
+                }
+            } catch (e) {
+                document.getElementById('openaiStatus').className = 'status-indicator disconnected';
+                document.getElementById('openaiStatus').title = 'Cannot connect to server';
+            }
+        }
+        
+        function toggleLLM() {
+            const toggle = document.getElementById('llmToggle');
+            const ollamaLabel = document.getElementById('ollamaLabel');
+            const openaiLabel = document.getElementById('openaiLabel');
+            
+            if (toggle.checked) {
+                // Switched to Ollama
+                currentEndpoint = '/chatbot-ollama/ask';
+                ollamaLabel.classList.add('active');
+                openaiLabel.classList.remove('active');
+                addMessage('🦙 Switched to Ollama (Free & Local)', false);
+            } else {
+                // Switched to OpenAI
+                currentEndpoint = '/chatbot/ask';
+                openaiLabel.classList.add('active');
+                ollamaLabel.classList.remove('active');
+                addMessage('☁️ Switched to OpenAI', false);
+            }
+        }
+        
+        // Sample BMS data - in production, this would come from your actual system
+        const SAMPLE_DATA = {
+            "queryResponse": [
+                {
+                    "data_received_on": "2024-11-01T08:00:00Z",
+                    "site": "Ground Floor",
+                    "equipment_name": "AHU-GF-01",
+                    "system_type": "AHU",
+                    "datapoint": "Fan Power meter (KW)",
+                    "monitoring_data": "15.5"
+                },
+                {
+                    "data_received_on": "2024-11-01T08:00:00Z",
+                    "site": "Rooftop",
+                    "equipment_name": "AHU-RT-01",
+                    "system_type": "AHU",
+                    "datapoint": "Fan Power meter (KW)",
+                    "monitoring_data": "22.3"
+                },
+                {
+                    "data_received_on": "2024-11-01T08:00:00Z",
+                    "site": "Ground Floor",
+                    "equipment_name": "AHU-GF-01",
+                    "system_type": "AHU",
+                    "datapoint": "SA Fan Speed control",
+                    "monitoring_data": "75"
+                },
+                {
+                    "data_received_on": "2024-11-01T08:00:00Z",
+                    "site": "Ground Floor",
+                    "equipment_name": "AHU-GF-01",
+                    "system_type": "AHU",
+                    "datapoint": "RA temperature setpoint",
+                    "monitoring_data": "24.0"
+                }
+            ]
+        };
+
+        function addMessage(content, isUser, recommendations = null, confidence = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            let html = `<div class="message-content">`;
+            
+            // Convert markdown-like formatting to HTML
+            content = content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+            
+            html += content;
+            
+            if (confidence !== null) {
+                html += `<div class="confidence">Confidence: ${(confidence * 100).toFixed(0)}%</div>`;
+            }
+            
+            if (recommendations && recommendations.length > 0) {
+                html += `<div class="recommendations">
+                    <h4>📋 Recommendations:</h4>
+                    <ul>`;
+                recommendations.forEach(rec => {
+                    html += `<li>${rec}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            html += `</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>`;
+            
+            messageDiv.innerHTML = html;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            const sendBtn = document.getElementById('sendBtn');
+            const userInput = document.getElementById('userInput');
+            
+            if (show) {
+                loading.classList.add('active');
+                sendBtn.disabled = true;
+                userInput.disabled = true;
+            } else {
+                loading.classList.remove('active');
+                sendBtn.disabled = false;
+                userInput.disabled = false;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const question = input.value.trim();
+            
+            if (!question) return;
+            
+            // Add user message
+            addMessage(question, true);
+            input.value = '';
+            
+            // Show loading
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`${API_URL}${currentEndpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        data: SAMPLE_DATA,
+                        context: {}
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Add bot response
+                addMessage(
+                    data.answer,
+                    false,
+                    data.recommendations,
+                    data.confidence
+                );
+                
+            } catch (error) {
+                console.error('Error:', error);
+                const llmName = currentEndpoint.includes('ollama') ? 'Ollama' : 'OpenAI';
+                addMessage(
+                    `❌ Sorry, I encountered an error with ${llmName}. Please make sure:<br>
+                    ${currentEndpoint.includes('ollama') 
+                        ? '• Ollama is running: <code>ollama serve</code><br>• Model is installed: <code>ollama pull llama3.2</code>'
+                        : '• OpenAI API key is configured in .env<br>• You have available credits'
+                    }<br>• API server is running on port 8000`,
+                    false
+                );
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function sendQuickQuestion(question) {
+            document.getElementById('userInput').value = question;
+            sendMessage();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Focus input on load
+        window.onload = function() {
+            document.getElementById('userInput').focus();
+            checkAPIStatus();
+            // Re-check status every 30 seconds
+            setInterval(checkAPIStatus, 30000);
+        };
+    </script>
+</body>
+</html>

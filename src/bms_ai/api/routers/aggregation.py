@@ -207,20 +207,20 @@ def stats_checker(request_data: request_structure) -> Dict[str, Dict[str, Any]]:
     final_return: Dict[str, Dict[str, Any]] = {}
 
     response_table: Dict[str, Callable] = {
-        "min":                 lambda c, d, dt, fdt, tdt: find_min(c, d),
-        "max":                 lambda c, d, dt, fdt, tdt: find_max(c, d),
-        "mode":                lambda c, d, dt, fdt, tdt: find_mode(c, d),
-        "mean":                lambda c, d, dt, fdt, tdt: find_mean(c, d),
-        "standard deviation":  lambda c, d, dt, fdt, tdt: find_std(c, d),
-        "variance":            lambda c, d, dt, fdt, tdt: find_var(c, d),
-        "find_last_min":       lambda c, d, dt, fdt, tdt: find_last_min_date(c, d, dt),
-        "find_last_max":       lambda c, d, dt, fdt, tdt: find_last_max_date(c, d, dt),
-        "count_min_hits":      lambda c, d, dt, fdt, tdt: count_min_feature_occurence(c, d, dt),
-        "count_max_hits":      lambda c, d, dt, fdt, tdt: count_max_feature_occurence(c, d, dt),
-        "min_date_hits":       lambda c, d, dt, fdt, tdt: find_min_dates(c, d, dt),
-        "max_data_hits":       lambda c, d, dt, fdt, tdt: find_max_dates(c, d, dt),
-        "min_date_hits_in_range": lambda c, d, dt, fdt, tdt: find_min_dates_in_range(c, d, dt, fdt, tdt),
-        "max_date_hits_in_range": lambda c, d, dt, fdt, tdt: find_max_dates_in_range(c, d, dt, fdt, tdt),
+        "min":                 lambda column, data, dt, fdt, tdt: find_min(column, data),
+        "max":                 lambda column, data, dt, fdt, tdt: find_max(column, data),
+        "mode":                lambda column, data, dt, fdt, tdt: find_mode(column, data),
+        "mean":                lambda column, data, dt, fdt, tdt: find_mean(column, data),
+        "standard deviation":  lambda column, data, dt, fdt, tdt: find_std(column, data),
+        "variance":            lambda column, data, dt, fdt, tdt: find_var(column, data),
+        "find_last_min":       lambda column, data, dt, fdt, tdt: find_last_min_date(column, data, dt),
+        "find_last_max":       lambda column, data, dt, fdt, tdt: find_last_max_date(column, data, dt),
+        "count_min_hits":      lambda column, data, dt, fdt, tdt: count_min_feature_occurence(column, data, dt),
+        "count_max_hits":      lambda column, data, dt, fdt, tdt: count_max_feature_occurence(column, data, dt),
+        "min_date_hits":       lambda column, data, dt, fdt, tdt: find_min_dates(column, data, dt),
+        "max_data_hits":       lambda column, data, dt, fdt, tdt: find_max_dates(column, data, dt),
+        "min_date_hits_in_range": lambda column, data, dt, fdt, tdt: find_min_dates_in_range(column, data, dt, fdt, tdt),
+        "max_date_hits_in_range": lambda column, data, dt, fdt, tdt: find_max_dates_in_range(column, data, dt, fdt, tdt),
     }
 
     for column in columns:
