@@ -14,14 +14,26 @@ def create_hierarchical_stats(df: pd.DataFrame, hierarchy_keys: List[str]) -> Di
     grouped = df.groupby(hierarchy_keys)
     for group_keys, group_df in grouped:
         monitoring_status = group_df['monitoring_data']
-        q1 = monitoring_status.quantile(0.25)
-        q3 = monitoring_status.quantile(0.75)
-        iqr = q3 - q1
-        stats = {
-            'min': monitoring_status.min(), 'max': monitoring_status.max(),
-            'lower_quartile': q1, 'upper_quartile': q3, 'IQR': iqr,
-            'lower_bound': q1 - 1.5 * iqr, 'upper_bound': q3 + 1.5 * iqr,
-        }
+        # Convert to numeric, replacing non-numeric values with NaN
+        monitoring_status_numeric = pd.to_numeric(monitoring_status, errors='coerce').dropna()
+        
+        # Skip groups with no numeric data
+        if len(monitoring_status_numeric) == 0:
+            stats = {
+                'min': None, 'max': None,
+                'lower_quartile': None, 'upper_quartile': None, 'IQR': None,
+                'lower_bound': None, 'upper_bound': None,
+                'note': 'No numeric data available'
+            }
+        else:
+            q1 = monitoring_status_numeric.quantile(0.25)
+            q3 = monitoring_status_numeric.quantile(0.75)
+            iqr = q3 - q1
+            stats = {
+                'min': monitoring_status_numeric.min(), 'max': monitoring_status_numeric.max(),
+                'lower_quartile': q1, 'upper_quartile': q3, 'IQR': iqr,
+                'lower_bound': q1 - 1.5 * iqr, 'upper_bound': q3 + 1.5 * iqr,
+            }
         if not isinstance(group_keys, tuple):
             group_keys = (group_keys,)
         current_level = result_json
@@ -49,8 +61,26 @@ def generate_and_save_stats(
     """
     print(f"Generating hierarchical statistics for hierarchy: {hierarchy}...")
     
+    def convert_to_native_types(obj):
+        """Convert numpy and pandas types to native Python types for JSON serialization."""
+        import numpy as np
+        if isinstance(obj, dict):
+            return {key: convert_to_native_types(value) for key, value in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [convert_to_native_types(item) for item in obj]
+        elif isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        elif isinstance(obj, (np.bool_)):
+            return bool(obj)
+        elif pd.isna(obj):
+            return None
+        return obj
+    
     try:
         hierarchical_data = create_hierarchical_stats(df, hierarchy)
+        # Convert all numpy types to native Python types
+        hierarchical_data = convert_to_native_types(hierarchical_data)
+        
         notebook_dir = Path.cwd()
         project_root = notebook_dir.parent
         resources_dir = project_root / 'resources'
