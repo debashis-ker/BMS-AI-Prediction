@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
-from src.bms_ai.api.routers.heatlh_check import get_resample_rule, Damper_health_analysis
+from src.bms_ai.api.routers.heatlh_check import Damper_health_analysis
 
 import pandas as pd
 import joblib
@@ -41,7 +41,7 @@ class PredictionResponse(BaseModel):
     failure_threshold: float = Field(..., description="Threshold used for prediction.")
     resampled_predicted_data: List[ResampledData] = Field(..., description="Resampled 15-day average prediction data.")
 
-@router.post('/Damper_health_prediction', response_model=PredictionResponse)
+@router.post('/damper_health_prediction', response_model=PredictionResponse)
 def Damper_health_prediction(
     request_data: PredictionRequest
 ):
