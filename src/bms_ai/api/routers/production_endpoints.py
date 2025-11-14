@@ -18,10 +18,9 @@ warnings.filterwarnings('ignore')
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 
 damper_forecast_model = None
-fan_forecast_model = None
 
 try:
-    damper_forecast_model = joblib.load("artifacts/AHU1_Damper_health.joblib")
+    damper_forecast_model = joblib.load("artifacts/production_models/AHU1_Damper_health.joblib")
     log.info("Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading forecast model: {e}")
@@ -66,17 +65,9 @@ def model_status():
             "message": "Damper Forecast model is not loaded. Please check server logs."
         }
 
-    if fan_forecast_model is None:
-        return {
-            "status": "unavailable",
-            "model_loaded": False,
-            "message": "Fan Forecast model is not loaded. Please check server logs."
-        }
-
     return {
         "status": "ready",
         "model_loaded": True,
         "Damper_Health_model_type": type(damper_forecast_model).__name__,
-        "Fan_Health_model_type": type(fan_forecast_model).__name__,
         "message": "Forecast model is loaded and ready for predictions."
     }
