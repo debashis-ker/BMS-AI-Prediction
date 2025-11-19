@@ -1,0 +1,108 @@
+{
+  "equipment_id": "Ahu1",
+  "target_column": "FbVFD",
+  "selected_features": [
+    "CMDSpdVFD",
+    "PIDVFD",
+    "CmdCHW",
+    "PIDTR",
+    "hour",
+    "SpTROcc",
+    "SpTREff",
+    "StaFlw",
+    "HuSu",
+    "StaVFDSf",
+    "CmdVFD",
+    "TsOn",
+    "TempSp1",
+    "TrAvg",
+    "SpMinVFD",
+    "HuR",
+    "TSu",
+    "week_number",
+    "TempSp2",
+    "TRe"
+  ],
+  "feature_scores": {
+    "CMDSpdVFD": {
+      "correlation": 0.9991488042728387,
+      "mutual_info": 2.0446958481351327
+    },
+    "PIDVFD": {
+      "correlation": 0.9974101825155537,
+      "mutual_info": 1.8483912274596337
+    },
+    "CmdCHW": {
+      "correlation": 0.5547290699414504,
+      "mutual_info": 0.9411395457184271
+    },
+    "PIDTR": {
+      "correlation": 0.19272118332979113,
+      "mutual_info": 0.8437543113846364
+    },
+    "hour": {
+      "correlation": 0.318415922482358,
+      "mutual_info": 0.7432935067603954
+    },
+    "SpTROcc": {
+      "correlation": -0.568347512401637,
+      "mutual_info": 0.5552248844485361
+    },
+    "SpTREff": {
+      "correlation": -0.5674310142140432,
+      "mutual_info": 0.5435774123451789
+    },
+    "StaFlw": {
+      "correlation": -0.8877928480893751,
+      "mutual_info": 0.5011066801581634
+    },
+    "HuSu": {
+      "correlation": 0.0924689406053317,
+      "mutual_info": 0.498245733187459
+    },
+    "StaVFDSf": {
+      "correlation": -0.8877928480893751,
+      "mutual_info": 0.4845149568271976
+    },
+    "CmdVFD": {
+      "correlation": -0.8877928480893751,
+      "mutual_info": 0.48447816439658764
+    },
+    "TsOn": {
+      "correlation": 0.672608111865862,
+      "mutual_info": 0.48383637828383397
+    },
+    "TempSp1": {
+      "correlation": -0.608540107157845,
+      "mutual_info": 0.42934703526323936
+    },
+    "TrAvg": {
+      "correlation": -0.49804894019722756,
+      "mutual_info": 0.3384700277503647
+    },
+    "SpMinVFD": {
+      "correlation": 0.4352710377456228,
+      "mutual_info": 0.4283274412454259
+    },
+    "HuR": {
+      "correlation": -0.39058867509982065,
+      "mutual_info": 0.3733191283713282
+    },
+    "TSu": {
+      "correlation": -0.387593404164372,
+      "mutual_info": 0.4534994097149374
+    },
+    "week_number": {
+      "correlation": -0.34516949306276157,
+      "mutual_info": 0.22444763434145987
+    },
+    "TempSp2": {
+      "correlation": -0.28699557832572886,
+      "mutual_info": 0.28534122849038734
+    },
+    "TRe": {
+      "correlation": 0.11688569037391,
+      "mutual_info": 0.26755268182367864
+    }
+  }
+}

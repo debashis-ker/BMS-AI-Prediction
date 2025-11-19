@@ -40,7 +40,6 @@ FEATURE_COLUMNS = [
 SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 TARGET_VARIABLE = 'FbFAD'
 
-# ==================== DATA TRANSFORMATION ====================
 @dataclass
 class DataTransformationConfig:
     """Configuration for data transformation artifacts."""
@@ -773,15 +772,12 @@ class DamperPrescriptivePipeline:
         """Hybrid search: coarse grid + random refinement."""
         feature_names = list(search_space.keys())
         
-        # Phase 1: Coarse grid search
         log.info("Hybrid Phase 1: Coarse grid search")
         coarse_space = {}
         for name, rng in search_space.items():
             if isinstance(rng, list) and len(rng) == 2:
-                # Create 5 evenly spaced points
                 coarse_space[name] = list(np.linspace(rng[0], rng[1], 5))
             else:
-                # Use all discrete values
                 coarse_space[name] = rng
         
         grid_result = self._grid_search_optimization(current_conditions, coarse_space, start_time)
@@ -789,7 +785,6 @@ class DamperPrescriptivePipeline:
         min_fbfad = grid_result['min_fbfad']
         tested = grid_result['total_combinations_tested']
         
-        # Phase 2: Random refinement around best point
         log.info("Hybrid Phase 2: Random refinement")
         refinement_iters = n_iterations - tested
         
@@ -801,7 +796,6 @@ class DamperPrescriptivePipeline:
                 best_val = best_setpoints[feature_name]
                 
                 if isinstance(feature_range, list) and len(feature_range) == 2:
-                    # Explore within 20% of range around best value
                     range_width = feature_range[1] - feature_range[0]
                     explore_width = 0.2 * range_width
                     
@@ -810,12 +804,10 @@ class DamperPrescriptivePipeline:
                         min(feature_range[1], best_val + explore_width)
                     )
                 else:
-                    # Random choice from discrete values
                     test_val = np.random.choice(feature_range)
                 
                 test_conditions[feature_name] = test_val
             
-            # Predict
             predicted_fbfad = self._predict_fbfad(test_conditions)
             
             if predicted_fbfad < min_fbfad:
@@ -836,7 +828,6 @@ class DamperPrescriptivePipeline:
         }
 
 
-# ==================== MAIN TRAINING FUNCTION ====================
 def train(data_path: str, equipment_id: str = "Ahu1", test_size: float = 0.2,
           search_method: str = 'random', cv_folds: int = 5, n_iter: int = 20) -> Dict[str, Any]:
     """
@@ -929,18 +920,17 @@ def optimize(current_conditions: Dict[str, Any],
         if not search_space:
             if optimization_method == "grid":
                 search_space = {
-                    'SpMinVFD': list(np.arange(20.0, 60.0, 5.0)),
-                    'SpTREff': list(np.arange(18.0, 26.0, 1.0)),
-                    'SpTROcc': list(np.arange(20.0, 27.0, 1.0))
+                    'SpMinVFD': list(np.arange(40.0, 80.0, 5.0)),
+                    'SpTREff': list(np.arange(20.0, 26.0, 1.0)),
+                    'SpTROcc': list(np.arange(22.0, 27.0, 1.0))
                 }
             else:
                 search_space = {
-                    'SpMinVFD': [20.0, 60.0],
-                    'SpTREff': [18.0, 26.0],
-                    'SpTROcc': [20.0, 27.0]
+                    'SpMinVFD': [40.0, 80.0],
+                    'SpTREff': [20.0, 26.0],
+                    'SpTROcc': [22.0, 27.0]
                 }
         
-        # Load pipeline and optimize
         pipeline = DamperPrescriptivePipeline()
         pipeline.load_artifacts()
         
@@ -964,15 +954,8 @@ def optimize(current_conditions: Dict[str, Any],
         raise CustomException(e, sys)
 
 
-# ==================== EXAMPLE USAGE ====================
 if __name__ == "__main__":
-    # Example: Training
-    # train_result = train(
-    #     data_path="C:\\Users\\debas\\OneDrive\\Desktop\\ahu1_model_data.csv"
-    # )
-    # print(train_result)
-    
-    # Example: Optimization
+
     example_conditions = {
         'CMDSpdVFD': 50.0,
         'CmdCHW': 30.0,

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
+import json
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
@@ -601,8 +603,8 @@ class DamperOptimizeRequest(BaseModel):
 class DamperOptimizeResponse(BaseModel):
     best_setpoints: Dict[str, float]
     min_fbfad: float
-    total_combinations_tested: int
-    optimization_method: str
+    # total_combinations_tested: int
+    # optimization_method: str
     optimization_time_seconds: float
 
 
@@ -713,39 +715,42 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
-    equipment_id: str = Field(..., description="Equipment ID (must match training)")
-    target_variable: str = Field(..., description="Target variable to minimize (must match training)")
+    equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
+    target_variable: str = Field(..., description="Target variable to optimize (must match training)")
     search_space: Optional[Dict[str, List[float]]] = Field(None, description="Setpoint ranges to search")
-    optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid', 'random', or 'hybrid'")
-    n_iterations: Optional[int] = Field(1000, description="Number of iterations for random/hybrid search")
+    optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid' or 'random'")
+    n_iterations: Optional[int] = Field(1000, description="Number of iterations for random search (ignored for grid)")
+    direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
 
 
 class GenericOptimizeResponse(BaseModel):
     best_setpoints: Dict[str, float]
-    min_target_value: float
+    best_target_value: float
     target_variable: str
-    total_combinations_tested: int
-    optimization_method: str
+    # optimization_direction: str
+    # total_combinations_tested: int
+    # optimization_method: str
     optimization_time_seconds: float
 
 
 @router.post('/generic_optimize', response_model=GenericOptimizeResponse)
 def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
     """
-    Optimize AHU setpoints to minimize any specified target variable.
+    Optimize AHU setpoints to minimize or maximize any specified target variable.
     
     Args:
         current_conditions: Current system state with all required features
-        target_variable: Target variable to minimize
+        target_variable: Target variable to optimize
         search_space: Optional setpoint ranges (defaults provided if not specified)
-        optimization_method: 'grid', 'random', or 'hybrid'
-        n_iterations: Number of iterations for random/hybrid methods
+        optimization_method: 'grid' or 'random'
+        n_iterations: Number of iterations for random search
+        direction: 'minimize' or 'maximize' the target variable
         
     Returns:
-        Best setpoints and minimum target value
+        Best setpoints and optimized target value
     """
     start = time.time()
-    log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={request_data.target_variable}, method={request_data.optimization_method}")
+    log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={request_data.target_variable}, method={request_data.optimization_method}, direction={request_data.direction}")
     
     try:
         result = optimize_generic(
@@ -754,15 +759,39 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
             target_column=request_data.target_variable,  
             search_space=request_data.search_space,
             optimization_method=request_data.optimization_method or "random",
-            n_iterations=request_data.n_iterations or 1000
+            n_iterations=request_data.n_iterations or 1000,
+            direction=request_data.direction or "minimize"
         )
         
         end = time.time()
         log.info(f"Generic optimization completed in {end - start:.2f} seconds")
-        log.info(f"Best setpoints: {result['best_setpoints']}, Min {request_data.target_variable}: {result['min_target_value']:.4f}")
+        log.info(f"Best setpoints: {result['best_setpoints']}, Best {request_data.target_variable}: {result['best_target_value']:.4f}")
         
         return GenericOptimizeResponse(**result)
         
     except Exception as e:
         log.error(f"Generic optimization failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/optimization_results", response_class=FileResponse)
+async def get_optimization_results():
+    """
+    Returns the optimization results JSON file.
+    
+    Returns:
+        JSON file containing optimization results with timestamps, actual values,
+        predicted values, and setpoint comparisons.
+    """
+    file_path = Path.cwd() / "test_optimization_results.json"
+    
+    if not file_path.exists():
+        log.error(f"Optimization results file not found: {file_path}")
+        raise HTTPException(status_code=404, detail="Optimization results file not found")
+    
+    log.info(f"Serving optimization results from {file_path}")
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/json",
+        filename="test_optimization_results.json"
+    )

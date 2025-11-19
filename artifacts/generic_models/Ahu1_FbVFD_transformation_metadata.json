@@ -1,0 +1,51 @@
+{
+  "numeric_cols_at_training": [
+    "CMDSpdVFD",
+    "PIDVFD",
+    "CmdCHW",
+    "PIDTR",
+    "SpTROcc",
+    "SpTREff",
+    "HuSu",
+    "TsOn",
+    "TempSp1",
+    "TrAvg",
+    "SpMinVFD",
+    "HuR",
+    "TSu",
+    "TempSp2",
+    "TRe"
+  ],
+  "categorical_cols_at_training": [
+    "StaFlw",
+    "StaVFDSf",
+    "CmdVFD"
+  ],
+  "selected_features": [
+    "CMDSpdVFD",
+    "PIDVFD",
+    "CmdCHW",
+    "PIDTR",
+    "hour",
+    "SpTROcc",
+    "SpTREff",
+    "StaFlw",
+    "HuSu",
+    "StaVFDSf",
+    "CmdVFD",
+    "TsOn",
+    "TempSp1",
+    "TrAvg",
+    "SpMinVFD",
+    "HuR",
+    "TSu",
+    "week_number",
+    "TempSp2",
+    "TRe"
+  ],
+  "label_encoder_columns": [
+    "StaFlw",
+    "StaVFDSf",
+    "CmdVFD"
+  ]
+}

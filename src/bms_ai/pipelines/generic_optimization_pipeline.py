@@ -24,24 +24,22 @@ import itertools
 import time
 from pathlib import Path
 
-# Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 from logger_config import setup_logger
 from exception import CustomException
 
 log = setup_logger(__name__)
 
-# Fixed setpoints for all optimizations
 SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 
 
-# ==================== FEATURE SELECTION ====================
 @dataclass
 class FeatureSelectionConfig:
     """Configuration for feature selection artifacts."""
     correlation_plot_path: str = os.path.join('artifacts', 'generic_models', 'correlation_plot.png')
     mutual_info_plot_path: str = os.path.join('artifacts', 'generic_models', 'mutual_info_plot.png')
     selected_features_path: str = os.path.join('artifacts', 'generic_models', 'selected_features.txt')
+    selected_features_json: str = os.path.join('artifacts', 'generic_models', 'selected_features.json')
 
 
 class GenericFeatureSelector:
@@ -70,26 +68,21 @@ class GenericFeatureSelector:
             log.info(f"Target: {self.target_column}")
             log.info("="*60)
             
-            # Ensure target exists and is numeric
             if self.target_column not in df.columns:
                 raise ValueError(f"Target column '{self.target_column}' not found in data")
             
-            # Check if target is numeric
             try:
                 df[self.target_column] = pd.to_numeric(df[self.target_column], errors='raise')
             except (ValueError, TypeError):
                 raise ValueError(f"Target column '{self.target_column}' must contain numeric values")
             
-            # Separate features and target
             y = df[self.target_column].copy()
             X = df.drop(columns=[self.target_column]).copy()
             
             log.info(f"Initial features: {X.shape[1]}")
             
-            # Transform features for analysis (convert to numeric or label encode)
             X_transformed = self._transform_for_analysis(X)
             
-            # Drop rows with NaN in target or features
             valid_idx = X_transformed.notna().all(axis=1) & y.notna()
             X_transformed = X_transformed[valid_idx]
             y = y[valid_idx]
@@ -99,35 +92,27 @@ class GenericFeatureSelector:
             if X_transformed.empty:
                 raise ValueError("No valid data remaining after transformation")
             
-            # Calculate correlation
             log.info("Calculating correlation with target...")
             df_temp = pd.concat([X_transformed, y], axis=1)
             corr_matrix = df_temp.corr()
             target_corr = corr_matrix[self.target_column].drop(self.target_column)
             
-            # Calculate mutual information
             log.info("Calculating mutual information with target...")
             mi_scores = mutual_info_regression(X_transformed, y, random_state=42)
             mi_series = pd.Series(mi_scores, index=X_transformed.columns)
             
-            # Save plots
             self._plot_feature_importance(target_corr, mi_series)
             
-            # Select top features
-            # Top 10 from mutual information
             top_mi_features = mi_series.nlargest(10).index.tolist()
             
-            # Top 10 from correlation (excluding those already in top MI)
             corr_abs = target_corr.abs()
             top_corr_features = []
             for feat in corr_abs.nlargest(n_features).index:
                 if feat not in top_mi_features and len(top_corr_features) < 10:
                     top_corr_features.append(feat)
             
-            # Combine features
             self.selected_features = top_mi_features + top_corr_features
             
-            # Add setpoints if not present
             for setpoint in SETPOINT_NAMES:
                 if setpoint in X.columns and setpoint not in self.selected_features:
                     self.selected_features.append(setpoint)
@@ -138,7 +123,6 @@ class GenericFeatureSelector:
             log.info(f"Top 10 Correlation features: {top_corr_features}")
             log.info(f"Setpoints included: {[s for s in SETPOINT_NAMES if s in self.selected_features]}")
             
-            # Save selected features
             self._save_selected_features(target_corr, mi_series)
             
             return self.selected_features
@@ -152,10 +136,8 @@ class GenericFeatureSelector:
         df_transformed = df.copy()
         
         for col in df_transformed.columns:
-            # Try to convert to numeric
             df_transformed[col] = pd.to_numeric(df_transformed[col], errors='ignore')
         
-        # Label encode categorical columns
         for col in df_transformed.columns:
             if df_transformed[col].dtype == 'object':
                 le = LabelEncoder()
@@ -169,17 +151,14 @@ class GenericFeatureSelector:
         try:
             os.makedirs(os.path.dirname(self.config.correlation_plot_path), exist_ok=True)
             
-            # Create combined plot
             fig, axes = plt.subplots(1, 2, figsize=(16, 8))
             
-            # Plot A: Correlation with Target
             sorted_corr = correlation.abs().nlargest(20).sort_values(ascending=True)
             sorted_corr.plot(kind='barh', color='skyblue', ax=axes[0])
             axes[0].set_title(f'Top 20 Features by Correlation with {self.target_column}')
             axes[0].set_xlabel('Absolute Correlation Coefficient')
             axes[0].grid(axis='x', linestyle='--', alpha=0.7)
             
-            # Plot B: Mutual Information Scores
             sorted_mi = mutual_info.nlargest(20).sort_values(ascending=True)
             sorted_mi.plot(kind='barh', color='teal', ax=axes[1])
             axes[1].set_title(f'Top 20 Features by Mutual Information with {self.target_column}')
@@ -218,16 +197,39 @@ class GenericFeatureSelector:
             
             log.info(f"Selected features info saved to {self.config.selected_features_path}")
             
+            import json
+            metadata = {
+                'equipment_id': self.equipment_id,
+                'target_column': self.target_column,
+                'selected_features': self.selected_features,
+                'feature_scores': {
+                    feat: {
+                        'correlation': float(correlation.get(feat, 0.0)),
+                        'mutual_info': float(mutual_info.get(feat, 0.0))
+                    }
+                    for feat in self.selected_features
+                }
+            }
+            
+            json_path = os.path.join(
+                'artifacts', 'generic_models', 
+                f"{self.equipment_id}_{self.target_column}_features.json"
+            )
+            with open(json_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
+            log.info(f"Selected features metadata saved to {json_path}")
+            
         except Exception as e:
             log.error(f"Error saving selected features: {e}")
 
 
-# ==================== DATA TRANSFORMATION ====================
 @dataclass
 class GenericDataTransformationConfig:
     """Configuration for data transformation artifacts."""
     scaler_path: str = os.path.join('artifacts', 'generic_models', 'scaler.pkl')
     label_encoders_path: str = os.path.join('artifacts', 'generic_models', 'label_encoders.pkl')
+    transformation_metadata_path: str = os.path.join('artifacts', 'generic_models', 'transformation_metadata.json')
 
 
 class GenericDataTransformation:
@@ -236,19 +238,22 @@ class GenericDataTransformation:
     def __init__(self, equipment_id: str, target_column: str):
         self.equipment_id = equipment_id
         self.target_column = target_column
-        # Update config with dynamic paths based on equipment_id and target_column
         if equipment_id and target_column:
             scaler_filename = f"{equipment_id}_{target_column}_scaler.pkl"
             encoders_filename = f"{equipment_id}_{target_column}_label_encoders.pkl"
+            metadata_filename = f"{equipment_id}_{target_column}_transformation_metadata.json"
             self.config = GenericDataTransformationConfig(
                 scaler_path=os.path.join('artifacts', 'generic_models', scaler_filename),
-                label_encoders_path=os.path.join('artifacts', 'generic_models', encoders_filename)
+                label_encoders_path=os.path.join('artifacts', 'generic_models', encoders_filename),
+                transformation_metadata_path=os.path.join('artifacts', 'generic_models', metadata_filename)
             )
         else:
             self.config = GenericDataTransformationConfig()
         self.scaler = MinMaxScaler()
         self.label_encoders = {}
         self.selected_features = []
+        self.numeric_cols_at_training = []
+        self.categorical_cols_at_training = []
         
     def transform_dataset(self, data_path: str) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
@@ -266,17 +271,14 @@ class GenericDataTransformation:
             log.info(f"Equipment: {self.equipment_id}, Target: {self.target_column}")
             log.info("="*60)
             
-            # Step 1: Load data
             log.info(f"Loading raw BMS data from {data_path}")
             df = pd.read_csv(data_path)
             log.info(f"Raw data shape: {df.shape}")
             
-            # Step 2: Filter for AHU system type
             if 'system_type' in df.columns:
                 df = df[df['system_type'] == 'AHU'].copy()
                 log.info(f"Filtered for AHU system type. Shape: {df.shape}")
             
-            # Step 3: Filter for specific equipment
             if 'equipment_id' in df.columns:
                 df = df[df['equipment_id'] == self.equipment_id].copy()
                 log.info(f"Filtered for equipment '{self.equipment_id}'. Shape: {df.shape}")
@@ -286,11 +288,9 @@ class GenericDataTransformation:
             if df.empty:
                 raise ValueError(f"No data found for system_type='AHU' and equipment_id='{self.equipment_id}'")
             
-            # Step 4: Process timestamp
             if 'data_received_on' in df.columns:
                 df['data_received_on'] = pd.to_datetime(df['data_received_on'], errors='coerce')
                 
-                # Handle timezone
                 if df['data_received_on'].dt.tz is not None:
                     df['data_received_on_naive'] = df['data_received_on'].dt.tz_localize(None)
                 else:
@@ -300,8 +300,7 @@ class GenericDataTransformation:
                 log.info("Processed timestamps")
             else:
                 raise ValueError("'data_received_on' column not found in data")
-            
-            # Step 5: Pivot the data
+        
             log.info("Pivoting data from long to wide format...")
             pivoted_df = df.pivot_table(
                 index='data_received_on_naive',
@@ -310,7 +309,6 @@ class GenericDataTransformation:
                 aggfunc='first'
             )
             
-            # Step 6: Extract temporal features from timestamp
             log.info("Creating temporal features from timestamp...")
             pivoted_df['month'] = pivoted_df.index.month
             pivoted_df['hour'] = pivoted_df.index.hour
@@ -320,7 +318,6 @@ class GenericDataTransformation:
             pivoted_df.reset_index(drop=True, inplace=True)
             log.info(f"Pivoted data shape: {pivoted_df.shape}")
             
-            # Step 7: Remove columns with only single value
             single_value_cols = []
             for col in pivoted_df.columns:
                 if pivoted_df[col].nunique() == 1:
@@ -330,32 +327,26 @@ class GenericDataTransformation:
                 pivoted_df.drop(columns=single_value_cols, inplace=True)
                 log.info(f"Removed {len(single_value_cols)} columns with single value: {single_value_cols}")
             
-            # Step 8: Remove columns with all NaN or blank
             all_nan_cols = pivoted_df.columns[pivoted_df.isna().all()].tolist()
             if all_nan_cols:
                 pivoted_df.drop(columns=all_nan_cols, inplace=True)
                 log.info(f"Removed {len(all_nan_cols)} columns with all NaN: {all_nan_cols}")
             
-            # Step 9: Convert columns to numeric where possible
             for col in pivoted_df.columns:
                 pivoted_df[col] = pd.to_numeric(pivoted_df[col], errors='ignore')
             log.info("Converted columns to numeric where possible")
             
-            # Step 10: Drop rows with any NaN
             pivoted_df.dropna(how='any', inplace=True)
             log.info(f"After dropping NaN rows: {pivoted_df.shape}")
             
             if pivoted_df.empty:
                 raise ValueError("No valid data remaining after preprocessing")
             
-            # Step 11: Feature selection using correlation and mutual information
             log.info("Starting automatic feature selection...")
             feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
             selected_features = feature_selector.select_features(pivoted_df, n_features=20)
             self.selected_features = selected_features
             
-            # Step 12: Create final X and y
-            # Ensure all selected features exist in the data
             available_features = [f for f in selected_features if f in pivoted_df.columns]
             missing_features = [f for f in selected_features if f not in pivoted_df.columns]
             
@@ -391,7 +382,6 @@ class GenericDataTransformation:
             numeric_cols = df_processed.select_dtypes(include=['float64', 'int64']).columns.tolist()
             categorical_cols = df_processed.select_dtypes(include=['object']).columns.tolist()
             
-            log.info(f"Identified {len(numeric_cols)} numeric and {len(categorical_cols)} categorical columns")
             
             if categorical_cols:
                 for col in categorical_cols:
@@ -399,7 +389,6 @@ class GenericDataTransformation:
                         le = LabelEncoder()
                         df_processed[col] = le.fit_transform(df_processed[col].astype(str))
                         self.label_encoders[col] = le
-                        log.info(f"Label encoded column: {col}")
                     else:
                         if col in self.label_encoders:
                             le = self.label_encoders[col]
@@ -409,11 +398,13 @@ class GenericDataTransformation:
             
             if numeric_cols:
                 if fit:
+                    self.numeric_cols_at_training = numeric_cols.copy()
+                    self.categorical_cols_at_training = categorical_cols.copy()
                     df_processed[numeric_cols] = self.scaler.fit_transform(df_processed[numeric_cols])
-                    log.info(f"Fitted and scaled {len(numeric_cols)} numeric columns")
+                  
                 else:
                     df_processed[numeric_cols] = self.scaler.transform(df_processed[numeric_cols])
-                    log.info(f"Scaled {len(numeric_cols)} numeric columns")
+                   
             
             return df_processed
             
@@ -422,18 +413,32 @@ class GenericDataTransformation:
             raise CustomException(e, sys)
     
     def save_transformers(self):
-        """Save scaler and label encoders to disk."""
+        """Save scaler, label encoders, and transformation metadata to disk."""
         try:
             os.makedirs(os.path.dirname(self.config.scaler_path), exist_ok=True)
+            
             joblib.dump(self.scaler, self.config.scaler_path)
             joblib.dump(self.label_encoders, self.config.label_encoders_path)
-            log.info(f"Saved transformers to {os.path.dirname(self.config.scaler_path)}")
+            
+            import json
+            metadata = {
+                'numeric_cols_at_training': self.numeric_cols_at_training,
+                'categorical_cols_at_training': self.categorical_cols_at_training,
+                'selected_features': self.selected_features,
+                'label_encoder_columns': list(self.label_encoders.keys())
+            }
+            
+            with open(self.config.transformation_metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
+            log.info(f"Saved transformers and metadata to {os.path.dirname(self.config.scaler_path)}")
+            log.info(f"Transformation metadata: {metadata}")
         except Exception as e:
             log.error(f"Error saving transformers: {e}")
             raise CustomException(e, sys)
     
     def load_transformers(self):
-        """Load scaler and label encoders from disk."""
+        """Load scaler, label encoders, and transformation metadata from disk."""
         try:
             if os.path.exists(self.config.scaler_path):
                 self.scaler = joblib.load(self.config.scaler_path)
@@ -442,9 +447,89 @@ class GenericDataTransformation:
             if os.path.exists(self.config.label_encoders_path):
                 self.label_encoders = joblib.load(self.config.label_encoders_path)
                 log.info(f"Loaded label encoders from {self.config.label_encoders_path}")
+            
+            if os.path.exists(self.config.transformation_metadata_path):
+                import json
+                with open(self.config.transformation_metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                
+                self.numeric_cols_at_training = metadata.get('numeric_cols_at_training', [])
+                self.categorical_cols_at_training = metadata.get('categorical_cols_at_training', [])
+                self.selected_features = metadata.get('selected_features', [])
+                
+                log.info(f"Loaded transformation metadata from {self.config.transformation_metadata_path}")
+                log.info(f"Numeric columns: {len(self.numeric_cols_at_training)}, Categorical: {len(self.categorical_cols_at_training)}")
+            else:
+                log.warning(f"Transformation metadata not found at {self.config.transformation_metadata_path}")
                 
         except Exception as e:
             log.error(f"Error loading transformers: {e}")
+            raise CustomException(e, sys)
+    
+    def transform_input(self, input_df: pd.DataFrame, selected_features: List[str]) -> pd.DataFrame:
+        """
+        Transform input data for prediction using saved transformation metadata.
+        Replicates the exact transformation pipeline used during training.
+        
+        Args:
+            input_df: Raw input DataFrame with feature values
+            selected_features: List of features expected by the model
+            
+        Returns:
+            Transformed DataFrame ready for prediction
+        """
+        try:
+            df_processed = input_df.copy()
+            
+            temporal_features = ['month', 'hour', 'week_number', 'is_weekend']
+            for temp_feat in temporal_features:
+                if temp_feat in selected_features and temp_feat not in df_processed.columns:
+                    from datetime import datetime
+                    now = datetime.now()
+                    if temp_feat == 'month':
+                        df_processed[temp_feat] = now.month
+                    elif temp_feat == 'hour':
+                        df_processed[temp_feat] = now.hour
+                    elif temp_feat == 'week_number':
+                        df_processed[temp_feat] = now.isocalendar()[1]
+                    elif temp_feat == 'is_weekend':
+                        df_processed[temp_feat] = 1 if now.weekday() >= 5 else 0
+            for col in df_processed.columns:
+                df_processed[col] = pd.to_numeric(df_processed[col], errors='ignore')
+            
+            for col in self.categorical_cols_at_training:
+                if col in df_processed.columns:
+                    if col in self.label_encoders:
+                        le = self.label_encoders[col]
+                        df_processed[col] = df_processed[col].astype(str).apply(
+                            lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                        )
+                    else:
+                        log.warning(f"Column '{col}' was categorical during training but encoder not found")
+            
+            if self.numeric_cols_at_training:
+                missing_numeric = [col for col in self.numeric_cols_at_training if col not in df_processed.columns]
+                if missing_numeric:
+                    log.warning(f"Missing numeric columns from training: {missing_numeric}")
+                    for col in missing_numeric:
+                        df_processed[col] = 0
+                
+                df_for_scaling = df_processed[self.numeric_cols_at_training]
+                
+                df_scaled = pd.DataFrame(
+                    self.scaler.transform(df_for_scaling),
+                    columns=self.numeric_cols_at_training,
+                    index=df_for_scaling.index
+                )
+                
+                df_processed[self.numeric_cols_at_training] = df_scaled
+            
+            return df_processed
+            
+        except Exception as e:
+            log.error(f"Error transforming input: {e}")
+            log.error(f"Numeric cols from training: {self.numeric_cols_at_training}")
+            log.error(f"Categorical cols from training: {self.categorical_cols_at_training}")
             raise CustomException(e, sys)
 
 
@@ -461,7 +546,6 @@ class GenericModelTrainer:
     def __init__(self, equipment_id: str = None, target_column: str = None):
         self.equipment_id = equipment_id
         self.target_column = target_column
-        # Update config with dynamic model path based on equipment_id and target variable
         if equipment_id and target_column:
             model_filename = f"{equipment_id}_{target_column}_model.pkl"
             metrics_filename = f"{equipment_id}_{target_column}_metrics.txt"
@@ -487,7 +571,6 @@ class GenericModelTrainer:
             log.info(f"Search Method: {search_method.upper()}")
             log.info("="*60)
             
-            # Simplified model selection for faster training
             models_params = {
                 'RandomForest': (
                     RandomForestRegressor(random_state=42, n_jobs=-1),
@@ -538,7 +621,6 @@ class GenericModelTrainer:
                     search.fit(X_train, y_train)
                     model = search.best_estimator_
                     
-                    # Evaluate
                     y_test_pred = model.predict(X_test)
                     test_r2 = r2_score(y_test, y_test_pred)
                     test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
@@ -606,7 +688,6 @@ class GenericModelTrainer:
             raise CustomException(e, sys)
 
 
-# ==================== MAIN TRAINING FUNCTION ====================
 def train_generic(data_path: str, equipment_id: str, target_column: str,
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20) -> Dict[str, Any]:
@@ -631,20 +712,16 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         log.info(f"Equipment: {equipment_id}, Target: {target_column}")
         log.info("="*60)
         
-        # Step 1: Data Transformation with auto feature selection
         transformer = GenericDataTransformation(equipment_id, target_column)
         X, y, selected_features = transformer.transform_dataset(data_path)
         
-        # Split data
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42
         )
         log.info(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
         
-        # Save transformers
         transformer.save_transformers()
         
-        # Step 2: Model Training
         trainer = GenericModelTrainer(equipment_id=equipment_id, target_column=target_column)
         metrics = trainer.train_model(
             X_train, y_train, X_test, y_test,
@@ -653,14 +730,12 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
             n_iter=n_iter
         )
         
-        # Save model
         trainer.save_model()
         
         log.info("="*60)
         log.info("TRAINING COMPLETED SUCCESSFULLY")
         log.info("="*60)
         
-        # Plot paths from FeatureSelectionConfig
         feature_config = FeatureSelectionConfig()
         
         return {
@@ -679,23 +754,24 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         raise CustomException(e, sys)
 
 
-# ==================== OPTIMIZATION FUNCTION ====================
 def optimize_generic(current_conditions: Dict[str, Any],
                     equipment_id: str,
                     target_column: str,
                     search_space: Optional[Dict[str, List[float]]] = None,
                     optimization_method: str = "random",
-                    n_iterations: int = 500) -> Dict[str, Any]:
+                    n_iterations: int = 500,
+                    direction: str = "minimize") -> Dict[str, Any]:
     """
     Generic optimization function using fixed setpoints.
     
     Args:
         current_conditions: Current system state with all features
         equipment_id: Equipment ID (must match training)
-        target_column: Target variable to minimize (must match training)
+        target_column: Target variable to optimize (must match training)
         search_space: Optional setpoint ranges (defaults used if not provided)
-        optimization_method: Optimization method (currently only 'random' supported)
-        n_iterations: Number of random search iterations
+        optimization_method: Optimization method ('grid' or 'random')
+        n_iterations: Number of iterations for random search (ignored for grid search)
+        direction: 'minimize' or 'maximize' the target variable
         
     Returns:
         Optimization results with best setpoints
@@ -707,14 +783,31 @@ def optimize_generic(current_conditions: Dict[str, Any],
         log.info(f"Setpoints to optimize: {SETPOINT_NAMES}")
         log.info("="*60)
         
-        # Load model and transformers with equipment-specific and target-specific paths
+        import json
+        features_json_path = os.path.join(
+            'artifacts', 'generic_models',
+            f"{equipment_id}_{target_column}_features.json"
+        )
+        
+        if not os.path.exists(features_json_path):
+            raise FileNotFoundError(
+                f"Selected features metadata not found at {features_json_path}. "
+                f"Please train the model first for equipment '{equipment_id}' and target '{target_column}'."
+            )
+        
+        with open(features_json_path, 'r') as f:
+            features_metadata = json.load(f)
+        
+        selected_features = features_metadata['selected_features']
+        log.info(f"Loaded {len(selected_features)} selected features from training")
+        log.info(f"Features: {selected_features}")
+        
         trainer = GenericModelTrainer(equipment_id=equipment_id, target_column=target_column)
         trainer.load_model()
         
         transformer = GenericDataTransformation(equipment_id=equipment_id, target_column=target_column)
         transformer.load_transformers()
         
-        # Default search space if not provided
         if not search_space:
             search_space = {
                 'SpMinVFD': list(np.linspace(0, 100, 21)),
@@ -722,44 +815,101 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 'SpTROcc': list(np.linspace(20, 28, 17))
             }
         
-        # Random search optimization
+        log.info(f"Optimization method: {optimization_method}")
+        log.info(f"Optimization direction: {direction}")
+        log.info(f"Search space: {search_space}")
+        
+        if optimization_method.lower() == 'grid':
+            import itertools
+            setpoint_combinations = list(itertools.product(
+                search_space.get('SpMinVFD', [80]),
+                search_space.get('SpTREff', [21]),
+                search_space.get('SpTROcc', [21])
+            ))
+            log.info(f"Grid search: Testing {len(setpoint_combinations)} combinations")
+        else:
+            setpoint_combinations = None
+        
         start_time = time.time()
         best_setpoints = None
-        min_target = float('inf')
         
-        for i in range(n_iterations):
-            # Generate random setpoint values
-            test_conditions = current_conditions.copy()
-            for setpoint in SETPOINT_NAMES:
-                if setpoint in search_space:
-                    test_conditions[setpoint] = np.random.choice(search_space[setpoint])
+        if direction.lower() == 'minimize':
+            best_target = float('inf')
+            is_better = lambda new, best: new < best
+        else: 
+            best_target = float('-inf')
+            is_better = lambda new, best: new > best
+        
+        if optimization_method.lower() == 'grid':
+            for i, (sp_min, sp_eff, sp_occ) in enumerate(setpoint_combinations):
+                test_conditions = current_conditions.copy()
+                test_conditions['SpMinVFD'] = sp_min
+                test_conditions['SpTREff'] = sp_eff
+                test_conditions['SpTROcc'] = sp_occ
+                
+                input_df = pd.DataFrame([test_conditions])
+                
+                temporal_features = ['month', 'hour', 'week_number', 'is_weekend']
+                for feat in selected_features:
+                    if feat not in input_df.columns and feat not in temporal_features:
+                        input_df[feat] = 0
+                
+                input_df = transformer.transform_input(input_df, selected_features)
+                input_df = input_df[selected_features]
+                predicted_value = trainer.model.predict(input_df)[0]
+                
+                if is_better(predicted_value, best_target):
+                    best_target = predicted_value
+                    best_setpoints = {
+                        'SpMinVFD': sp_min,
+                        'SpTREff': sp_eff,
+                        'SpTROcc': sp_occ
+                    }
+                
+                if (i + 1) % 100 == 0 or (i + 1) == len(setpoint_combinations):
+                    log.info(f"Progress: {i + 1}/{len(setpoint_combinations)} combinations tested")
             
-            # Create input DataFrame
-            input_df = pd.DataFrame([test_conditions])
-            
-            # Predict
-            predicted_value = trainer.model.predict(input_df)[0]
-            
-            if predicted_value < min_target:
-                min_target = predicted_value
-                best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
-            
-            if (i + 1) % 100 == 0:
-                log.info(f"Progress: {i + 1}/{n_iterations} iterations")
+            total_tested = len(setpoint_combinations)
+        else:
+            total_tested = n_iterations
+            for i in range(n_iterations):
+                test_conditions = current_conditions.copy()
+                for setpoint in SETPOINT_NAMES:
+                    if setpoint in search_space:
+                        test_conditions[setpoint] = np.random.choice(search_space[setpoint])
+                
+                input_df = pd.DataFrame([test_conditions])
+                
+                temporal_features = ['month', 'hour', 'week_number', 'is_weekend']
+                for feat in selected_features:
+                    if feat not in input_df.columns and feat not in temporal_features:
+                        input_df[feat] = 0
+                input_df = transformer.transform_input(input_df, selected_features)
+                input_df = input_df[selected_features]
+                predicted_value = trainer.model.predict(input_df)[0]
+                
+                if is_better(predicted_value, best_target):
+                    best_target = predicted_value
+                    best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                
+                if (i + 1) % 100 == 0:
+                    log.info(f"Progress: {i + 1}/{n_iterations} iterations")
         
         elapsed_time = time.time() - start_time
         
         log.info("="*60)
         log.info("OPTIMIZATION COMPLETED")
         log.info(f"Best Setpoints: {best_setpoints}")
-        log.info(f"Minimum {target_column}: {min_target:.4f}")
+        log.info(f"Best {target_column} value ({direction}): {best_target:.4f}")
         log.info("="*60)
         
         return {
             'best_setpoints': best_setpoints,
-            'min_target_value': min_target,
+            'best_target_value': best_target,
             'target_variable': target_column,
-            'total_combinations_tested': n_iterations,
+            'optimization_direction': direction,
+            'selected_features_used': selected_features,
+            'total_combinations_tested': total_tested,
             'optimization_method': optimization_method,
             'optimization_time_seconds': elapsed_time
         }
