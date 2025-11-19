@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,chatbot_ollama,production_endpoints
+from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,chatbot_ollama,production_endpoints,fetch_datapoints_using_haystack,lstm_predictions
 import os
 from dotenv import load_dotenv
 import uvicorn
@@ -39,8 +39,10 @@ app.include_router(heatlh_check.router)
 app.include_router(aggregation.router)
 app.include_router(production_endpoints.router)
 app.include_router(utils.router)
-app.include_router(chatbot.router)  # OpenAI-powered chatbot
-app.include_router(chatbot_ollama.router)  # Ollama-powered chatbot (Local & Free!)
+app.include_router(chatbot.router)  
+app.include_router(chatbot_ollama.router) 
+app.include_router(fetch_datapoints_using_haystack.router)
+app.include_router(lstm_predictions.router)
 
 
 @app.get("/")

@@ -1,0 +1,88 @@
+Selected Features for Ahu2
+Target: FbVFD
+============================================================
+
+Total Features Selected: 20
+
+Feature Scores:
+------------------------------------------------------------
+CMDSpdVFD:
+  Correlation: 0.9996
+  Mutual Info: 2.3890
+
+PIDVFD:
+  Correlation: 0.9945
+  Mutual Info: 2.1249
+
+CmdCHW:
+  Correlation: 0.5415
+  Mutual Info: 1.4660
+
+ChwFb:
+  Correlation: 0.5380
+  Mutual Info: 1.1683
+
+PIDTR:
+  Correlation: 0.4082
+  Mutual Info: 1.1192
+
+hour:
+  Correlation: 0.3859
+  Mutual Info: 0.7929
+
+SpTREff:
+  Correlation: -0.8007
+  Mutual Info: 0.6708
+
+SpTROcc:
+  Correlation: -0.8007
+  Mutual Info: 0.6470
+
+StaVFDSf:
+  Correlation: -0.9033
+  Mutual Info: 0.6060
+
+StaFlw:
+  Correlation: -0.9033
+  Mutual Info: 0.5900
+
+CmdVFD:
+  Correlation: -0.9005
+  Mutual Info: 0.5613
+
+TsOn:
+  Correlation: 0.6048
+  Mutual Info: 0.2039
+
+HuR:
+  Correlation: 0.5207
+  Mutual Info: 0.3122
+
+Almbag:
+  Correlation: -0.4707
+  Mutual Info: 0.2604
+
+TempSp1:
+  Correlation: -0.4670
+  Mutual Info: 0.2868
+
+TrAvg:
+  Correlation: -0.4633
+  Mutual Info: 0.2968
+
+TempSp2:
+  Correlation: -0.4200
+  Mutual Info: 0.2563
+
+TRe:
+  Correlation: -0.4146
+  Mutual Info: 0.4141
+
+TempSu:
+  Correlation: -0.4030
+  Mutual Info: 0.4369
+
+SpMinVFD:
+  Correlation: 0.2940
+  Mutual Info: 0.4512
+
