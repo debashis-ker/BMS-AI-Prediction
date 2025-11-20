@@ -31,21 +31,21 @@ fan_forecast_model = None
 anamoly_model = None
 
 try:
-    damper_forecast_model = joblib.load("artifacts/production_models/AHU1_Damper_health.joblib")
+    damper_forecast_model = joblib.load("artifacts/production_models/ahu1_damper_model.joblib")
     log.info("AHU1 Damper Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Damper forecast model: {e}")
     print(f"Error loading Damper forecast model: {e}")
 
 try:
-    fan_forecast_model = joblib.load("artifacts/production_models/AHU1_Fan_Speed_Health.joblib")
+    fan_forecast_model = joblib.load("artifacts/production_models/ahu1_fan_speed_model.joblib")
     log.info("Ahu1 Fan Speed Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Fan Speed forecast model: {e}")
     print(f"Error loading Fan Speed forecast model: {e}")
 
 try:
-    anamoly_model = joblib.load("artifacts/production_models/Anamoly_model.joblib")
+    anamoly_model = joblib.load("artifacts/production_models/ahu1_anamoly_model.joblib")
     log.info("Anamoly Detection Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Anamoly Detection  model: {e}")
@@ -96,12 +96,12 @@ class AnomalyVizResponse(BaseModel):
     chart_type: str
     data: Dict[str, Any] = Field(..., description="Data structure for the requested visualization.")
 
-def Anomaly_viz_data_analysis(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
+def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
     features = ALL_AVAILABLE_FEATURES 
     
-    BASE_REPORT_DIR = Path(r"src/bms_ai/utils/Stored_Anamoly_JSON")
+    BASE_REPORT_DIR = Path(r"src/bms_ai/utils/ahu1_stored_anamoly")
     
     all_feature_data = {} 
     
@@ -159,54 +159,52 @@ def Anomaly_viz_data_analysis(request_data: AnomalyVizRequest) -> AnomalyVizResp
 
     elif chart_type == 'line':
         
-        df_list = []
+        integrated_data_by_feature = {}
+        
         for feature, data in all_feature_data.items():
             df = data['df'].copy()
-            df.set_index('date', inplace=True)
             
-            df = df.rename(columns={
-                'Anomaly_Flag': f"{feature}_Flag",
-                feature: f"{feature}_Value"
-            })
+            if feature not in df.columns:
+                 log.warning(f"Raw data column '{feature}' missing in DataFrame for report. Skipping.")
+                 continue
+
+            df_report = df[['date', 'Anomaly_Flag', feature]].copy()
             
-            df_list.append(df[[f"{feature}_Value", f"{feature}_Flag"]])
-
-        if not df_list:
-             raise HTTPException(status_code=404, detail="Line chart data missing after loading files.")
-             
-        master_df = pd.concat(df_list, axis=1, join='outer').fillna(0) 
-
-        master_df = master_df.reset_index()
-        
-        master_df.rename(columns={'date': 'data_received_on'}, inplace=True)
-        
-        master_df['data_received_on'] = master_df['data_received_on'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        
-        flag_cols = [col for col in master_df.columns if col.endswith('_Flag')]
-        master_df[flag_cols] = master_df[flag_cols].astype(int)
+            df_report.rename(columns={
+                'date': 'timestamp', 
+                'Anomaly_Flag': 'Anamoly_Flag'
+            }, inplace=True)
+            
+            df_report['timestamp'] = df_report['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f') + '+00:00'
+            
+            df_report['Anamoly_Flag'] = df_report['Anamoly_Flag'].astype(str)
+            df_report[feature] = df_report[feature].astype(str)
+            
+            integrated_data_by_feature[feature] = df_report.to_dict('records')
+            
         
         return AnomalyVizResponse(
             chart_type='line', 
             data={
-                'integrated_time_series_data': master_df.to_dict('records')
+                'historical_data': integrated_data_by_feature
             }
         )
 
     else:
         raise HTTPException(status_code=400, detail=f"Invalid chart_type: {chart_type}. Must be 'pie' or 'line'.")
     
-def Anamoly_data_pipeline(data: Dict[str, Any], date_column: str, target_asset_code: str) -> pd.DataFrame:
+def anamoly_data_pipeline(data: Dict[str, Any], date_column: str, target_asset_code: str) -> pd.DataFrame:
     try:
         records = data.get("data", {}).get("queryResponse", [])
         if not records:
-            raise ValueError("Input JSON is missing the 'data' or 'queryResponse' key, or the record list is empty.")
+            log.error("Input JSON is missing the 'data' or 'queryResponse' key, or the record list is empty.")
             
         df = pd.DataFrame(records)
         if df.empty:
-            raise ValueError("DataFrame is empty after extracting records.")
+            log.error("DataFrame is empty after extracting records.")
 
         if date_column not in df.columns:
-            raise ValueError(f"Date column '{date_column}' not found.")
+            log.error(f"Date column '{date_column}' not found.")
         
         df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
         if df[date_column].dt.tz is not None:
@@ -232,7 +230,7 @@ def Anamoly_data_pipeline(data: Dict[str, Any], date_column: str, target_asset_c
         required = ["data_received_on", 'asset_code', 'datapoint', 'monitoring_data']
         missing = [col for col in required if col not in df.columns]
         if missing:
-             raise ValueError(f"Required columns for aggregation are missing: {', '.join(missing)}")
+             log.error(f"Required columns for aggregation are missing: {', '.join(missing)}")
 
         aggregated_scores = df.groupby(["data_received_on", 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
         result_df = aggregated_scores.unstack(level='datapoint').reset_index()
@@ -243,7 +241,7 @@ def Anamoly_data_pipeline(data: Dict[str, Any], date_column: str, target_asset_c
         log.error(f"Data pipeline failed: {e}")
         raise Exception(f"Data pipeline failed: {e}")
     
-def Anomaly_detection_analysis(request_data: AnamolyPredictionRequest) -> AnamolyPredictionResponse:
+def anomaly_detection(request_data: AnamolyPredictionRequest) -> AnamolyPredictionResponse:
     if anamoly_model is None:
         log.error("Anomaly Detection model is unavailable.")
         raise HTTPException(status_code=503, detail="Anomaly Detection model is currently unavailable.")
@@ -265,7 +263,7 @@ def Anomaly_detection_analysis(request_data: AnamolyPredictionRequest) -> Anamol
         
         date_col_name = "data_received_on" 
         
-        df_wide = Anamoly_data_pipeline(wrapped_data, date_col_name, asset_code)
+        df_wide = anamoly_data_pipeline(wrapped_data, date_col_name, asset_code)
         
         if df_wide.empty:
             return AnamolyPredictionResponse(
@@ -289,7 +287,7 @@ def Anomaly_detection_analysis(request_data: AnamolyPredictionRequest) -> Anamol
     predictions = model_package['model'].predict(X_scaled)
 
     X_df['Anomaly_Flag'] = predictions
-    X_df['Data_received_on'] = X_df["data_received_on"].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+    X_df['timestamp'] = X_df["data_received_on"].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
     X_df.drop(columns=["data_received_on"], inplace=True)
     
     total_anomalies = (X_df['Anomaly_Flag'] == -1).sum()
@@ -323,7 +321,7 @@ def get_resample_rule(months_input: int) -> str:
     
     return f'{resample_rule_days}D'
 
-def Fan_health_analysis(request_data: PredictionRequest):
+def fan_health_analysis(request_data: PredictionRequest):
     """
     This function takes 
         periods : int (months)
@@ -383,7 +381,7 @@ def Fan_health_analysis(request_data: PredictionRequest):
         resampled_predicted_data=resampled_predicted_data
     )
 
-def Damper_health_analysis(request_data: PredictionRequest):
+def damper_health_analysis(request_data: PredictionRequest):
     """
     This function takes 
         periods : int (months)
@@ -446,40 +444,40 @@ def Damper_health_analysis(request_data: PredictionRequest):
 
 
 @router.post('/damper_health_prediction', response_model=PredictionResponse)
-def Damper_health_prediction(
+def damper_health_prediction(
     request_data: PredictionRequest
 ):
     start = time.time()
     log.info(f"input Data: {request_data.dict()}") 
-    result = Damper_health_analysis(request_data)
+    result = damper_health_analysis(request_data)
     end = time.time()
     log.info(f"VOX AHU1 Damper End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
 
-@router.post('/Fan_Speed_health_prediction', response_model=PredictionResponse)
-def Fan_Speed_health_prediction(
+@router.post('/fan_Speed_health_prediction', response_model=PredictionResponse)
+def fan_Speed_health_prediction(
     request_data: PredictionRequest
 ):
     start = time.time()
     log.info(f"input Data: {request_data.dict()}") 
-    result = Fan_health_analysis(request_data)
+    result = fan_health_analysis(request_data)
     end = time.time()
     log.info(f"VOX AHU1 Fan Speed End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
 
 @router.post('/anomaly_detection_prediction', response_model=AnamolyPredictionResponse)
-def Anomaly_detection_endpoint(
+def anomaly_detection_prediction(
     request_data: AnamolyPredictionRequest
 ):
     start = time.time()
     log.info(f"Anomaly detection initiated for Asset: {request_data.asset}, Feature: {request_data.feature}") 
-    result = Anomaly_detection_analysis(request_data)
+    result = anomaly_detection(request_data)
     end = time.time()
     log.info(f"Anomaly Detection completed in {end - start:.2f} seconds. Anomalies found: {result.total_anomalies}") 
     return result
 
-@router.post('/anomaly_viz_data', response_model=AnomalyVizResponse)
-def anomaly_viz_data_endpoint(
+@router.post('/anomaly_chart_data', response_model=AnomalyVizResponse)
+def anomaly_chart_data(
     request_data: AnomalyVizRequest
 ):
     """
@@ -489,7 +487,7 @@ def anomaly_viz_data_endpoint(
     start = time.time()
     log.info(f"Visualization data request initiated for chart_type: {request_data.chart_type}") 
     
-    result = Anomaly_viz_data_analysis(request_data)
+    result = anamoly_detection_chart(request_data)
     end = time.time()
     log.info(f"Visualization data generation completed in {end - start:.2f} seconds.") 
     return result
