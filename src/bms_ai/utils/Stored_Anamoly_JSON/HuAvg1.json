@@ -1,0 +1,4986 @@
+[
+    {
+        "data_received_on": "2025-11-07 09:23:36.264000",
+        "Anomaly_Flag": 1
+    },
+    {
+        "data_received_on": "2025-11-07 09:39:53.639000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 60.81999969482422
+    },
+    {
+        "data_received_on": "2025-11-07 10:00:49.236000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.67499923706055
+    },
+    {
+        "data_received_on": "2025-11-07 10:17:20.315000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.2449951171875
+    },
+    {
+        "data_received_on": "2025-11-07 10:33:47.450000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.67499542236328
+    },
+    {
+        "data_received_on": "2025-11-07 10:50:12.004000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.65499877929688
+    },
+    {
+        "data_received_on": "2025-11-07 11:06:56.469000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.04999542236328
+    },
+    {
+        "data_received_on": "2025-11-07 11:23:06.602000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 56.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-07 11:37:27.586000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.66499710083008
+    },
+    {
+        "data_received_on": "2025-11-07 11:54:06.002000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-07 12:10:29.305000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.709999084472656
+    },
+    {
+        "data_received_on": "2025-11-07 12:29:08.119000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 60.40999603271485
+    },
+    {
+        "data_received_on": "2025-11-07 12:45:13.230000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 60.959999084472656
+    },
+    {
+        "data_received_on": "2025-11-07 13:04:19.430000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.50999450683594
+    },
+    {
+        "data_received_on": "2025-11-07 13:20:01.368000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 13:38:29.819000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-07 13:54:37.123000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.02499771118164
+    },
+    {
+        "data_received_on": "2025-11-07 14:10:49.989000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.790000915527344
+    },
+    {
+        "data_received_on": "2025-11-07 14:28:37.410000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-07 14:44:30.378000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.755001068115234
+    },
+    {
+        "data_received_on": "2025-11-07 15:01:08.935000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.56499481201172
+    },
+    {
+        "data_received_on": "2025-11-07 15:17:17.482000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-07 15:33:40.570000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-07 15:50:03.747000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-07 16:06:38.932000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-07 16:23:15.181000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-07 16:39:27.791000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-07 16:55:51.207000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 17:14:35.594000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-07 17:33:26.509000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-07 17:49:39.714000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-07 18:06:39.538000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.98999786376953
+    },
+    {
+        "data_received_on": "2025-11-07 18:22:48.919000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.125
+    },
+    {
+        "data_received_on": "2025-11-07 18:38:58.696000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.25499725341797
+    },
+    {
+        "data_received_on": "2025-11-07 18:55:14.978000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.8699951171875
+    },
+    {
+        "data_received_on": "2025-11-07 19:15:29.705000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-07 19:32:00.609000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.869998931884766
+    },
+    {
+        "data_received_on": "2025-11-07 19:48:07.396000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-07 20:04:19.636000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.459999084472656
+    },
+    {
+        "data_received_on": "2025-11-07 20:20:10.408000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-07 20:38:23.118000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 56.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-07 20:54:29.071000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-07 21:11:04.400000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.59000015258789
+    },
+    {
+        "data_received_on": "2025-11-07 21:29:31.132000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 53.31499862670898
+    },
+    {
+        "data_received_on": "2025-11-07 21:46:03.138000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.66999816894531
+    },
+    {
+        "data_received_on": "2025-11-07 22:04:50.002000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-07 22:21:48.302000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.40499877929688
+    },
+    {
+        "data_received_on": "2025-11-07 22:38:12.716000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.08999633789063
+    },
+    {
+        "data_received_on": "2025-11-07 22:54:25.496000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.59999847412109
+    },
+    {
+        "data_received_on": "2025-11-07 23:10:20.369000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.72499847412109
+    },
+    {
+        "data_received_on": "2025-11-07 23:28:57.849000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.75499725341797
+    },
+    {
+        "data_received_on": "2025-11-07 23:44:48.199000",
+        "Anomaly_Flag": -1,
+        "HuAvg1": 48.27000045776367
+    },
+    {
+        "data_received_on": "2025-11-08 00:03:45.601000",
+        "Anomaly_Flag": -1,
+        "HuAvg1": 47.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-08 00:19:59.429000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 50.84999847412109
+    },
+    {
+        "data_received_on": "2025-11-08 00:38:31.268000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 51.52499771118164
+    },
+    {
+        "data_received_on": "2025-11-08 00:54:29.278000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 51.93999862670898
+    },
+    {
+        "data_received_on": "2025-11-08 01:10:43.358000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-08 01:28:41.338000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.40499877929688
+    },
+    {
+        "data_received_on": "2025-11-08 01:44:29.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.17499923706055
+    },
+    {
+        "data_received_on": "2025-11-08 02:00:35.146000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-08 02:19:04.676000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.18000030517578
+    },
+    {
+        "data_received_on": "2025-11-08 02:35:12.823000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.35499954223633
+    },
+    {
+        "data_received_on": "2025-11-08 02:53:19.163000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.209999084472656
+    },
+    {
+        "data_received_on": "2025-11-08 03:09:07.927000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.11499786376953
+    },
+    {
+        "data_received_on": "2025-11-08 03:25:04.785000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-08 03:41:16.281000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 03:57:33.004000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-08 04:13:54.291000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 52.5099983215332
+    },
+    {
+        "data_received_on": "2025-11-08 04:30:00.500000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 53.18999862670898
+    },
+    {
+        "data_received_on": "2025-11-08 04:50:53.268000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 53.97999572753906
+    },
+    {
+        "data_received_on": "2025-11-08 05:07:02.488000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.31499862670898
+    },
+    {
+        "data_received_on": "2025-11-08 05:23:19.571000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 54.720001220703125
+    },
+    {
+        "data_received_on": "2025-11-08 05:39:43.013000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 55.525001525878906
+    },
+    {
+        "data_received_on": "2025-11-08 05:56:27.809000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 56.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-08 06:12:42.893000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 56.83000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 06:28:51.160000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.04999923706055
+    },
+    {
+        "data_received_on": "2025-11-08 06:45:21.165000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.81499862670898
+    },
+    {
+        "data_received_on": "2025-11-08 07:05:49.968000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.619998931884766
+    },
+    {
+        "data_received_on": "2025-11-08 07:22:39.748000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.42499542236328
+    },
+    {
+        "data_received_on": "2025-11-08 07:38:44.231000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-08 07:54:53.386000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.44499969482422
+    },
+    {
+        "data_received_on": "2025-11-08 08:11:49.894000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.55999755859375
+    },
+    {
+        "data_received_on": "2025-11-08 08:30:20.931000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-08 08:46:01.943000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.6349983215332
+    },
+    {
+        "data_received_on": "2025-11-08 09:03:48.896000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 59.52499771118164
+    },
+    {
+        "data_received_on": "2025-11-08 09:19:24.033000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 60.54999542236328
+    },
+    {
+        "data_received_on": "2025-11-08 09:35:27.812000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.25499725341797
+    },
+    {
+        "data_received_on": "2025-11-08 09:53:50.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.77999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 10:09:36.144000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.64999771118164
+    },
+    {
+        "data_received_on": "2025-11-08 10:25:30.063000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.68999481201172
+    },
+    {
+        "data_received_on": "2025-11-08 10:41:42.393000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-08 10:59:29.252000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.81500244140625
+    },
+    {
+        "data_received_on": "2025-11-08 11:15:09.829000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-08 11:33:48.732000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-08 11:50:05.519000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.45499801635742
+    },
+    {
+        "data_received_on": "2025-11-08 12:06:52.211000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.52999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 12:24:45.465000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.38500213623047
+    },
+    {
+        "data_received_on": "2025-11-08 12:40:52.143000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.63999938964844
+    },
+    {
+        "data_received_on": "2025-11-08 12:58:52.260000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.22000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 13:15:01.940000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-08 13:30:56.173000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.5099983215332
+    },
+    {
+        "data_received_on": "2025-11-08 13:48:41.248000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.43999481201172
+    },
+    {
+        "data_received_on": "2025-11-08 14:03:58.384000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.66999816894531
+    },
+    {
+        "data_received_on": "2025-11-08 14:19:26.255000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-08 14:34:27.175000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.77999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 14:49:47.701000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2550048828125
+    },
+    {
+        "data_received_on": "2025-11-08 15:09:56.783000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.00499725341797
+    },
+    {
+        "data_received_on": "2025-11-08 15:27:02.961000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.48999786376953
+    },
+    {
+        "data_received_on": "2025-11-08 15:45:31.826000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.42500305175781
+    },
+    {
+        "data_received_on": "2025-11-08 16:01:43.110000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.29499816894531
+    },
+    {
+        "data_received_on": "2025-11-08 16:17:49.588000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-08 16:33:55.861000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.41500091552734
+    },
+    {
+        "data_received_on": "2025-11-08 16:49:49.586000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-08 17:10:39.702000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.29000091552734
+    },
+    {
+        "data_received_on": "2025-11-08 17:27:00.522000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-08 17:43:14.464000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-08 17:59:10.552000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.17999267578125
+    },
+    {
+        "data_received_on": "2025-11-08 18:15:16.541000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.3699951171875
+    },
+    {
+        "data_received_on": "2025-11-08 18:33:47.473000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.48999786376953
+    },
+    {
+        "data_received_on": "2025-11-08 18:50:09.634000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.45500183105469
+    },
+    {
+        "data_received_on": "2025-11-08 19:06:26.382000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.52999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 19:22:35.881000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.77999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 19:40:40.974000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-08 19:57:50.442000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-08 20:13:54.023000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.55499267578125
+    },
+    {
+        "data_received_on": "2025-11-08 20:30:39.077000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.58000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 20:49:06.969000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.95500183105469
+    },
+    {
+        "data_received_on": "2025-11-08 21:05:04.457000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-08 21:23:27.471000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.79999542236328
+    },
+    {
+        "data_received_on": "2025-11-08 21:39:42.821000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.58999633789062
+    },
+    {
+        "data_received_on": "2025-11-08 21:55:08.911000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-08 22:14:20.111000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.3949966430664
+    },
+    {
+        "data_received_on": "2025-11-08 22:30:20.662000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-08 22:48:37.926000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.0
+    },
+    {
+        "data_received_on": "2025-11-08 23:04:53.011000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-08 23:20:33.136000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.92500305175781
+    },
+    {
+        "data_received_on": "2025-11-08 23:37:16.751000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.22999572753906
+    },
+    {
+        "data_received_on": "2025-11-08 23:53:39.118000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.66999816894531
+    },
+    {
+        "data_received_on": "2025-11-09 00:09:58.801000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.72000122070312
+    },
+    {
+        "data_received_on": "2025-11-09 00:26:08.640000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.08999633789062
+    },
+    {
+        "data_received_on": "2025-11-09 00:42:04.086000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.6449966430664
+    },
+    {
+        "data_received_on": "2025-11-09 01:00:18.393000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.44499969482422
+    },
+    {
+        "data_received_on": "2025-11-09 01:18:13.550000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.16500091552734
+    },
+    {
+        "data_received_on": "2025-11-09 01:34:31.685000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.08499908447266
+    },
+    {
+        "data_received_on": "2025-11-09 01:50:32.354000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-09 02:06:44.430000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.75499725341797
+    },
+    {
+        "data_received_on": "2025-11-09 02:24:56.886000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.58499908447266
+    },
+    {
+        "data_received_on": "2025-11-09 02:41:32.540000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.50499725341797
+    },
+    {
+        "data_received_on": "2025-11-09 02:57:26.881000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-09 03:15:22.992000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.26499938964844
+    },
+    {
+        "data_received_on": "2025-11-09 03:34:12.407000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-09 03:50:34.189000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-09 04:08:14.104000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.125
+    },
+    {
+        "data_received_on": "2025-11-09 04:24:38.853000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-09 04:40:35.761000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.90999603271485
+    },
+    {
+        "data_received_on": "2025-11-09 04:58:32.897000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.01499938964844
+    },
+    {
+        "data_received_on": "2025-11-09 05:14:29.794000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.6449966430664
+    },
+    {
+        "data_received_on": "2025-11-09 05:31:06.589000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.14500427246094
+    },
+    {
+        "data_received_on": "2025-11-09 05:49:38.620000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.11000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 06:05:37.203000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.55000305175781
+    },
+    {
+        "data_received_on": "2025-11-09 06:23:41.363000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.3699951171875
+    },
+    {
+        "data_received_on": "2025-11-09 06:39:37.116000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.98999786376953
+    },
+    {
+        "data_received_on": "2025-11-09 06:55:22.979000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.03499603271484
+    },
+    {
+        "data_received_on": "2025-11-09 07:13:47.607000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.869998931884766
+    },
+    {
+        "data_received_on": "2025-11-09 07:29:25.411000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.19000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 07:44:40.330000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.52999877929688
+    },
+    {
+        "data_received_on": "2025-11-09 08:00:55.449000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.67499542236328
+    },
+    {
+        "data_received_on": "2025-11-09 08:19:27.333000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.80500030517578
+    },
+    {
+        "data_received_on": "2025-11-09 08:35:28.199000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.33499145507812
+    },
+    {
+        "data_received_on": "2025-11-09 08:53:38.266000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.18000030517578
+    },
+    {
+        "data_received_on": "2025-11-09 09:09:51.213000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.9749984741211
+    },
+    {
+        "data_received_on": "2025-11-09 09:26:08.466000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-09 09:43:57.503000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.72000122070312
+    },
+    {
+        "data_received_on": "2025-11-09 10:00:20.031000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-09 10:17:29.739000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.57499694824219
+    },
+    {
+        "data_received_on": "2025-11-09 10:35:35.613000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.45500183105469
+    },
+    {
+        "data_received_on": "2025-11-09 10:50:58.977000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.91499328613281
+    },
+    {
+        "data_received_on": "2025-11-09 11:07:09.256000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.05999755859375
+    },
+    {
+        "data_received_on": "2025-11-09 11:22:40.065000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.22999572753906
+    },
+    {
+        "data_received_on": "2025-11-09 11:38:19.625000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.40999603271484
+    },
+    {
+        "data_received_on": "2025-11-09 11:54:02.015000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.64999389648438
+    },
+    {
+        "data_received_on": "2025-11-09 12:10:15.294000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-09 12:26:34.563000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.66500091552734
+    },
+    {
+        "data_received_on": "2025-11-09 12:44:40.809000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.54499816894531
+    },
+    {
+        "data_received_on": "2025-11-09 13:01:32.450000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 13:19:45.491000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-09 13:36:06.634000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.04000091552734
+    },
+    {
+        "data_received_on": "2025-11-09 13:52:40.174000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.44499969482422
+    },
+    {
+        "data_received_on": "2025-11-09 14:08:36.218000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.44499206542969
+    },
+    {
+        "data_received_on": "2025-11-09 14:24:24.829000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.44499206542969
+    },
+    {
+        "data_received_on": "2025-11-09 14:40:17.784000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-09 14:58:24.541000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-09 15:14:13.263000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.24000549316406
+    },
+    {
+        "data_received_on": "2025-11-09 15:30:43.534000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.66500091552734
+    },
+    {
+        "data_received_on": "2025-11-09 15:46:48.793000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.47000122070312
+    },
+    {
+        "data_received_on": "2025-11-09 16:03:00.205000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.81499481201172
+    },
+    {
+        "data_received_on": "2025-11-09 16:19:04.674000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.86000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 16:35:04.234000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.83499908447266
+    },
+    {
+        "data_received_on": "2025-11-09 16:55:12.979000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.80499267578125
+    },
+    {
+        "data_received_on": "2025-11-09 17:11:10.611000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.39999389648438
+    },
+    {
+        "data_received_on": "2025-11-09 17:27:06.911000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-09 17:42:51.849000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.9949951171875
+    },
+    {
+        "data_received_on": "2025-11-09 17:58:55.200000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.27499389648438
+    },
+    {
+        "data_received_on": "2025-11-09 18:14:47.900000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-09 18:30:52.476000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.72999572753906
+    },
+    {
+        "data_received_on": "2025-11-09 18:47:07.592000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-09 19:05:20.538000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.91000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 19:23:35.442000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.5250015258789
+    },
+    {
+        "data_received_on": "2025-11-09 19:39:49.622000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.52499389648438
+    },
+    {
+        "data_received_on": "2025-11-09 19:55:31.569000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.65499877929688
+    },
+    {
+        "data_received_on": "2025-11-09 20:12:22.965000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.17499542236328
+    },
+    {
+        "data_received_on": "2025-11-09 20:30:35.436000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.13499450683594
+    },
+    {
+        "data_received_on": "2025-11-09 20:48:47.714000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-09 21:04:52.324000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.03999328613281
+    },
+    {
+        "data_received_on": "2025-11-09 21:21:00.020000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-09 21:39:43.067000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-09 21:55:33.517000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.61499786376953
+    },
+    {
+        "data_received_on": "2025-11-09 22:13:53.053000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.5
+    },
+    {
+        "data_received_on": "2025-11-09 22:30:08.282000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-09 22:46:39.232000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.79999542236328
+    },
+    {
+        "data_received_on": "2025-11-09 23:04:55.496000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-09 23:20:53.018000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-09 23:37:45.140000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 23:56:00.207000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.11000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 00:13:52.801000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-10 00:29:46.929000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-10 00:45:33.587000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-10 01:04:24.113000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-10 01:20:12.457000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-10 01:38:20.292000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.03499603271484
+    },
+    {
+        "data_received_on": "2025-11-10 01:54:32.908000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.0250015258789
+    },
+    {
+        "data_received_on": "2025-11-10 02:10:50.565000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.16500091552734
+    },
+    {
+        "data_received_on": "2025-11-10 02:29:21.142000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.93000030517578
+    },
+    {
+        "data_received_on": "2025-11-10 02:45:19.374000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.79000091552734
+    },
+    {
+        "data_received_on": "2025-11-10 03:01:24.410000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-10 03:19:38.516000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.81999206542969
+    },
+    {
+        "data_received_on": "2025-11-10 03:35:31.694000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-10 03:54:09.715000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-10 04:10:32.205000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.92500305175781
+    },
+    {
+        "data_received_on": "2025-11-10 04:27:15.903000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-10 04:45:13.660000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.84500122070312
+    },
+    {
+        "data_received_on": "2025-11-10 05:01:29.465000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.15999603271484
+    },
+    {
+        "data_received_on": "2025-11-10 05:17:38.163000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.92500305175781
+    },
+    {
+        "data_received_on": "2025-11-10 05:36:00.661000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-10 05:52:36.755000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-10 06:11:00.802000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-10 06:29:05.042000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.875
+    },
+    {
+        "data_received_on": "2025-11-10 06:44:43.713000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.25
+    },
+    {
+        "data_received_on": "2025-11-10 07:00:45.212000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-10 07:19:17.532000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-10 07:34:50.601000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.30999755859375
+    },
+    {
+        "data_received_on": "2025-11-10 07:50:57.477000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.66000366210938
+    },
+    {
+        "data_received_on": "2025-11-10 08:07:58.623000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.7699966430664
+    },
+    {
+        "data_received_on": "2025-11-10 08:23:04.839000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-10 08:38:32.174000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-10 08:54:27.179000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.44499206542969
+    },
+    {
+        "data_received_on": "2025-11-10 09:09:52.554000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.58999633789062
+    },
+    {
+        "data_received_on": "2025-11-10 09:25:31.051000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.77000427246094
+    },
+    {
+        "data_received_on": "2025-11-10 09:43:55.704000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.4749984741211
+    },
+    {
+        "data_received_on": "2025-11-10 09:59:33.893000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-10 10:15:06.434000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-10 10:31:52.680000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.68499755859375
+    },
+    {
+        "data_received_on": "2025-11-10 10:49:52.852000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.5199966430664
+    },
+    {
+        "data_received_on": "2025-11-10 11:05:45.920000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-10 11:23:20.135000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-10 11:39:00.049000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.55999755859375
+    },
+    {
+        "data_received_on": "2025-11-10 11:54:51.415000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.625
+    },
+    {
+        "data_received_on": "2025-11-10 12:10:44.236000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.84500122070312
+    },
+    {
+        "data_received_on": "2025-11-10 12:29:37.831000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.95999908447266
+    },
+    {
+        "data_received_on": "2025-11-10 12:46:02.410000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.72000122070312
+    },
+    {
+        "data_received_on": "2025-11-10 13:04:17.423000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.30499267578125
+    },
+    {
+        "data_received_on": "2025-11-10 13:20:33.342000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-10 13:37:35.182000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-10 13:53:30.640000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-10 14:09:25.024000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-10 14:25:16.104000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-10 14:43:33.295000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.58000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 14:59:31.143000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-10 15:16:09.455000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.8499984741211
+    },
+    {
+        "data_received_on": "2025-11-10 15:35:00.276000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.29999542236328
+    },
+    {
+        "data_received_on": "2025-11-10 15:51:30.552000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-10 16:09:45.434000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-10 16:26:08.309000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.38999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 16:44:32.419000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-10 17:01:19.614000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-10 17:17:38.250000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.7550048828125
+    },
+    {
+        "data_received_on": "2025-11-10 17:33:43.932000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-10 17:50:14.758000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-10 18:08:15.409000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 81.5999984741211
+    },
+    {
+        "data_received_on": "2025-11-10 18:24:21.706000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.38999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 18:43:05.185000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.48999786376953
+    },
+    {
+        "data_received_on": "2025-11-10 18:59:43.943000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-10 19:16:25.660000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.87999725341797
+    },
+    {
+        "data_received_on": "2025-11-10 19:33:06.887000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.30500030517578
+    },
+    {
+        "data_received_on": "2025-11-10 19:49:10.129000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 20:08:07.493000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-10 20:23:55.515000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-10 20:40:16.785000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 20:57:05.709000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-10 21:13:29.221000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.97999572753906
+    },
+    {
+        "data_received_on": "2025-11-10 21:29:42.033000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.40999603271484
+    },
+    {
+        "data_received_on": "2025-11-10 21:47:33.870000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.43000030517578
+    },
+    {
+        "data_received_on": "2025-11-10 22:04:06.049000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-10 22:23:19.032000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.2750015258789
+    },
+    {
+        "data_received_on": "2025-11-10 22:39:53.977000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.8499984741211
+    },
+    {
+        "data_received_on": "2025-11-10 22:57:59.709000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.875
+    },
+    {
+        "data_received_on": "2025-11-10 23:14:05.597000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.53999328613281
+    },
+    {
+        "data_received_on": "2025-11-10 23:32:16.158000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.33999633789062
+    },
+    {
+        "data_received_on": "2025-11-10 23:48:31.350000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-11 00:04:34.608000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-11 00:21:41.480000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-11 00:37:52.746000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.08499908447266
+    },
+    {
+        "data_received_on": "2025-11-11 00:53:50.681000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-11 01:10:35.279000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 83.17999267578125
+    },
+    {
+        "data_received_on": "2025-11-11 01:28:41.567000",
+        "Anomaly_Flag": -1,
+        "HuAvg1": 85.48999786376953
+    },
+    {
+        "data_received_on": "2025-11-11 01:44:41.677000",
+        "Anomaly_Flag": -1,
+        "HuAvg1": 85.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-11 02:03:19.664000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 83.45999908447266
+    },
+    {
+        "data_received_on": "2025-11-11 02:19:40.077000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 82.69000244140625
+    },
+    {
+        "data_received_on": "2025-11-11 02:36:13.455000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 82.0199966430664
+    },
+    {
+        "data_received_on": "2025-11-11 02:54:40.632000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 81.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 03:11:04.953000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.5
+    },
+    {
+        "data_received_on": "2025-11-11 03:29:10.128000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.55499267578125
+    },
+    {
+        "data_received_on": "2025-11-11 03:50:14.127000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.2750015258789
+    },
+    {
+        "data_received_on": "2025-11-11 04:08:19.250000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.79999542236328
+    },
+    {
+        "data_received_on": "2025-11-11 04:24:22.264000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.58000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 04:42:52.361000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-11 04:59:49.955000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 05:18:40.961000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.42999267578125
+    },
+    {
+        "data_received_on": "2025-11-11 05:34:20.485000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-11 05:52:32.247000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.19999694824219
+    },
+    {
+        "data_received_on": "2025-11-11 06:08:31.709000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.86000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 06:24:24.109000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.42999267578125
+    },
+    {
+        "data_received_on": "2025-11-11 06:43:26.034000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.9949951171875
+    },
+    {
+        "data_received_on": "2025-11-11 06:59:10.629000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-11 07:18:56.103000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.97000122070312
+    },
+    {
+        "data_received_on": "2025-11-11 07:35:01.841000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.0050048828125
+    },
+    {
+        "data_received_on": "2025-11-11 07:53:21.668000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.25
+    },
+    {
+        "data_received_on": "2025-11-11 08:09:51.116000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-11 08:28:47.376000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.58499908447266
+    },
+    {
+        "data_received_on": "2025-11-11 08:44:43.104000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.98500061035156
+    },
+    {
+        "data_received_on": "2025-11-11 09:03:35.515000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.47000122070312
+    },
+    {
+        "data_received_on": "2025-11-11 09:19:32.730000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.48999786376953
+    },
+    {
+        "data_received_on": "2025-11-11 09:38:49.060000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-11 09:55:18.995000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-11 10:12:49.678000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.80499267578125
+    },
+    {
+        "data_received_on": "2025-11-11 10:28:32.804000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-11 10:44:41.245000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-11 11:02:38.001000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.63499450683594
+    },
+    {
+        "data_received_on": "2025-11-11 11:19:04.489000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-11 11:34:50.128000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.82499694824219
+    },
+    {
+        "data_received_on": "2025-11-11 11:53:09.631000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.45999908447266
+    },
+    {
+        "data_received_on": "2025-11-11 12:10:02.217000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-11 12:28:10.698000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.10499572753906
+    },
+    {
+        "data_received_on": "2025-11-11 12:44:03.175000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-11 12:59:53.480000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-11 13:18:06.563000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.33999633789062
+    },
+    {
+        "data_received_on": "2025-11-11 13:33:46.144000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-11 13:49:57.959000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.44000244140625
+    },
+    {
+        "data_received_on": "2025-11-11 14:06:00.688000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-11 14:24:09.754000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.9749984741211
+    },
+    {
+        "data_received_on": "2025-11-11 14:39:52.076000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.19000244140625
+    },
+    {
+        "data_received_on": "2025-11-11 14:55:53.879000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.35499572753906
+    },
+    {
+        "data_received_on": "2025-11-11 15:13:29.826000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.40999603271484
+    },
+    {
+        "data_received_on": "2025-11-11 15:29:11.638000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-11 15:48:11.659000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.83499908447266
+    },
+    {
+        "data_received_on": "2025-11-11 16:04:06.010000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.58499908447266
+    },
+    {
+        "data_received_on": "2025-11-11 16:20:23.270000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.77499389648438
+    },
+    {
+        "data_received_on": "2025-11-11 16:38:24.048000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.03500366210938
+    },
+    {
+        "data_received_on": "2025-11-11 16:54:28.651000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-11 17:14:19.182000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-11 17:33:22.311000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.56999969482422
+    },
+    {
+        "data_received_on": "2025-11-11 17:48:48.169000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-11 18:04:53.530000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.55499267578125
+    },
+    {
+        "data_received_on": "2025-11-11 18:23:16.919000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-11 18:39:23.601000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.26499938964844
+    },
+    {
+        "data_received_on": "2025-11-11 18:59:54.172000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.27000427246094
+    },
+    {
+        "data_received_on": "2025-11-11 19:18:03.084000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.44999694824219
+    },
+    {
+        "data_received_on": "2025-11-11 19:34:02.958000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.58999633789062
+    },
+    {
+        "data_received_on": "2025-11-11 19:50:08.433000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.75499725341797
+    },
+    {
+        "data_received_on": "2025-11-11 20:08:12.540000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.64500427246094
+    },
+    {
+        "data_received_on": "2025-11-11 20:24:25.090000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.05000305175781
+    },
+    {
+        "data_received_on": "2025-11-11 20:42:37.250000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2550048828125
+    },
+    {
+        "data_received_on": "2025-11-11 20:58:41.317000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.31499481201172
+    },
+    {
+        "data_received_on": "2025-11-11 21:14:11.605000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-11 21:30:25.838000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.23500061035156
+    },
+    {
+        "data_received_on": "2025-11-11 21:47:00.847000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.7699966430664
+    },
+    {
+        "data_received_on": "2025-11-11 22:05:14.980000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-11 22:21:08.481000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.0199966430664
+    },
+    {
+        "data_received_on": "2025-11-11 22:39:35.055000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.70999145507812
+    },
+    {
+        "data_received_on": "2025-11-11 22:56:22.580000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.69000244140625
+    },
+    {
+        "data_received_on": "2025-11-11 23:14:04.918000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.59999084472656
+    },
+    {
+        "data_received_on": "2025-11-11 23:30:19.073000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-11 23:46:18.235000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.56999206542969
+    },
+    {
+        "data_received_on": "2025-11-12 00:04:17.435000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.68999481201172
+    },
+    {
+        "data_received_on": "2025-11-12 00:25:04.229000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-12 00:43:30.865000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.29499816894531
+    },
+    {
+        "data_received_on": "2025-11-12 00:59:34.503000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.52999877929688
+    },
+    {
+        "data_received_on": "2025-11-12 10:37:59.386000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 56.62999725341797
+    },
+    {
+        "data_received_on": "2025-11-12 10:54:13.218000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 57.31999969482422
+    },
+    {
+        "data_received_on": "2025-11-12 11:14:00.189000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.28999710083008
+    },
+    {
+        "data_received_on": "2025-11-12 11:29:38.476000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 58.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-12 11:45:56.292000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-12 12:03:19.940000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 61.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-12 12:19:09.495000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.374996185302734
+    },
+    {
+        "data_received_on": "2025-11-12 12:34:57.961000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.33999633789063
+    },
+    {
+        "data_received_on": "2025-11-12 12:51:36.879000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 62.82999801635742
+    },
+    {
+        "data_received_on": "2025-11-12 13:09:29.878000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.37999725341797
+    },
+    {
+        "data_received_on": "2025-11-12 13:28:26.125000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.41499710083008
+    },
+    {
+        "data_received_on": "2025-11-12 13:43:53.585000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.459999084472656
+    },
+    {
+        "data_received_on": "2025-11-12 13:59:57.324000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.33999633789063
+    },
+    {
+        "data_received_on": "2025-11-12 14:20:08.286000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.32999801635742
+    },
+    {
+        "data_received_on": "2025-11-12 14:37:59.785000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.65499877929688
+    },
+    {
+        "data_received_on": "2025-11-12 14:53:49.482000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.93999481201172
+    },
+    {
+        "data_received_on": "2025-11-12 15:10:02.789000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.01499938964844
+    },
+    {
+        "data_received_on": "2025-11-12 15:28:44.017000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.05999755859375
+    },
+    {
+        "data_received_on": "2025-11-12 15:44:33.625000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-12 16:02:31.181000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-12 16:18:10.374000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.53999328613281
+    },
+    {
+        "data_received_on": "2025-11-12 16:33:39.282000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.63499450683594
+    },
+    {
+        "data_received_on": "2025-11-12 16:49:40.167000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.53500366210938
+    },
+    {
+        "data_received_on": "2025-11-12 17:09:57.647000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-12 17:29:07.986000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.78499603271484
+    },
+    {
+        "data_received_on": "2025-11-12 17:45:01.420000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.44999694824219
+    },
+    {
+        "data_received_on": "2025-11-12 18:04:03.369000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.81500244140625
+    },
+    {
+        "data_received_on": "2025-11-12 18:19:47.989000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-12 18:39:53.692000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-12 18:58:18.734000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.85499572753906
+    },
+    {
+        "data_received_on": "2025-11-12 19:14:33.317000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.50999450683594
+    },
+    {
+        "data_received_on": "2025-11-12 19:34:51.478000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.45999908447266
+    },
+    {
+        "data_received_on": "2025-11-12 19:52:32.363000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-12 20:08:06.702000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.20999145507812
+    },
+    {
+        "data_received_on": "2025-11-12 20:23:56.561000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.53500366210938
+    },
+    {
+        "data_received_on": "2025-11-12 20:40:01.112000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-12 20:56:32.164000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-12 21:12:45.302000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-12 21:28:43.350000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.84500122070312
+    },
+    {
+        "data_received_on": "2025-11-12 21:44:32.753000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.125
+    },
+    {
+        "data_received_on": "2025-11-12 22:04:29.781000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-12 22:24:15.919000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.91500091552734
+    },
+    {
+        "data_received_on": "2025-11-12 22:39:37.848000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.89500427246094
+    },
+    {
+        "data_received_on": "2025-11-12 22:59:34.477000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-12 23:15:32.149000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.41499328613281
+    },
+    {
+        "data_received_on": "2025-11-12 23:33:16.246000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.11000061035156
+    },
+    {
+        "data_received_on": "2025-11-12 23:49:01.771000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-13 00:04:35.004000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.8499984741211
+    },
+    {
+        "data_received_on": "2025-11-13 00:24:16.574000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.88999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 00:39:43.769000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-13 00:55:25.205000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.83499908447266
+    },
+    {
+        "data_received_on": "2025-11-13 01:13:05.205000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.79000091552734
+    },
+    {
+        "data_received_on": "2025-11-13 01:28:43.408000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.53499603271484
+    },
+    {
+        "data_received_on": "2025-11-13 01:44:14.760000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.37999725341797
+    },
+    {
+        "data_received_on": "2025-11-13 01:59:27.445000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-13 02:19:07.437000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.19999694824219
+    },
+    {
+        "data_received_on": "2025-11-13 02:34:35.084000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.02499389648438
+    },
+    {
+        "data_received_on": "2025-11-13 02:53:14.102000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-13 03:08:44.561000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.87999725341797
+    },
+    {
+        "data_received_on": "2025-11-13 03:24:16.320000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-13 03:39:45.737000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.97999572753906
+    },
+    {
+        "data_received_on": "2025-11-13 03:59:21.544000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-13 04:17:20.994000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.47000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 04:32:36.490000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.54999542236328
+    },
+    {
+        "data_received_on": "2025-11-13 04:48:17.806000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-13 05:04:02.915000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.19000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 05:19:43.647000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 05:37:07.699000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-13 05:52:40.536000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.7699966430664
+    },
+    {
+        "data_received_on": "2025-11-13 06:07:50.785000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-13 06:23:18.068000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.66500091552734
+    },
+    {
+        "data_received_on": "2025-11-13 06:38:57.723000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.03500366210938
+    },
+    {
+        "data_received_on": "2025-11-13 06:57:12.948000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.75499725341797
+    },
+    {
+        "data_received_on": "2025-11-13 07:13:00.272000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-13 07:29:16.012000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.95999908447266
+    },
+    {
+        "data_received_on": "2025-11-13 07:45:27.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 08:03:50.807000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.59500122070312
+    },
+    {
+        "data_received_on": "2025-11-13 08:20:12.339000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.25499725341797
+    },
+    {
+        "data_received_on": "2025-11-13 08:38:25.159000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-13 08:54:18.397000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.5999984741211
+    },
+    {
+        "data_received_on": "2025-11-13 09:09:59.548000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-13 09:28:50.955000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.69999694824219
+    },
+    {
+        "data_received_on": "2025-11-13 09:44:57.972000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.2449951171875
+    },
+    {
+        "data_received_on": "2025-11-13 10:05:11.406000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.0
+    },
+    {
+        "data_received_on": "2025-11-13 10:24:02.383000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.56999969482422
+    },
+    {
+        "data_received_on": "2025-11-13 10:40:18.730000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.10499572753906
+    },
+    {
+        "data_received_on": "2025-11-13 10:59:32.963000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.45500183105469
+    },
+    {
+        "data_received_on": "2025-11-13 11:18:06.804000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.09500122070312
+    },
+    {
+        "data_received_on": "2025-11-13 11:33:53.730000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.56999969482422
+    },
+    {
+        "data_received_on": "2025-11-13 11:49:59.936000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.17999267578125
+    },
+    {
+        "data_received_on": "2025-11-13 12:10:21.835000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-13 12:27:19.979000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.29499816894531
+    },
+    {
+        "data_received_on": "2025-11-13 12:44:04.194000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.9000015258789
+    },
+    {
+        "data_received_on": "2025-11-13 12:59:55.521000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.625
+    },
+    {
+        "data_received_on": "2025-11-13 13:17:36.716000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.27999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 13:33:42.762000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.18999481201172
+    },
+    {
+        "data_received_on": "2025-11-13 13:49:10.122000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.65999603271484
+    },
+    {
+        "data_received_on": "2025-11-13 14:04:49.630000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.39999389648438
+    },
+    {
+        "data_received_on": "2025-11-13 14:23:02.606000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.87999725341797
+    },
+    {
+        "data_received_on": "2025-11-13 14:38:41.885000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-13 14:54:30.490000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.53500366210938
+    },
+    {
+        "data_received_on": "2025-11-13 15:12:12.257000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.125
+    },
+    {
+        "data_received_on": "2025-11-13 15:30:14.091000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.84500122070312
+    },
+    {
+        "data_received_on": "2025-11-13 15:46:32.826000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-13 16:04:37.503000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.56999969482422
+    },
+    {
+        "data_received_on": "2025-11-13 16:20:59.166000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.43499755859375
+    },
+    {
+        "data_received_on": "2025-11-13 16:39:01.179000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.62999725341797
+    },
+    {
+        "data_received_on": "2025-11-13 16:54:41.935000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.64999389648438
+    },
+    {
+        "data_received_on": "2025-11-13 17:13:16.344000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.40499877929688
+    },
+    {
+        "data_received_on": "2025-11-13 17:28:46.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.15999603271484
+    },
+    {
+        "data_received_on": "2025-11-13 17:44:47.468000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-13 18:01:00.933000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.67499542236328
+    },
+    {
+        "data_received_on": "2025-11-13 18:18:31.818000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.42999267578125
+    },
+    {
+        "data_received_on": "2025-11-13 18:34:23.537000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.20500183105469
+    },
+    {
+        "data_received_on": "2025-11-13 18:50:36.654000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.0
+    },
+    {
+        "data_received_on": "2025-11-13 19:08:07.293000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.82499694824219
+    },
+    {
+        "data_received_on": "2025-11-13 19:23:50.591000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.3949966430664
+    },
+    {
+        "data_received_on": "2025-11-13 19:39:38.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.26499938964844
+    },
+    {
+        "data_received_on": "2025-11-13 19:55:39.379000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.31999206542969
+    },
+    {
+        "data_received_on": "2025-11-13 20:13:27.526000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.65999603271484
+    },
+    {
+        "data_received_on": "2025-11-13 20:29:18.781000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.94000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 20:45:28.367000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-13 21:04:14.866000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-13 21:19:32.942000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-13 21:37:28.825000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 21:53:11.016000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.44499969482422
+    },
+    {
+        "data_received_on": "2025-11-13 22:08:35.355000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.81999969482422
+    },
+    {
+        "data_received_on": "2025-11-13 22:24:26.337000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2550048828125
+    },
+    {
+        "data_received_on": "2025-11-13 22:40:17.563000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.625
+    },
+    {
+        "data_received_on": "2025-11-13 22:58:20.753000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-13 23:14:09.939000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-13 23:29:54.443000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.55500030517578
+    },
+    {
+        "data_received_on": "2025-11-13 23:47:37.768000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.91000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 00:03:31.015000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.75999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 00:19:28.331000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-14 00:35:12.614000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-14 00:53:29.723000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.91499328613281
+    },
+    {
+        "data_received_on": "2025-11-14 01:09:07.366000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.7750015258789
+    },
+    {
+        "data_received_on": "2025-11-14 01:25:08.355000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-14 01:43:12.473000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.64500427246094
+    },
+    {
+        "data_received_on": "2025-11-14 01:58:45.961000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.58499908447266
+    },
+    {
+        "data_received_on": "2025-11-14 02:14:22.491000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.67500305175781
+    },
+    {
+        "data_received_on": "2025-11-14 02:29:40.894000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.55999755859375
+    },
+    {
+        "data_received_on": "2025-11-14 02:47:47.584000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-14 03:03:36.829000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-14 03:19:22.650000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-14 03:34:35.512000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-14 03:53:18.178000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-14 04:08:49.471000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.52000427246094
+    },
+    {
+        "data_received_on": "2025-11-14 04:24:42.633000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.66499328613281
+    },
+    {
+        "data_received_on": "2025-11-14 04:42:40.454000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.66999816894531
+    },
+    {
+        "data_received_on": "2025-11-14 04:58:25.988000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-14 05:14:11.145000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.93000030517578
+    },
+    {
+        "data_received_on": "2025-11-14 05:29:33.366000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-14 05:50:04.761000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.52499389648438
+    },
+    {
+        "data_received_on": "2025-11-14 06:06:31.714000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.47000122070312
+    },
+    {
+        "data_received_on": "2025-11-14 06:22:28.540000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.11499786376953
+    },
+    {
+        "data_received_on": "2025-11-14 06:38:55.134000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.00999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 06:53:20.154000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.50499725341797
+    },
+    {
+        "data_received_on": "2025-11-14 07:09:13.288000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.93999481201172
+    },
+    {
+        "data_received_on": "2025-11-14 07:25:04.838000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.58000183105469
+    },
+    {
+        "data_received_on": "2025-11-14 07:43:19.963000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-14 07:57:14.072000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.70999908447266
+    },
+    {
+        "data_received_on": "2025-11-14 08:15:34.621000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.61499786376953
+    },
+    {
+        "data_received_on": "2025-11-14 08:32:02.407000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-14 08:49:56.730000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.26499938964844
+    },
+    {
+        "data_received_on": "2025-11-14 09:08:24.676000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.43000030517578
+    },
+    {
+        "data_received_on": "2025-11-14 09:24:30.337000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.3699951171875
+    },
+    {
+        "data_received_on": "2025-11-14 09:40:01.208000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-14 09:59:04.176000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.095001220703125
+    },
+    {
+        "data_received_on": "2025-11-14 10:15:24.968000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.5250015258789
+    },
+    {
+        "data_received_on": "2025-11-14 10:33:29.786000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-14 10:49:28.234000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.15499877929688
+    },
+    {
+        "data_received_on": "2025-11-14 11:05:05.894000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-14 11:23:40.121000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-14 11:39:49.987000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-14 11:56:18.687000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-14 12:14:31.823000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.584999084472656
+    },
+    {
+        "data_received_on": "2025-11-14 12:30:02.232000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.65999603271485
+    },
+    {
+        "data_received_on": "2025-11-14 12:47:47.638000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 63.8849983215332
+    },
+    {
+        "data_received_on": "2025-11-14 13:03:38.885000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.84500122070312
+    },
+    {
+        "data_received_on": "2025-11-14 13:19:30.869000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.08999633789062
+    },
+    {
+        "data_received_on": "2025-11-14 13:35:31.896000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.30999755859375
+    },
+    {
+        "data_received_on": "2025-11-14 13:53:49.553000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.7249984741211
+    },
+    {
+        "data_received_on": "2025-11-14 14:09:27.306000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.56999206542969
+    },
+    {
+        "data_received_on": "2025-11-14 14:25:04.332000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.625
+    },
+    {
+        "data_received_on": "2025-11-14 14:43:37.595000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.625
+    },
+    {
+        "data_received_on": "2025-11-14 15:00:24.351000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.75999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 15:16:31.713000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.68499755859375
+    },
+    {
+        "data_received_on": "2025-11-14 15:32:30.338000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.88500213623047
+    },
+    {
+        "data_received_on": "2025-11-14 15:50:42.817000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.7249984741211
+    },
+    {
+        "data_received_on": "2025-11-14 16:06:57.669000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-14 16:24:45.861000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.20500183105469
+    },
+    {
+        "data_received_on": "2025-11-14 16:41:30.920000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.35499572753906
+    },
+    {
+        "data_received_on": "2025-11-14 16:59:49.281000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 17:16:03.044000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 64.95499420166016
+    },
+    {
+        "data_received_on": "2025-11-14 17:35:34.399000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.68499755859375
+    },
+    {
+        "data_received_on": "2025-11-14 17:51:40.888000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.11499786376953
+    },
+    {
+        "data_received_on": "2025-11-14 18:07:34.092000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.50999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 18:23:51.349000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.08499908447266
+    },
+    {
+        "data_received_on": "2025-11-14 18:39:47.509000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.68499755859375
+    },
+    {
+        "data_received_on": "2025-11-14 19:00:09.838000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-14 19:16:14.211000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.75999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 19:32:17.580000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.94000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 19:48:17.466000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-14 20:04:26.025000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.7699966430664
+    },
+    {
+        "data_received_on": "2025-11-14 20:20:27.541000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.59500122070312
+    },
+    {
+        "data_received_on": "2025-11-14 20:38:15.323000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.25
+    },
+    {
+        "data_received_on": "2025-11-14 20:54:00.302000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-14 21:10:06.817000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.04000091552734
+    },
+    {
+        "data_received_on": "2025-11-14 21:28:25.798000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.03500366210938
+    },
+    {
+        "data_received_on": "2025-11-14 21:44:38.765000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-14 21:58:06.144000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 22:14:14.286000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.97000122070312
+    },
+    {
+        "data_received_on": "2025-11-14 22:29:36.178000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-14 22:45:03.269000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.28500366210938
+    },
+    {
+        "data_received_on": "2025-11-14 23:03:58.083000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.43499755859375
+    },
+    {
+        "data_received_on": "2025-11-14 23:19:59.578000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.40999603271484
+    },
+    {
+        "data_received_on": "2025-11-14 23:36:01.556000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.37000274658203
+    },
+    {
+        "data_received_on": "2025-11-14 23:54:04.692000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.3949966430664
+    },
+    {
+        "data_received_on": "2025-11-15 00:09:45.431000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-15 00:26:03.049000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.38999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 00:41:54.444000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-15 00:59:43.122000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-15 01:18:23.316000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.25
+    },
+    {
+        "data_received_on": "2025-11-15 01:34:25.399000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-15 01:50:11.788000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.30500030517578
+    },
+    {
+        "data_received_on": "2025-11-15 02:08:19.771000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-15 02:24:24.869000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.0250015258789
+    },
+    {
+        "data_received_on": "2025-11-15 02:40:24.471000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.31499481201172
+    },
+    {
+        "data_received_on": "2025-11-15 02:57:06.472000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.125
+    },
+    {
+        "data_received_on": "2025-11-15 03:15:02.317000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.06500244140625
+    },
+    {
+        "data_received_on": "2025-11-15 03:33:29.291000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-15 03:49:18.244000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-15 04:05:30.263000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.9000015258789
+    },
+    {
+        "data_received_on": "2025-11-15 04:21:55.755000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.77999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 04:39:52.089000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.61499786376953
+    },
+    {
+        "data_received_on": "2025-11-15 04:55:33.566000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-15 05:13:40.742000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.81999969482422
+    },
+    {
+        "data_received_on": "2025-11-15 05:29:41.309000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.52499389648438
+    },
+    {
+        "data_received_on": "2025-11-15 05:46:00.903000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.28500366210938
+    },
+    {
+        "data_received_on": "2025-11-15 06:02:15.098000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.03999328613281
+    },
+    {
+        "data_received_on": "2025-11-15 06:20:15.432000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.2699966430664
+    },
+    {
+        "data_received_on": "2025-11-15 06:38:43.914000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.37999725341797
+    },
+    {
+        "data_received_on": "2025-11-15 06:55:43.543000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.125
+    },
+    {
+        "data_received_on": "2025-11-15 07:11:46.959000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-15 07:30:05.681000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-15 07:46:53.517000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.98500061035156
+    },
+    {
+        "data_received_on": "2025-11-15 08:05:00.807000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.12999725341797
+    },
+    {
+        "data_received_on": "2025-11-15 08:20:48.894000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 08:36:31.848000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.81999969482422
+    },
+    {
+        "data_received_on": "2025-11-15 08:54:17.104000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.8800048828125
+    },
+    {
+        "data_received_on": "2025-11-15 09:10:12.748000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-15 09:29:03.602000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.40499877929688
+    },
+    {
+        "data_received_on": "2025-11-15 09:44:54.118000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-15 10:00:39.470000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.52999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 10:18:29.012000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.92999267578125
+    },
+    {
+        "data_received_on": "2025-11-15 10:34:15.326000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.0
+    },
+    {
+        "data_received_on": "2025-11-15 10:50:31.798000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.5
+    },
+    {
+        "data_received_on": "2025-11-15 11:06:25.931000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.0
+    },
+    {
+        "data_received_on": "2025-11-15 11:24:05.197000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.95999908447266
+    },
+    {
+        "data_received_on": "2025-11-15 11:39:38.674000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.54999542236328
+    },
+    {
+        "data_received_on": "2025-11-15 11:54:58.655000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-15 12:13:06.376000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.40499877929688
+    },
+    {
+        "data_received_on": "2025-11-15 12:29:01.361000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-15 12:44:56.688000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-15 13:00:49.587000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.5999984741211
+    },
+    {
+        "data_received_on": "2025-11-15 13:18:49.092000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.06999206542969
+    },
+    {
+        "data_received_on": "2025-11-15 13:35:00.538000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.57499694824219
+    },
+    {
+        "data_received_on": "2025-11-15 13:50:59.504000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.55000305175781
+    },
+    {
+        "data_received_on": "2025-11-15 14:08:29.930000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-15 14:24:08.123000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.72000122070312
+    },
+    {
+        "data_received_on": "2025-11-15 14:39:58.918000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.31499481201172
+    },
+    {
+        "data_received_on": "2025-11-15 14:56:44.782000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.125
+    },
+    {
+        "data_received_on": "2025-11-15 15:14:23.373000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-15 15:30:13.876000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.61499786376953
+    },
+    {
+        "data_received_on": "2025-11-15 15:47:56.361000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-15 16:01:38.763000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.89999389648438
+    },
+    {
+        "data_received_on": "2025-11-15 16:17:06.912000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.875
+    },
+    {
+        "data_received_on": "2025-11-15 16:33:07.691000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-15 16:48:51.011000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.83999633789062
+    },
+    {
+        "data_received_on": "2025-11-15 17:04:39.869000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.03499603271484
+    },
+    {
+        "data_received_on": "2025-11-15 17:20:31.010000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.98500061035156
+    },
+    {
+        "data_received_on": "2025-11-15 17:40:12.168000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-15 17:56:34.279000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.79000091552734
+    },
+    {
+        "data_received_on": "2025-11-15 18:12:25.430000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-15 18:28:06.205000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.8499984741211
+    },
+    {
+        "data_received_on": "2025-11-15 18:43:39.135000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-15 19:00:02.286000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-15 19:16:09.593000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.62999725341797
+    },
+    {
+        "data_received_on": "2025-11-15 19:33:52.302000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.0
+    },
+    {
+        "data_received_on": "2025-11-15 19:49:46.622000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.88999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 20:04:54.454000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.89999389648438
+    },
+    {
+        "data_received_on": "2025-11-15 20:23:02.713000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.0250015258789
+    },
+    {
+        "data_received_on": "2025-11-15 20:38:38.374000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.80999755859375
+    },
+    {
+        "data_received_on": "2025-11-15 20:54:16.139000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-15 21:10:15.779000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-15 21:26:15.376000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.30000305175781
+    },
+    {
+        "data_received_on": "2025-11-15 21:44:09.778000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.2699966430664
+    },
+    {
+        "data_received_on": "2025-11-15 21:59:55.643000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.9749984741211
+    },
+    {
+        "data_received_on": "2025-11-15 22:13:41.573000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.63499450683594
+    },
+    {
+        "data_received_on": "2025-11-15 22:29:20.801000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 22:44:57.689000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-15 23:05:15.101000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-15 23:21:27.034000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.00999450683594
+    },
+    {
+        "data_received_on": "2025-11-15 23:37:17.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.66000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 23:52:48.146000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.59500122070312
+    },
+    {
+        "data_received_on": "2025-11-16 00:08:31.578000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.51499938964844
+    },
+    {
+        "data_received_on": "2025-11-16 00:23:58.923000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-16 00:39:51.186000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.375
+    },
+    {
+        "data_received_on": "2025-11-16 00:55:47.643000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-16 01:14:12.071000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.91500091552734
+    },
+    {
+        "data_received_on": "2025-11-16 01:29:55.597000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.78499603271484
+    },
+    {
+        "data_received_on": "2025-11-16 01:47:20.652000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.77000427246094
+    },
+    {
+        "data_received_on": "2025-11-16 02:02:53.758000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.80000305175781
+    },
+    {
+        "data_received_on": "2025-11-16 02:18:38.423000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-16 02:34:30.109000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-16 02:50:20.981000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.30000305175781
+    },
+    {
+        "data_received_on": "2025-11-16 03:08:36.403000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.43000030517578
+    },
+    {
+        "data_received_on": "2025-11-16 03:22:11.635000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-16 03:37:36.100000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.22000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 03:55:36.819000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.37999725341797
+    },
+    {
+        "data_received_on": "2025-11-16 04:13:07.734000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.02499389648438
+    },
+    {
+        "data_received_on": "2025-11-16 04:28:43.515000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.91500091552734
+    },
+    {
+        "data_received_on": "2025-11-16 04:44:34.983000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.94499969482422
+    },
+    {
+        "data_received_on": "2025-11-16 05:00:14.586000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.81999206542969
+    },
+    {
+        "data_received_on": "2025-11-16 05:18:45.597000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.31499481201172
+    },
+    {
+        "data_received_on": "2025-11-16 05:34:58.202000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-16 05:50:47.180000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-16 06:08:41.496000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-16 06:24:16.705000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.87999725341797
+    },
+    {
+        "data_received_on": "2025-11-16 06:40:19.867000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.04999542236328
+    },
+    {
+        "data_received_on": "2025-11-16 06:56:21.387000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-16 07:14:10.208000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.60499572753906
+    },
+    {
+        "data_received_on": "2025-11-16 07:29:59.759000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.41000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 07:46:23.066000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.36500549316406
+    },
+    {
+        "data_received_on": "2025-11-16 08:04:44.197000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.86000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 08:20:49.156000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.8499984741211
+    },
+    {
+        "data_received_on": "2025-11-16 08:39:25.517000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-16 08:55:32.011000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-16 09:11:44.003000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.125
+    },
+    {
+        "data_received_on": "2025-11-16 09:29:37.682000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.67499542236328
+    },
+    {
+        "data_received_on": "2025-11-16 09:45:26.170000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.77999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 10:03:35.626000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-16 10:19:24.709000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 65.51499938964844
+    },
+    {
+        "data_received_on": "2025-11-16 10:35:14.245000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 66.23500061035156
+    },
+    {
+        "data_received_on": "2025-11-16 10:51:45.921000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 67.20999908447266
+    },
+    {
+        "data_received_on": "2025-11-16 11:09:51.717000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-16 11:26:03.590000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.375
+    },
+    {
+        "data_received_on": "2025-11-16 11:44:28.193000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.32499694824219
+    },
+    {
+        "data_received_on": "2025-11-16 12:00:22.135000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-16 12:18:50.719000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.83999633789062
+    },
+    {
+        "data_received_on": "2025-11-16 12:34:35.246000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.58999633789062
+    },
+    {
+        "data_received_on": "2025-11-16 12:50:26.441000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.05000305175781
+    },
+    {
+        "data_received_on": "2025-11-16 13:08:12.369000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.86499786376953
+    },
+    {
+        "data_received_on": "2025-11-16 13:23:39.266000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.09500122070312
+    },
+    {
+        "data_received_on": "2025-11-16 13:39:40.051000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.0199966430664
+    },
+    {
+        "data_received_on": "2025-11-16 13:55:42.629000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.16500091552734
+    },
+    {
+        "data_received_on": "2025-11-16 14:13:15.015000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 14:28:46.901000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.25999450683594
+    },
+    {
+        "data_received_on": "2025-11-16 14:44:35.436000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-16 15:00:38.300000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.83000183105469
+    },
+    {
+        "data_received_on": "2025-11-16 15:16:23.768000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.43000030517578
+    },
+    {
+        "data_received_on": "2025-11-16 15:34:21.820000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-16 15:50:13.858000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-16 16:05:50.102000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-16 16:23:40.749000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.63999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 16:39:26.744000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.23999786376953
+    },
+    {
+        "data_received_on": "2025-11-16 16:55:00.851000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.70999908447266
+    },
+    {
+        "data_received_on": "2025-11-16 17:11:02.151000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.5999984741211
+    },
+    {
+        "data_received_on": "2025-11-16 17:28:59.180000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.70999145507812
+    },
+    {
+        "data_received_on": "2025-11-16 17:44:43.161000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.03500366210938
+    },
+    {
+        "data_received_on": "2025-11-16 18:00:08.473000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.11499786376953
+    },
+    {
+        "data_received_on": "2025-11-16 18:17:44.436000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.19499206542969
+    },
+    {
+        "data_received_on": "2025-11-16 18:33:42.735000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-16 18:49:32.077000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.11000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 19:05:07.908000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.3499984741211
+    },
+    {
+        "data_received_on": "2025-11-16 19:22:58.743000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-16 19:38:50.172000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.87999725341797
+    },
+    {
+        "data_received_on": "2025-11-16 19:55:03.198000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.20500183105469
+    },
+    {
+        "data_received_on": "2025-11-16 20:11:10.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.86499786376953
+    },
+    {
+        "data_received_on": "2025-11-16 20:29:26.098000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.29000091552734
+    },
+    {
+        "data_received_on": "2025-11-16 20:45:22.002000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.22000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 21:01:05.439000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.16500091552734
+    },
+    {
+        "data_received_on": "2025-11-16 21:19:03.733000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 21:35:02.182000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.81500244140625
+    },
+    {
+        "data_received_on": "2025-11-16 21:51:21.866000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-16 22:09:10.979000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-16 22:25:15.898000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.98999786376953
+    },
+    {
+        "data_received_on": "2025-11-16 22:41:10.357000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.08000183105469
+    },
+    {
+        "data_received_on": "2025-11-16 22:59:10.612000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.41000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 23:15:04.582000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.36000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 23:31:40.212000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 23:47:32.977000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.08000183105469
+    },
+    {
+        "data_received_on": "2025-11-17 00:03:39.292000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-17 00:19:18.984000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-17 00:39:26.519000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.92499542236328
+    },
+    {
+        "data_received_on": "2025-11-17 00:58:01.427000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.86499786376953
+    },
+    {
+        "data_received_on": "2025-11-17 01:13:46.159000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.83000183105469
+    },
+    {
+        "data_received_on": "2025-11-17 01:29:19.230000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.91000366210938
+    },
+    {
+        "data_received_on": "2025-11-17 01:49:44.779000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-17 02:07:45.380000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.55000305175781
+    },
+    {
+        "data_received_on": "2025-11-17 02:23:29.727000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-17 02:39:18.041000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.56999969482422
+    },
+    {
+        "data_received_on": "2025-11-17 02:56:21.359000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.44000244140625
+    },
+    {
+        "data_received_on": "2025-11-17 03:14:15.696000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.34500122070312
+    },
+    {
+        "data_received_on": "2025-11-17 03:34:54.481000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.22999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 03:53:14.706000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.1449966430664
+    },
+    {
+        "data_received_on": "2025-11-17 04:09:09.356000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.29499816894531
+    },
+    {
+        "data_received_on": "2025-11-17 04:29:50.589000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.31500244140625
+    },
+    {
+        "data_received_on": "2025-11-17 04:46:03.485000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-17 05:04:41.851000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.72000122070312
+    },
+    {
+        "data_received_on": "2025-11-17 05:21:12.171000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-17 05:39:05.767000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.78500366210938
+    },
+    {
+        "data_received_on": "2025-11-17 05:59:45.217000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.02999877929688
+    },
+    {
+        "data_received_on": "2025-11-17 06:18:04.120000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.2449951171875
+    },
+    {
+        "data_received_on": "2025-11-17 06:34:14.825000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.09500122070312
+    },
+    {
+        "data_received_on": "2025-11-17 06:54:58.361000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-17 07:11:20.983000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.68000030517578
+    },
+    {
+        "data_received_on": "2025-11-17 07:29:30.980000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.88999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 07:50:15.664000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.17999267578125
+    },
+    {
+        "data_received_on": "2025-11-17 08:08:45.711000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.53499603271484
+    },
+    {
+        "data_received_on": "2025-11-17 08:24:51.286000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.33999633789062
+    },
+    {
+        "data_received_on": "2025-11-17 08:42:37.023000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-17 08:56:33.863000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.89999389648438
+    },
+    {
+        "data_received_on": "2025-11-17 09:14:40.216000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 09:32:33.012000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.50999450683594
+    },
+    {
+        "data_received_on": "2025-11-17 09:48:23.925000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-17 10:04:13.569000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.10499572753906
+    },
+    {
+        "data_received_on": "2025-11-17 10:22:02.054000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.05999755859375
+    },
+    {
+        "data_received_on": "2025-11-17 10:37:34.218000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-17 10:53:21.439000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.97999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 11:08:57.972000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.42999267578125
+    },
+    {
+        "data_received_on": "2025-11-17 11:24:35.820000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.72999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 11:41:13.051000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.45500183105469
+    },
+    {
+        "data_received_on": "2025-11-17 11:59:08.751000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.64999389648438
+    },
+    {
+        "data_received_on": "2025-11-17 12:15:15.161000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-17 12:31:33.137000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.45999908447266
+    },
+    {
+        "data_received_on": "2025-11-17 12:49:07.978000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.55999755859375
+    },
+    {
+        "data_received_on": "2025-11-17 13:04:41.408000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.06500244140625
+    },
+    {
+        "data_received_on": "2025-11-17 13:25:21.252000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.92499542236328
+    },
+    {
+        "data_received_on": "2025-11-17 13:43:46.979000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.30500030517578
+    },
+    {
+        "data_received_on": "2025-11-17 13:59:45.383000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.05000305175781
+    },
+    {
+        "data_received_on": "2025-11-17 14:17:45.468000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.90499877929688
+    },
+    {
+        "data_received_on": "2025-11-17 14:33:59.721000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.5050048828125
+    },
+    {
+        "data_received_on": "2025-11-17 14:50:30.497000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-17 15:09:04.519000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.80499267578125
+    },
+    {
+        "data_received_on": "2025-11-17 15:25:06.394000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.44999694824219
+    },
+    {
+        "data_received_on": "2025-11-17 15:42:25.035000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.1199951171875
+    },
+    {
+        "data_received_on": "2025-11-17 15:58:19.964000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.04499816894531
+    },
+    {
+        "data_received_on": "2025-11-17 16:14:18.195000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.48500061035156
+    },
+    {
+        "data_received_on": "2025-11-17 16:32:18.046000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.22999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 16:48:30.052000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.28499603271484
+    },
+    {
+        "data_received_on": "2025-11-17 17:04:38.199000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.67499542236328
+    },
+    {
+        "data_received_on": "2025-11-17 17:24:51.406000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.89500427246094
+    },
+    {
+        "data_received_on": "2025-11-17 17:41:46.761000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.23500061035156
+    },
+    {
+        "data_received_on": "2025-11-17 17:57:46.024000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.02000427246094
+    },
+    {
+        "data_received_on": "2025-11-17 18:13:47.825000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.72999572753906
+    },
+    {
+        "data_received_on": "2025-11-17 18:29:56.656000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.52000427246094
+    },
+    {
+        "data_received_on": "2025-11-17 18:50:25.813000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.5199966430664
+    },
+    {
+        "data_received_on": "2025-11-17 19:06:17.083000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-17 19:22:14.866000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-17 19:38:13.010000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.35499572753906
+    },
+    {
+        "data_received_on": "2025-11-17 19:54:04.872000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.73500061035156
+    },
+    {
+        "data_received_on": "2025-11-17 20:09:57.418000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.97000122070312
+    },
+    {
+        "data_received_on": "2025-11-17 20:26:18.558000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.50499725341797
+    },
+    {
+        "data_received_on": "2025-11-17 20:44:24.493000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.03499603271484
+    },
+    {
+        "data_received_on": "2025-11-17 21:05:18.143000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-17 21:23:56.632000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.05000305175781
+    },
+    {
+        "data_received_on": "2025-11-17 21:40:00.897000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.89999389648438
+    },
+    {
+        "data_received_on": "2025-11-17 21:57:52.552000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.86499786376953
+    },
+    {
+        "data_received_on": "2025-11-17 22:14:00.126000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.79999542236328
+    },
+    {
+        "data_received_on": "2025-11-17 22:29:36.500000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.7449951171875
+    },
+    {
+        "data_received_on": "2025-11-17 22:48:17.674000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.89999389648438
+    },
+    {
+        "data_received_on": "2025-11-17 23:03:55.621000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-17 23:20:29.776000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.375
+    },
+    {
+        "data_received_on": "2025-11-17 23:39:11.096000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.98999786376953
+    },
+    {
+        "data_received_on": "2025-11-17 23:55:11.969000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-18 00:13:16.376000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.28999328613281
+    },
+    {
+        "data_received_on": "2025-11-18 00:29:14.999000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-18 00:47:30.703000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.90999603271484
+    },
+    {
+        "data_received_on": "2025-11-18 01:03:21.241000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.93499755859375
+    },
+    {
+        "data_received_on": "2025-11-18 01:19:34.007000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.69499969482422
+    },
+    {
+        "data_received_on": "2025-11-18 01:40:24.088000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.56500244140625
+    },
+    {
+        "data_received_on": "2025-11-18 01:58:31.555000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.52499389648438
+    },
+    {
+        "data_received_on": "2025-11-18 02:14:53.479000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.55500030517578
+    },
+    {
+        "data_received_on": "2025-11-18 02:33:16.426000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.13999938964844
+    },
+    {
+        "data_received_on": "2025-11-18 02:49:47.816000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.11499786376953
+    },
+    {
+        "data_received_on": "2025-11-18 03:05:54.783000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-18 03:23:52.641000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.66499328613281
+    },
+    {
+        "data_received_on": "2025-11-18 03:39:59.831000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.68499755859375
+    },
+    {
+        "data_received_on": "2025-11-18 03:55:52.367000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.80000305175781
+    },
+    {
+        "data_received_on": "2025-11-18 04:13:52.815000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.79499816894531
+    },
+    {
+        "data_received_on": "2025-11-18 04:30:16.593000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.20999908447266
+    },
+    {
+        "data_received_on": "2025-11-18 04:46:31.301000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-18 05:02:44.873000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.22000122070312
+    },
+    {
+        "data_received_on": "2025-11-18 05:18:49.374000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.17500305175781
+    },
+    {
+        "data_received_on": "2025-11-18 05:34:46.153000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.21499633789062
+    },
+    {
+        "data_received_on": "2025-11-18 05:55:05.218000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-18 06:11:22.875000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.11000061035156
+    },
+    {
+        "data_received_on": "2025-11-18 06:27:10.186000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.91999816894531
+    },
+    {
+        "data_received_on": "2025-11-18 06:43:29.558000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.80500030517578
+    },
+    {
+        "data_received_on": "2025-11-18 06:59:40.895000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-18 07:19:28.951000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.55000305175781
+    },
+    {
+        "data_received_on": "2025-11-18 07:38:20.199000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-18 07:54:11.549000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.01000213623047
+    },
+    {
+        "data_received_on": "2025-11-18 08:10:26.860000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-18 08:28:24.063000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.72999572753906
+    },
+    {
+        "data_received_on": "2025-11-18 08:44:14.306000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.96499633789062
+    },
+    {
+        "data_received_on": "2025-11-18 09:00:07.770000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.00499725341797
+    },
+    {
+        "data_received_on": "2025-11-18 09:20:17.435000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.0
+    },
+    {
+        "data_received_on": "2025-11-18 09:38:21.070000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.04999542236328
+    },
+    {
+        "data_received_on": "2025-11-18 09:54:59.511000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.2249984741211
+    },
+    {
+        "data_received_on": "2025-11-18 10:13:03.020000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.0199966430664
+    },
+    {
+        "data_received_on": "2025-11-18 10:29:15.476000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.03999328613281
+    },
+    {
+        "data_received_on": "2025-11-18 10:45:28.554000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 68.93000030517578
+    },
+    {
+        "data_received_on": "2025-11-18 11:04:07.321000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.05500030517578
+    },
+    {
+        "data_received_on": "2025-11-18 11:20:20.466000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.0999984741211
+    },
+    {
+        "data_received_on": "2025-11-18 11:38:53.392000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.24500274658203
+    },
+    {
+        "data_received_on": "2025-11-18 11:54:44.902000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.38499450683594
+    },
+    {
+        "data_received_on": "2025-11-18 12:13:31.135000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.47000122070312
+    },
+    {
+        "data_received_on": "2025-11-18 12:29:36.395000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.52000427246094
+    },
+    {
+        "data_received_on": "2025-11-18 12:49:38.041000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 69.61000061035156
+    },
+    {
+        "data_received_on": "2025-11-18 13:08:14.812000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.08499908447266
+    },
+    {
+        "data_received_on": "2025-11-18 13:24:07.071000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.44000244140625
+    },
+    {
+        "data_received_on": "2025-11-18 13:40:17.178000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.47999572753906
+    },
+    {
+        "data_received_on": "2025-11-18 13:58:30.847000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.42499542236328
+    },
+    {
+        "data_received_on": "2025-11-18 14:14:44.294000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.38999938964844
+    },
+    {
+        "data_received_on": "2025-11-18 14:32:57.086000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.00499725341797
+    },
+    {
+        "data_received_on": "2025-11-18 14:48:55.968000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.5999984741211
+    },
+    {
+        "data_received_on": "2025-11-18 15:04:42.638000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.49000549316406
+    },
+    {
+        "data_received_on": "2025-11-18 15:21:30.661000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-18 15:37:24.429000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.30499267578125
+    },
+    {
+        "data_received_on": "2025-11-18 15:53:19.403000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.9749984741211
+    },
+    {
+        "data_received_on": "2025-11-18 16:10:27.500000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.02499389648438
+    },
+    {
+        "data_received_on": "2025-11-18 16:26:37.759000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.65499877929688
+    },
+    {
+        "data_received_on": "2025-11-18 16:45:28.499000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.51499938964844
+    },
+    {
+        "data_received_on": "2025-11-18 17:01:30.215000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.31999969482422
+    },
+    {
+        "data_received_on": "2025-11-18 17:19:37.175000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.59500122070312
+    },
+    {
+        "data_received_on": "2025-11-18 17:38:15.849000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.9949951171875
+    },
+    {
+        "data_received_on": "2025-11-18 17:54:11.833000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.27000427246094
+    },
+    {
+        "data_received_on": "2025-11-18 18:10:32.238000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.125
+    },
+    {
+        "data_received_on": "2025-11-18 18:28:39.471000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.5
+    },
+    {
+        "data_received_on": "2025-11-18 18:44:29.340000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-18 19:04:09.705000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.76499938964844
+    },
+    {
+        "data_received_on": "2025-11-18 19:20:16.594000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.79000091552734
+    },
+    {
+        "data_received_on": "2025-11-18 19:40:07.742000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.14999389648438
+    },
+    {
+        "data_received_on": "2025-11-18 19:59:28.722000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-18 20:20:31.593000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.00999450683594
+    },
+    {
+        "data_received_on": "2025-11-18 20:38:56.109000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.83999633789062
+    },
+    {
+        "data_received_on": "2025-11-18 20:54:49.975000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.73999786376953
+    },
+    {
+        "data_received_on": "2025-11-18 21:15:20.284000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.33000183105469
+    },
+    {
+        "data_received_on": "2025-11-18 21:31:44.968000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.67500305175781
+    },
+    {
+        "data_received_on": "2025-11-18 21:47:29.531000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.91499328613281
+    },
+    {
+        "data_received_on": "2025-11-18 22:03:20.103000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.08499908447266
+    },
+    {
+        "data_received_on": "2025-11-18 22:19:09.834000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 81.59500122070312
+    },
+    {
+        "data_received_on": "2025-11-18 22:35:19.259000",
+        "Anomaly_Flag": -1,
+        "HuAvg1": 84.09500122070312
+    },
+    {
+        "data_received_on": "2025-11-18 22:53:35.991000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 83.5
+    },
+    {
+        "data_received_on": "2025-11-18 23:09:27.015000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 82.41000366210938
+    },
+    {
+        "data_received_on": "2025-11-18 23:30:17.380000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 80.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-18 23:48:52.079000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.78500366210938
+    },
+    {
+        "data_received_on": "2025-11-19 00:04:46.380000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.2699966430664
+    },
+    {
+        "data_received_on": "2025-11-19 00:20:44.130000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-19 00:38:32.911000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-19 00:54:43.950000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.50999450683594
+    },
+    {
+        "data_received_on": "2025-11-19 01:12:42.116000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.94000244140625
+    },
+    {
+        "data_received_on": "2025-11-19 01:28:42.452000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.58499908447266
+    },
+    {
+        "data_received_on": "2025-11-19 01:45:09.378000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.52499389648438
+    },
+    {
+        "data_received_on": "2025-11-19 02:04:09.695000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.55999755859375
+    },
+    {
+        "data_received_on": "2025-11-19 02:20:02.921000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.3699951171875
+    },
+    {
+        "data_received_on": "2025-11-19 02:38:35.525000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.31999969482422
+    },
+    {
+        "data_received_on": "2025-11-19 02:55:06.565000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.19499969482422
+    },
+    {
+        "data_received_on": "2025-11-19 03:10:55.743000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.4949951171875
+    },
+    {
+        "data_received_on": "2025-11-19 03:27:38.900000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.36499786376953
+    },
+    {
+        "data_received_on": "2025-11-19 03:43:25.647000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.46499633789062
+    },
+    {
+        "data_received_on": "2025-11-19 03:59:33.951000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.71499633789062
+    },
+    {
+        "data_received_on": "2025-11-19 04:20:03.308000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.41999816894531
+    },
+    {
+        "data_received_on": "2025-11-19 04:36:54.058000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.70500183105469
+    },
+    {
+        "data_received_on": "2025-11-19 04:52:58.343000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 79.33499908447266
+    },
+    {
+        "data_received_on": "2025-11-19 05:08:59.546000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 78.27999877929688
+    },
+    {
+        "data_received_on": "2025-11-19 05:25:14.299000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 77.27499389648438
+    },
+    {
+        "data_received_on": "2025-11-19 05:45:26.400000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.94999694824219
+    },
+    {
+        "data_received_on": "2025-11-19 06:02:14.091000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.88999938964844
+    },
+    {
+        "data_received_on": "2025-11-19 06:18:17.316000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.63499450683594
+    },
+    {
+        "data_received_on": "2025-11-19 06:34:38.187000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 76.30500030517578
+    },
+    {
+        "data_received_on": "2025-11-19 06:50:52.276000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.86500549316406
+    },
+    {
+        "data_received_on": "2025-11-19 07:08:43.414000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 75.16999816894531
+    },
+    {
+        "data_received_on": "2025-11-19 07:24:39.290000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.6199951171875
+    },
+    {
+        "data_received_on": "2025-11-19 07:40:25.616000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 74.07499694824219
+    },
+    {
+        "data_received_on": "2025-11-19 07:57:14.438000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 73.31999206542969
+    },
+    {
+        "data_received_on": "2025-11-19 08:15:34.345000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.57499694824219
+    },
+    {
+        "data_received_on": "2025-11-19 08:33:56.317000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.88999938964844
+    },
+    {
+        "data_received_on": "2025-11-19 08:49:44.598000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 70.88499450683594
+    },
+    {
+        "data_received_on": "2025-11-19 09:05:12.630000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.29000091552734
+    },
+    {
+        "data_received_on": "2025-11-19 09:21:37.328000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 71.56499481201172
+    },
+    {
+        "data_received_on": "2025-11-19 09:39:08.167000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.18499755859375
+    },
+    {
+        "data_received_on": "2025-11-19 09:54:39.619000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.45999908447266
+    },
+    {
+        "data_received_on": "2025-11-19 10:10:27.818000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.61499786376953
+    },
+    {
+        "data_received_on": "2025-11-19 10:28:25.894000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.92499542236328
+    },
+    {
+        "data_received_on": "2025-11-19 10:44:26.745000",
+        "Anomaly_Flag": 1,
+        "HuAvg1": 72.23999786376953
+    }
+]

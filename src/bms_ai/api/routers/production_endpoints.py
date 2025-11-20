@@ -87,89 +87,68 @@ class AnamolyPredictionResponse(BaseModel):
     total_anomalies: int = Field(..., description="Total count of unique anomalies detected in the input data.")
 
 ALL_AVAILABLE_ASSETS = ['OS01-AHU-02', 'OS04-AHU-52', 'OS02-AHU-04', 'OS02-AHU-05','OS01-AHU-03', 'OS01-AHU-01', 'OS04-AHU-08', 'OS04-AHU-06','OS04-AHU-13', 'OS04-AHU-07', 'OS05-AHU-09', 'OS05-AHU-11','OS05-AHU-12', 'OS05-AHU-10', 'OS02-AHU-15', 'OS02-AHU-16','OS02-AHU-14', 'OS01-AHU-17', 'OS04-AHU-74', 'OS01-AHU-74']
-ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'AvgHu']
+ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1'] 
 
 class AnomalyVizRequest(BaseModel):
-    queryResponse: List['MonitoringDataRecord'] = Field(
-        ...,
-        description="List of raw monitoring data records for all assets and features."
-    )
     chart_type: str = Field('pie', description="Type of visualization data requested: 'pie' or 'line'.")
 
 class AnomalyVizResponse(BaseModel):
     chart_type: str
     data: Dict[str, Any] = Field(..., description="Data structure for the requested visualization.")
 
-def _process_single_anomaly_run(raw_records: List['MonitoringDataRecord'], asset_code: str, feature: str) -> tuple[int, pd.DataFrame | None]:
-    """
-    Runs anomaly detection for a single asset/feature pair, returning 
-    (total_anomalies, time_series_df).
-    """
-    if anamoly_model is None:
-        return 0, None
-
-    try:
-        model_package = anamoly_model[feature][asset_code]
-    except KeyError:
-        log.warning(f"Model package not found for Feature: {feature} and Asset: {asset_code}. Skipping.")
-        return 0, None
-
-    try:
-        wrapped_data = {"data": {"queryResponse": [rec.dict() for rec in raw_records]}}
-        df_wide = Anamoly_data_pipeline(wrapped_data, "data_received_on", asset_code)
-        
-        if df_wide.empty or feature not in df_wide.columns:
-            return 0, None
-
-        X_df = df_wide[[feature, "data_received_on"]].copy().dropna(subset=[feature])
-        
-        if X_df.empty:
-            return 0, None
-            
-        X_scaled = model_package['scaler'].transform(X_df[[feature]])
-        predictions = model_package['model'].predict(X_scaled)
-
-        X_df['Anomaly_Flag'] = predictions
-        X_df['Anomaly_Count'] = (X_df['Anomaly_Flag'] == -1).astype(int) 
-        
-        total_anomalies = int(X_df['Anomaly_Count'].sum())
-        
-        return total_anomalies, X_df[['data_received_on', 'Anomaly_Count']]
-
-    except Exception as e:
-        log.error(f"Anomaly analysis failed for {asset_code}/{feature}: {e}")
-        return 0, None
-
 def Anomaly_viz_data_analysis(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
-    assets = ALL_AVAILABLE_ASSETS 
     features = ALL_AVAILABLE_FEATURES 
     
-    all_results = {} 
+    BASE_REPORT_DIR = Path(r"src/bms_ai/utils/Stored_Anamoly_JSON")
     
-    input_assets = {record.asset_code for record in request_data.queryResponse}
-    assets_to_process = [asset for asset in assets if asset in input_assets]
+    all_feature_data = {} 
     
-    if not assets_to_process:
-        raise HTTPException(status_code=404, detail="No data found for any of the hardcoded assets in the input records.")
-    
-    for asset in assets_to_process:
-        for feature in features:
-            total, df = _process_single_anomaly_run(request_data.queryResponse, asset, feature)
+    for feature in features:
+        file_path = BASE_REPORT_DIR / f"{feature}.json" 
+        
+        if not file_path.exists():
+            log.warning(f"Static anomaly file NOT FOUND for feature '{feature}'. Checked path: {file_path.resolve()}. Skipping.")
+            continue
             
-            if total > 0 or (df is not None and not df.empty):
-                all_results[(asset, feature)] = (total, df)
+        try:
+            with open(file_path, 'r') as f:
+                raw_list = json.load(f)
+                
+            df = pd.DataFrame(raw_list)
+            
+            if df.empty or 'Anomaly_Flag' not in df.columns or 'data_received_on' not in df.columns:
+                 log.warning(f"File {feature}.json is empty or missing required columns. Skipping.")
+                 continue
+                 
+            df['Anomaly_Flag'] = pd.to_numeric(df['Anomaly_Flag'], errors='coerce').fillna(1).astype(int)
+            df['date'] = pd.to_datetime(df['data_received_on'], errors='coerce')
+            
+            total_anomalies = df[df['Anomaly_Flag'] == -1].shape[0]
+            
+            if feature not in df.columns:
+                 log.warning(f"Raw data column '{feature}' not found in {feature}.json. Skipping.")
+                 continue
+                 
+            all_feature_data[feature] = {
+                'total': total_anomalies,
+                'df': df.copy() 
+            }
+            log.info(f"Successfully loaded and processed static data for feature: {feature} with {total_anomalies} anomalies.")
+            
+        except Exception as e:
+            log.error(f"Failed to process anomaly file {file_path}: {e}")
+            continue
 
-    if not all_results:
-        raise HTTPException(status_code=404, detail="Anomaly detection models ran successfully but found zero relevant data points for visualization.")
-
+    if not all_feature_data:
+        raise HTTPException(status_code=404, detail="No anomaly data could be loaded from static files for visualization.")
 
     if chart_type == 'pie':
-        feature_totals = {feature: 0 for feature in features}
+        feature_totals = {f: 0 for f in features} 
         
-        for (asset, feature), (total, df) in all_results.items():
-            feature_totals[feature] += total
+        for feature, data in all_feature_data.items():
+            feature_totals[feature] = data['total']
             
         response_data = {
             'feature_anomalies': feature_totals,
@@ -181,33 +160,41 @@ def Anomaly_viz_data_analysis(request_data: AnomalyVizRequest) -> AnomalyVizResp
     elif chart_type == 'line':
         
         df_list = []
-        for (asset, feature), (total, df) in all_results.items():
-            if df is not None:
-                col_name = f"{asset}_{feature}"
-                df = df.rename(columns={'Anomaly_Count': col_name, 'data_received_on': 'date'})
-                df = df.set_index('date')[[col_name]]
-                df_list.append(df)
+        for feature, data in all_feature_data.items():
+            df = data['df'].copy()
+            df.set_index('date', inplace=True)
+            
+            df = df.rename(columns={
+                'Anomaly_Flag': f"{feature}_Flag",
+                feature: f"{feature}_Value"
+            })
+            
+            df_list.append(df[[f"{feature}_Value", f"{feature}_Flag"]])
 
         if not df_list:
-            raise HTTPException(status_code=404, detail="Could not generate line chart data; all anomaly totals were zero or time series data was missing.")
-
-        master_df = pd.concat(df_list, axis=1).fillna(0) 
+             raise HTTPException(status_code=404, detail="Line chart data missing after loading files.")
+             
+        master_df = pd.concat(df_list, axis=1, join='outer').fillna(0) 
 
         master_df = master_df.reset_index()
-        master_df['date'] = master_df['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        master_df.rename(columns={'date': 'data_received_on'}, inplace=True)
+        
+        master_df['data_received_on'] = master_df['data_received_on'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        flag_cols = [col for col in master_df.columns if col.endswith('_Flag')]
+        master_df[flag_cols] = master_df[flag_cols].astype(int)
         
         return AnomalyVizResponse(
             chart_type='line', 
             data={
-                'time_index': master_df['date'].tolist(),
-                'data_series': master_df.to_dict('records')
+                'integrated_time_series_data': master_df.to_dict('records')
             }
         )
 
     else:
         raise HTTPException(status_code=400, detail=f"Invalid chart_type: {chart_type}. Must be 'pie' or 'line'.")
-
-
+    
 def Anamoly_data_pipeline(data: Dict[str, Any], date_column: str, target_asset_code: str) -> pd.DataFrame:
     try:
         records = data.get("data", {}).get("queryResponse", [])

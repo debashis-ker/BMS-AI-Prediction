@@ -1,0 +1,4096 @@
+[
+    {
+        "data_received_on": "2025-11-07 09:23:36.264000",
+        "Anomaly_Flag": 1
+    },
+    {
+        "data_received_on": "2025-11-07 09:39:53.639000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 370.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 10:00:49.236000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 394.0
+    },
+    {
+        "data_received_on": "2025-11-07 10:17:20.315000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 10:33:47.450000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 399.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 10:50:12.004000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 398.0
+    },
+    {
+        "data_received_on": "2025-11-07 11:06:56.469000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-07 11:23:06.602000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 408.0
+    },
+    {
+        "data_received_on": "2025-11-07 11:37:27.586000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-07 11:54:06.002000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 12:10:29.305000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-07 12:29:08.119000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 493.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-07 12:45:13.230000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-07 13:04:19.430000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 13:20:01.368000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 532.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 13:38:29.819000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 570.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 13:54:37.123000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 601.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 14:10:49.989000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 518.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-07 14:28:37.410000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 493.0
+    },
+    {
+        "data_received_on": "2025-11-07 14:44:30.378000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 15:01:08.935000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 587.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 15:17:17.482000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 615.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 15:33:40.570000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 656.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-07 15:50:03.747000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 682.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 16:06:38.932000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 695.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 16:23:15.181000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 679.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 16:39:27.791000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 663.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 16:55:51.207000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 604.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 17:14:35.594000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 635.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 17:33:26.509000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 763.0
+    },
+    {
+        "data_received_on": "2025-11-07 17:49:39.714000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 800.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 18:06:39.538000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 817.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-07 18:22:48.919000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 827.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-07 18:38:58.696000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 840.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 18:55:14.978000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 849.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 19:15:29.705000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 741.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-07 19:32:00.609000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 666.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 19:48:07.396000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 665.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 20:04:19.636000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 678.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 20:20:10.408000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 676.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 20:38:23.118000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 676.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 20:54:29.071000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 672.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 21:11:04.400000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 669.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-07 21:29:31.132000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 661.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 21:46:03.138000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 601.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 22:04:50.002000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 547.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-07 22:21:48.302000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-07 22:38:12.716000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 496.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-07 22:54:25.496000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-07 23:10:20.369000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.0
+    },
+    {
+        "data_received_on": "2025-11-07 23:28:57.849000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-07 23:44:48.199000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 00:03:45.601000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.0
+    },
+    {
+        "data_received_on": "2025-11-08 00:19:59.429000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 447.0
+    },
+    {
+        "data_received_on": "2025-11-08 00:38:31.268000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 00:54:29.278000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 454.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 01:10:43.358000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 01:28:41.338000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 01:44:29.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 02:00:35.146000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 02:19:04.676000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.0
+    },
+    {
+        "data_received_on": "2025-11-08 02:35:12.823000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 02:53:19.163000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 03:09:07.927000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 03:25:04.785000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 03:41:16.281000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 03:57:33.004000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 04:13:54.291000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 443.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-08 04:30:00.500000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 04:50:53.268000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 436.0
+    },
+    {
+        "data_received_on": "2025-11-08 05:07:02.488000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 435.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-08 05:23:19.571000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 05:39:43.013000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 415.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 05:56:27.809000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 412.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 06:12:42.893000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 402.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 06:28:51.160000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 403.0
+    },
+    {
+        "data_received_on": "2025-11-08 06:45:21.165000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 401.0
+    },
+    {
+        "data_received_on": "2025-11-08 07:05:49.968000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 07:22:39.748000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 07:38:44.231000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.0
+    },
+    {
+        "data_received_on": "2025-11-08 07:54:53.386000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.0
+    },
+    {
+        "data_received_on": "2025-11-08 08:11:49.894000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-08 08:30:20.931000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.0
+    },
+    {
+        "data_received_on": "2025-11-08 08:46:01.943000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-08 09:03:48.896000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 09:19:24.033000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 409.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 09:35:27.812000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.0
+    },
+    {
+        "data_received_on": "2025-11-08 09:53:50.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 440.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 10:09:36.144000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.0
+    },
+    {
+        "data_received_on": "2025-11-08 10:25:30.063000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 478.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 10:41:42.393000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 486.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 10:59:29.252000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 470.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 11:15:09.829000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 11:33:48.732000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 11:50:05.519000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 12:06:52.211000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 443.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 12:24:45.465000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-08 12:40:52.143000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 488.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 12:58:52.260000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 502.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 13:15:01.940000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 509.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 13:30:56.173000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 13:48:41.248000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 486.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 14:03:58.384000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 454.0
+    },
+    {
+        "data_received_on": "2025-11-08 14:19:26.255000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 14:34:27.175000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 540.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 14:49:47.701000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 642.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 15:09:56.783000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 728.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 15:27:02.961000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 766.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 15:45:31.826000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 778.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 16:01:43.110000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 787.0
+    },
+    {
+        "data_received_on": "2025-11-08 16:17:49.588000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 774.0
+    },
+    {
+        "data_received_on": "2025-11-08 16:33:55.861000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 672.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-08 16:49:49.586000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 681.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 17:10:39.702000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 785.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 17:27:00.522000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 868.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-08 17:43:14.464000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 932.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 17:59:10.552000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 968.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 18:15:16.541000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 966.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 18:33:47.473000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 955.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 18:50:09.634000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 923.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-08 19:06:26.382000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 793.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 19:22:35.881000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 820.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 19:40:40.974000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 829.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 19:57:50.442000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 826.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 20:13:54.023000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 813.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 20:30:39.077000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 801.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-08 20:49:06.969000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 770.0
+    },
+    {
+        "data_received_on": "2025-11-08 21:05:04.457000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 755.0
+    },
+    {
+        "data_received_on": "2025-11-08 21:23:27.471000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 691.0
+    },
+    {
+        "data_received_on": "2025-11-08 21:39:42.821000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 629.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-08 21:55:08.911000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 585.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-08 22:14:20.111000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 546.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-08 22:30:20.662000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-08 22:48:37.926000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 499.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 23:04:53.011000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 485.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 23:20:33.136000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 478.0
+    },
+    {
+        "data_received_on": "2025-11-08 23:37:16.751000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 473.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-08 23:53:39.118000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 467.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 00:09:58.801000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 00:26:08.640000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 496.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 00:42:04.086000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 491.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 01:00:18.393000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 01:18:13.550000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 497.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 01:34:31.685000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 508.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 01:50:32.354000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 02:06:44.430000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 510.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-09 02:24:56.886000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 508.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 02:41:32.540000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 511.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 02:57:26.881000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 03:15:22.992000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.0
+    },
+    {
+        "data_received_on": "2025-11-09 03:34:12.407000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 506.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 03:50:34.189000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-09 04:08:14.104000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 506.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 04:24:38.853000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 498.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-09 04:40:35.761000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 493.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 04:58:32.897000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 489.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 05:14:29.794000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 478.0
+    },
+    {
+        "data_received_on": "2025-11-09 05:31:06.589000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.0
+    },
+    {
+        "data_received_on": "2025-11-09 05:49:38.620000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 06:05:37.203000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 06:23:41.363000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 410.0
+    },
+    {
+        "data_received_on": "2025-11-09 06:39:37.116000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 403.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 06:55:22.979000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 400.0
+    },
+    {
+        "data_received_on": "2025-11-09 07:13:47.607000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 07:29:25.411000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.0
+    },
+    {
+        "data_received_on": "2025-11-09 07:44:40.330000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 08:00:55.449000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 435.0
+    },
+    {
+        "data_received_on": "2025-11-09 08:19:27.333000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 08:35:28.199000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 08:53:38.266000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 474.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 09:09:51.213000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 440.0
+    },
+    {
+        "data_received_on": "2025-11-09 09:26:08.466000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 409.0
+    },
+    {
+        "data_received_on": "2025-11-09 09:43:57.503000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 10:00:20.031000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 10:17:29.739000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 10:35:35.613000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 492.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 10:50:58.977000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 497.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 11:07:09.256000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 501.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 11:22:40.065000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 503.0
+    },
+    {
+        "data_received_on": "2025-11-09 11:38:19.625000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 11:54:02.015000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-09 12:10:15.294000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 12:26:34.563000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 506.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 12:44:40.809000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 532.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 13:01:32.450000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 551.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 13:19:45.491000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 568.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 13:36:06.634000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 574.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 13:52:40.174000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 558.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 14:08:36.218000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 525.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 14:24:24.829000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 490.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 14:40:17.784000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 14:58:24.541000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 541.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 15:14:13.263000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 565.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 15:30:43.534000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 571.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 15:46:48.793000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 600.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-09 16:03:00.205000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 574.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 16:19:04.674000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 566.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 16:35:04.234000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 559.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 16:55:12.979000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 17:11:10.611000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 492.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-09 17:27:06.911000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 511.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-09 17:42:51.849000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 521.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 17:58:55.200000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 537.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 18:14:47.900000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 539.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 18:30:52.476000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 540.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 18:47:07.592000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 19:05:20.538000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 516.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 19:23:35.442000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 19:39:49.622000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 467.0
+    },
+    {
+        "data_received_on": "2025-11-09 19:55:31.569000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 492.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 20:12:22.965000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 20:30:35.436000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 535.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-09 20:48:47.714000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 550.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 21:04:52.324000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 553.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 21:21:00.020000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 554.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-09 21:39:43.067000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 537.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-09 21:55:33.517000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 22:13:53.053000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 487.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-09 22:30:08.282000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 22:46:39.232000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 23:04:55.496000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 463.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 23:20:53.018000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 23:37:45.140000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-09 23:56:00.207000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 454.0
+    },
+    {
+        "data_received_on": "2025-11-10 00:13:52.801000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 00:29:46.929000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 00:45:33.587000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 01:04:24.113000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 01:20:12.457000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 01:38:20.292000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 482.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 01:54:32.908000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 02:10:50.565000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 02:29:21.142000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 02:45:19.374000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 462.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 03:01:24.410000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 03:19:38.516000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 03:35:31.694000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 03:54:09.715000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 04:10:32.205000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 04:27:15.903000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 04:45:13.660000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 05:01:29.465000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 05:17:38.163000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 05:36:00.661000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 05:52:36.755000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 06:11:00.802000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 421.0
+    },
+    {
+        "data_received_on": "2025-11-10 06:29:05.042000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 411.0
+    },
+    {
+        "data_received_on": "2025-11-10 06:44:43.713000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-10 07:00:45.212000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 394.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 07:19:17.532000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 397.0
+    },
+    {
+        "data_received_on": "2025-11-10 07:34:50.601000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.0
+    },
+    {
+        "data_received_on": "2025-11-10 07:50:57.477000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 391.0
+    },
+    {
+        "data_received_on": "2025-11-10 08:07:58.623000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.0
+    },
+    {
+        "data_received_on": "2025-11-10 08:23:04.839000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 388.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 08:38:32.174000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 386.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 08:54:27.179000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 385.0
+    },
+    {
+        "data_received_on": "2025-11-10 09:09:52.554000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 387.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 09:25:31.051000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 385.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 09:43:55.704000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 384.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 09:59:33.893000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 10:15:06.434000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.0
+    },
+    {
+        "data_received_on": "2025-11-10 10:31:52.680000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 396.0
+    },
+    {
+        "data_received_on": "2025-11-10 10:49:52.852000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 391.0
+    },
+    {
+        "data_received_on": "2025-11-10 11:05:45.920000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 397.0
+    },
+    {
+        "data_received_on": "2025-11-10 11:23:20.135000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 394.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 11:39:00.049000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 391.0
+    },
+    {
+        "data_received_on": "2025-11-10 11:54:51.415000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 387.0
+    },
+    {
+        "data_received_on": "2025-11-10 12:10:44.236000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.0
+    },
+    {
+        "data_received_on": "2025-11-10 12:29:37.831000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.0
+    },
+    {
+        "data_received_on": "2025-11-10 12:46:02.410000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 391.0
+    },
+    {
+        "data_received_on": "2025-11-10 13:04:17.423000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 388.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 13:20:33.342000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 390.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 13:37:35.182000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 392.0
+    },
+    {
+        "data_received_on": "2025-11-10 13:53:30.640000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.0
+    },
+    {
+        "data_received_on": "2025-11-10 14:09:25.024000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 14:25:16.104000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 396.0
+    },
+    {
+        "data_received_on": "2025-11-10 14:43:33.295000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 395.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 14:59:31.143000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 397.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 15:16:09.455000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 411.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 15:35:00.276000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 423.0
+    },
+    {
+        "data_received_on": "2025-11-10 15:51:30.552000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 426.0
+    },
+    {
+        "data_received_on": "2025-11-10 16:09:45.434000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 438.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 16:26:08.309000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 438.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 16:44:32.419000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 17:01:19.614000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 423.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 17:17:38.250000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 441.0
+    },
+    {
+        "data_received_on": "2025-11-10 17:33:43.932000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 17:50:14.758000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 472.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 18:08:15.409000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 484.0
+    },
+    {
+        "data_received_on": "2025-11-10 18:24:21.706000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 496.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 18:43:05.185000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 510.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 18:59:43.943000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 510.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 19:16:25.660000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 503.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 19:33:06.887000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 472.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 19:49:10.129000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 463.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 20:08:07.493000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-10 20:23:55.515000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 462.0
+    },
+    {
+        "data_received_on": "2025-11-10 20:40:16.785000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-10 20:57:05.709000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 457.0
+    },
+    {
+        "data_received_on": "2025-11-10 21:13:29.221000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-10 21:29:42.033000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 452.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 21:47:33.870000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.0
+    },
+    {
+        "data_received_on": "2025-11-10 22:04:06.049000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.0
+    },
+    {
+        "data_received_on": "2025-11-10 22:23:19.032000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.0
+    },
+    {
+        "data_received_on": "2025-11-10 22:39:53.977000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 22:57:59.709000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 423.0
+    },
+    {
+        "data_received_on": "2025-11-10 23:14:05.597000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 415.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-10 23:32:16.158000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 417.0
+    },
+    {
+        "data_received_on": "2025-11-10 23:48:31.350000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 422.0
+    },
+    {
+        "data_received_on": "2025-11-11 00:04:34.608000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 421.0
+    },
+    {
+        "data_received_on": "2025-11-11 00:21:41.480000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 423.0
+    },
+    {
+        "data_received_on": "2025-11-11 00:37:52.746000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.0
+    },
+    {
+        "data_received_on": "2025-11-11 00:53:50.681000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.0
+    },
+    {
+        "data_received_on": "2025-11-11 01:10:35.279000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.0
+    },
+    {
+        "data_received_on": "2025-11-11 01:28:41.567000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.0
+    },
+    {
+        "data_received_on": "2025-11-11 01:44:41.677000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.0
+    },
+    {
+        "data_received_on": "2025-11-11 02:03:19.664000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.0
+    },
+    {
+        "data_received_on": "2025-11-11 02:19:40.077000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.0
+    },
+    {
+        "data_received_on": "2025-11-11 02:36:13.455000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 02:54:40.632000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 426.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 03:11:04.953000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.0
+    },
+    {
+        "data_received_on": "2025-11-11 03:29:10.128000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 432.0
+    },
+    {
+        "data_received_on": "2025-11-11 03:50:14.127000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 434.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 04:08:19.250000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 441.0
+    },
+    {
+        "data_received_on": "2025-11-11 04:24:22.264000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 447.0
+    },
+    {
+        "data_received_on": "2025-11-11 04:42:52.361000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 04:59:49.955000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 440.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 05:18:40.961000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 05:34:20.485000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 428.0
+    },
+    {
+        "data_received_on": "2025-11-11 05:52:32.247000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 06:08:31.709000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 06:24:24.109000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 406.0
+    },
+    {
+        "data_received_on": "2025-11-11 06:43:26.034000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 405.0
+    },
+    {
+        "data_received_on": "2025-11-11 06:59:10.629000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 402.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 07:18:56.103000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 396.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 07:35:01.841000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 394.0
+    },
+    {
+        "data_received_on": "2025-11-11 07:53:21.668000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 390.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 08:09:51.116000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 08:28:47.376000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 393.0
+    },
+    {
+        "data_received_on": "2025-11-11 08:44:43.104000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 391.0
+    },
+    {
+        "data_received_on": "2025-11-11 09:03:35.515000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 389.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 09:19:32.730000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 395.0
+    },
+    {
+        "data_received_on": "2025-11-11 09:38:49.060000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 397.0
+    },
+    {
+        "data_received_on": "2025-11-11 09:55:18.995000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 398.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 10:12:49.678000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 408.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 10:28:32.804000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 411.0
+    },
+    {
+        "data_received_on": "2025-11-11 10:44:41.245000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 412.0
+    },
+    {
+        "data_received_on": "2025-11-11 11:02:38.001000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-11 11:19:04.489000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 417.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-11 11:34:50.128000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-11 11:53:09.631000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-11 12:10:02.217000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-11 12:28:10.698000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.0
+    },
+    {
+        "data_received_on": "2025-11-11 12:44:03.175000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 418.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 12:59:53.480000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 421.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-11 13:18:06.563000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-11 13:33:46.144000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 13:49:57.959000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-11 14:06:00.688000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-11 14:24:09.754000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 14:39:52.076000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.0
+    },
+    {
+        "data_received_on": "2025-11-11 14:55:53.879000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 454.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 15:13:29.826000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 15:29:11.638000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 469.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 15:48:11.659000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 16:04:06.010000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 16:20:23.270000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 16:38:24.048000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 473.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 16:54:28.651000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 17:14:19.182000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 17:33:22.311000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 444.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 17:48:48.169000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-11 18:04:53.530000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 450.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 18:23:16.919000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 18:39:23.601000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 18:59:54.172000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 19:18:03.084000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 19:34:02.958000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 19:50:08.433000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 20:08:12.540000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 445.0
+    },
+    {
+        "data_received_on": "2025-11-11 20:24:25.090000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.0
+    },
+    {
+        "data_received_on": "2025-11-11 20:42:37.250000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 452.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-11 20:58:41.317000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 21:14:11.605000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 21:30:25.838000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 454.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 21:47:00.847000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-11 22:05:14.980000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 452.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 22:21:08.481000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 22:39:35.055000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 438.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 22:56:22.580000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-11 23:14:04.918000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.0
+    },
+    {
+        "data_received_on": "2025-11-11 23:30:19.073000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.0
+    },
+    {
+        "data_received_on": "2025-11-11 23:46:18.235000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 00:04:17.435000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 00:25:04.229000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 494.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 00:43:30.865000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 490.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 00:59:34.503000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-12 10:37:59.386000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 403.0
+    },
+    {
+        "data_received_on": "2025-11-12 10:54:13.218000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 402.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 11:14:00.189000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.0
+    },
+    {
+        "data_received_on": "2025-11-12 11:29:38.476000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-12 11:45:56.292000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.0
+    },
+    {
+        "data_received_on": "2025-11-12 12:03:19.940000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 400.0
+    },
+    {
+        "data_received_on": "2025-11-12 12:19:09.495000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 12:34:57.961000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 427.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 12:51:36.879000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 13:09:29.878000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 434.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 13:28:26.125000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 440.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 13:43:53.585000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 13:59:57.324000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 445.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 14:20:08.286000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 14:37:59.785000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 415.0
+    },
+    {
+        "data_received_on": "2025-11-12 14:53:49.482000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 15:10:02.789000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 15:28:44.017000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 15:44:33.625000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 427.0
+    },
+    {
+        "data_received_on": "2025-11-12 16:02:31.181000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.0
+    },
+    {
+        "data_received_on": "2025-11-12 16:18:10.374000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 16:33:39.282000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 434.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 16:49:40.167000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 430.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 17:09:57.647000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 421.0
+    },
+    {
+        "data_received_on": "2025-11-12 17:29:07.986000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 17:45:01.420000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 18:04:03.369000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 18:19:47.989000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 18:39:53.692000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 18:58:18.734000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 19:14:33.317000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 480.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-12 19:34:51.478000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 19:52:32.363000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 462.0
+    },
+    {
+        "data_received_on": "2025-11-12 20:08:06.702000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 20:23:56.561000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 20:40:01.112000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 467.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 20:56:32.164000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 21:12:45.302000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.0
+    },
+    {
+        "data_received_on": "2025-11-12 21:28:43.350000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 463.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-12 21:44:32.753000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 22:04:29.781000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-12 22:24:15.919000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 446.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 22:39:37.848000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 441.0
+    },
+    {
+        "data_received_on": "2025-11-12 22:59:34.477000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 436.0
+    },
+    {
+        "data_received_on": "2025-11-12 23:15:32.149000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-12 23:33:16.246000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-12 23:49:01.771000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 441.0
+    },
+    {
+        "data_received_on": "2025-11-13 00:04:35.004000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 00:24:16.574000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 447.0
+    },
+    {
+        "data_received_on": "2025-11-13 00:39:43.769000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 442.0
+    },
+    {
+        "data_received_on": "2025-11-13 00:55:25.205000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 473.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 01:13:05.205000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 467.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 01:28:43.408000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.0
+    },
+    {
+        "data_received_on": "2025-11-13 01:44:14.760000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 01:59:27.445000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 462.0
+    },
+    {
+        "data_received_on": "2025-11-13 02:19:07.437000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 02:34:35.084000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 457.0
+    },
+    {
+        "data_received_on": "2025-11-13 02:53:14.102000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-13 03:08:44.561000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-13 03:24:16.320000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.0
+    },
+    {
+        "data_received_on": "2025-11-13 03:39:45.737000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 03:59:21.544000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.0
+    },
+    {
+        "data_received_on": "2025-11-13 04:17:20.994000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 467.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 04:32:36.490000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 04:48:17.806000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 05:04:02.915000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.0
+    },
+    {
+        "data_received_on": "2025-11-13 05:19:43.647000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 05:37:07.699000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 444.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 05:52:40.536000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 730.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 06:07:50.785000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 837.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 06:23:18.068000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 813.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 06:38:57.723000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 804.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 06:57:12.948000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 826.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 07:13:00.272000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 854.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 07:29:16.012000",
+        "Anomaly_Flag": -1,
+        "Co2RA": 862.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 07:45:27.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 844.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 08:03:50.807000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 732.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 08:20:12.339000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 684.0
+    },
+    {
+        "data_received_on": "2025-11-13 08:38:25.159000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 645.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 08:54:18.397000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 613.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 09:09:59.548000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 585.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 09:28:50.955000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 557.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 09:44:57.972000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 532.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 10:05:11.406000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 10:24:02.383000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 487.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 10:40:18.730000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 489.0
+    },
+    {
+        "data_received_on": "2025-11-13 10:59:32.963000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 473.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 11:18:06.804000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 11:33:53.730000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 11:49:59.936000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 12:10:21.835000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 443.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 12:27:19.979000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 12:44:04.194000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 432.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 12:59:55.521000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 13:17:36.716000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 13:33:42.762000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 428.0
+    },
+    {
+        "data_received_on": "2025-11-13 13:49:10.122000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 428.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 14:04:49.630000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-13 14:23:02.606000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 451.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 14:38:41.885000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 502.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-13 14:54:30.490000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 520.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 15:12:12.257000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 531.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 15:30:14.091000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 531.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 15:46:32.826000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 526.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 16:04:37.503000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 510.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 16:20:59.166000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 528.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 16:39:01.179000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 501.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-13 16:54:41.935000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 478.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 17:13:16.344000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 481.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 17:28:46.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 488.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-13 17:44:47.468000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 501.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 18:01:00.933000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.0
+    },
+    {
+        "data_received_on": "2025-11-13 18:18:31.818000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 518.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 18:34:23.537000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 528.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 18:50:36.654000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 524.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 19:08:07.293000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 531.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 19:23:50.591000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 19:39:38.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 512.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 19:55:39.379000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 583.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 20:13:27.526000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 593.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 20:29:18.781000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 655.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 20:45:28.367000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 685.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 21:04:14.866000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 712.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 21:19:32.942000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 682.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 21:37:28.825000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 692.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 21:53:11.016000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 708.0
+    },
+    {
+        "data_received_on": "2025-11-13 22:08:35.355000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 683.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 22:24:26.337000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 615.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-13 22:40:17.563000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 553.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-13 22:58:20.753000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-13 23:14:09.939000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 494.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-13 23:29:54.443000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 534.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-13 23:47:37.768000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 00:03:31.015000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 520.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 00:19:28.331000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 556.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 00:35:12.614000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 585.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 00:53:29.723000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 552.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 01:09:07.366000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 537.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 01:25:08.355000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 534.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 01:43:12.473000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 529.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 01:58:45.961000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 526.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-14 02:14:22.491000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 521.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 02:29:40.894000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 02:47:47.584000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 514.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 03:03:36.829000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 516.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 03:19:22.650000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 03:34:35.512000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 03:53:18.178000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 510.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 04:08:49.471000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 04:24:42.633000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 04:42:40.454000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 04:58:25.988000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 497.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 05:14:11.145000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 483.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 05:29:33.366000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 05:50:04.761000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 448.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 06:06:31.714000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 06:22:28.540000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 06:38:55.134000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 427.0
+    },
+    {
+        "data_received_on": "2025-11-14 06:53:20.154000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 418.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 07:09:13.288000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 415.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 07:25:04.838000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-14 07:43:19.963000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-14 07:57:14.072000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 408.0
+    },
+    {
+        "data_received_on": "2025-11-14 08:15:34.621000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 409.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 08:32:02.407000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 404.0
+    },
+    {
+        "data_received_on": "2025-11-14 08:49:56.730000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 410.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 09:08:24.676000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-14 09:24:30.337000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 09:40:01.208000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-14 09:59:04.176000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-14 10:15:24.968000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 422.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 10:33:29.786000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 422.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 10:49:28.234000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 418.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 11:05:05.894000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-14 11:23:40.121000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 418.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-14 11:39:49.987000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 423.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 11:56:18.687000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.0
+    },
+    {
+        "data_received_on": "2025-11-14 12:14:31.823000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 12:30:02.232000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 12:47:47.638000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 13:03:38.885000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 425.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 13:19:30.869000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 13:35:31.896000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 13:53:49.553000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-14 14:09:27.306000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 14:25:04.332000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 14:43:37.595000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 471.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 15:00:24.351000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 15:16:31.713000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 482.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 15:32:30.338000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 485.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 15:50:42.817000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 492.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-14 16:06:57.669000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 490.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-14 16:24:45.861000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 520.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 16:41:30.920000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 558.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 16:59:49.281000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 593.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 17:16:03.044000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 619.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 17:35:34.399000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 623.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-14 17:51:40.888000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 606.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 18:07:34.092000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 596.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 18:23:51.349000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 590.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 18:39:47.509000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 616.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 19:00:09.838000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 578.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 19:16:14.211000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 618.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 19:32:17.580000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 672.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-14 19:48:17.466000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 691.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-14 20:04:26.025000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 718.0
+    },
+    {
+        "data_received_on": "2025-11-14 20:20:27.541000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 728.0
+    },
+    {
+        "data_received_on": "2025-11-14 20:38:15.323000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 736.0
+    },
+    {
+        "data_received_on": "2025-11-14 20:54:00.302000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 753.0
+    },
+    {
+        "data_received_on": "2025-11-14 21:10:06.817000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 741.0
+    },
+    {
+        "data_received_on": "2025-11-14 21:28:25.798000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 754.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-14 21:44:38.765000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 664.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-14 21:58:06.144000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 629.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 22:14:14.286000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 595.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-14 22:29:36.178000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 577.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 22:45:03.269000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 564.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 23:03:58.083000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 527.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-14 23:19:59.578000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 539.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-14 23:36:01.556000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 534.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-14 23:54:04.692000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 546.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 00:09:45.431000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 553.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 00:26:03.049000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 556.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 00:41:54.444000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 563.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 00:59:43.122000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 554.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 01:18:23.316000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 551.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 01:34:25.399000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 552.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 01:50:11.788000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 551.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 02:08:19.771000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 551.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 02:24:24.869000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 548.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 02:40:24.471000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 549.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 02:57:06.472000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 548.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 03:15:02.317000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 542.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 03:33:29.291000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 532.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 03:49:18.244000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 534.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 04:05:30.263000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 533.0
+    },
+    {
+        "data_received_on": "2025-11-15 04:21:55.755000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 526.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 04:39:52.089000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 524.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 04:55:33.566000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 525.0
+    },
+    {
+        "data_received_on": "2025-11-15 05:13:40.742000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 05:29:41.309000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 483.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-15 05:46:00.903000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 06:02:15.098000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 453.0
+    },
+    {
+        "data_received_on": "2025-11-15 06:20:15.432000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 436.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-15 06:38:43.914000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 418.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 06:55:43.543000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 410.0
+    },
+    {
+        "data_received_on": "2025-11-15 07:11:46.959000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 413.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 07:30:05.681000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 405.0
+    },
+    {
+        "data_received_on": "2025-11-15 07:46:53.517000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 403.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-15 08:05:00.807000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 405.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-15 08:20:48.894000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 411.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-15 08:36:31.848000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 408.0
+    },
+    {
+        "data_received_on": "2025-11-15 08:54:17.104000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-15 09:10:12.748000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.0
+    },
+    {
+        "data_received_on": "2025-11-15 09:29:03.602000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 433.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 09:44:54.118000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 437.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 10:00:39.470000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 427.0
+    },
+    {
+        "data_received_on": "2025-11-15 10:18:29.012000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 424.0
+    },
+    {
+        "data_received_on": "2025-11-15 10:34:15.326000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-15 10:50:31.798000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.0
+    },
+    {
+        "data_received_on": "2025-11-15 11:06:25.931000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 11:24:05.197000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 11:39:38.674000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 480.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 11:54:58.655000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 12:13:06.376000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 477.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 12:29:01.361000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 462.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-15 12:44:56.688000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 461.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 13:00:49.587000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 13:18:49.092000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 432.0
+    },
+    {
+        "data_received_on": "2025-11-15 13:35:00.538000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 13:50:59.504000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-15 14:08:29.930000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 434.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-15 14:24:08.123000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 444.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 14:39:58.918000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 14:56:44.782000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 459.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 15:14:23.373000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 460.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 15:30:13.876000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 15:47:56.361000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 465.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 16:01:38.763000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 464.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-15 16:17:06.912000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 483.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-15 16:33:07.691000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 540.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 16:48:51.011000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 610.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 17:04:39.869000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 625.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 17:20:31.010000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 673.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 17:40:12.168000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 703.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 17:56:34.279000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 722.0
+    },
+    {
+        "data_received_on": "2025-11-15 18:12:25.430000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 740.0
+    },
+    {
+        "data_received_on": "2025-11-15 18:28:06.205000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 757.0
+    },
+    {
+        "data_received_on": "2025-11-15 18:43:39.135000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 694.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 19:00:02.286000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 634.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 19:16:09.593000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 610.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 19:33:52.302000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 622.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 19:49:46.622000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 627.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 20:04:54.454000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 638.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 20:23:02.713000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 624.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 20:38:38.374000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 624.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-15 20:54:16.139000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 621.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 21:10:15.779000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 625.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 21:26:15.376000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 630.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 21:44:09.778000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 588.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 21:59:55.643000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 561.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 22:13:41.573000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 540.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-15 22:29:20.801000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 527.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-15 22:44:57.689000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 525.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 23:05:15.101000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 525.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 23:21:27.034000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 518.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 23:37:17.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 524.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-15 23:52:48.146000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 535.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 00:08:31.578000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 537.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 00:23:58.923000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 537.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 00:39:51.186000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 534.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 00:55:47.643000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 544.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 01:14:12.071000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 526.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 01:29:55.597000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 529.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 01:47:20.652000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 530.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 02:02:53.758000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 529.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 02:18:38.423000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 528.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 02:34:30.109000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 02:50:20.981000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 03:08:36.403000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 526.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 03:22:11.635000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 521.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 03:37:36.100000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 520.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 03:55:36.819000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 518.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 04:13:07.734000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 04:28:43.515000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 518.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 04:44:34.983000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 506.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 05:00:14.586000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 501.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 05:18:45.597000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 472.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 05:34:58.202000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 456.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 05:50:47.180000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 444.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 06:08:41.496000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 427.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 06:24:16.705000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 420.0
+    },
+    {
+        "data_received_on": "2025-11-16 06:40:19.867000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 416.0
+    },
+    {
+        "data_received_on": "2025-11-16 06:56:21.387000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 419.0
+    },
+    {
+        "data_received_on": "2025-11-16 07:14:10.208000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.0
+    },
+    {
+        "data_received_on": "2025-11-16 07:29:59.759000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 408.0
+    },
+    {
+        "data_received_on": "2025-11-16 07:46:23.066000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 403.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-16 08:04:44.197000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 410.0
+    },
+    {
+        "data_received_on": "2025-11-16 08:20:49.156000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 410.0
+    },
+    {
+        "data_received_on": "2025-11-16 08:39:25.517000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 409.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 08:55:32.011000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 417.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 09:11:44.003000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 421.0
+    },
+    {
+        "data_received_on": "2025-11-16 09:29:37.682000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 428.0
+    },
+    {
+        "data_received_on": "2025-11-16 09:45:26.170000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 10:03:35.626000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 432.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 10:19:24.709000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 431.0
+    },
+    {
+        "data_received_on": "2025-11-16 10:35:14.245000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.0
+    },
+    {
+        "data_received_on": "2025-11-16 10:51:45.921000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-16 11:09:51.717000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 11:26:03.590000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 514.0
+    },
+    {
+        "data_received_on": "2025-11-16 11:44:28.193000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 12:00:22.135000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 524.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 12:18:50.719000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 507.0
+    },
+    {
+        "data_received_on": "2025-11-16 12:34:35.246000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 508.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 12:50:26.441000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 504.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 13:08:12.369000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 466.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 13:23:39.266000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 455.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 13:39:40.051000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 13:55:42.629000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 494.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 14:13:15.015000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 516.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 14:28:46.901000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 538.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 14:44:35.436000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 556.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 15:00:38.300000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 558.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 15:16:23.768000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 538.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 15:34:21.820000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 539.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 15:50:13.858000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 544.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 16:05:50.102000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 522.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 16:23:40.749000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 517.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 16:39:26.744000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 548.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 16:55:00.851000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 570.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 17:11:02.151000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 588.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 17:28:59.180000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 607.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 17:44:43.161000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 619.7999877929688
+    },
+    {
+        "data_received_on": "2025-11-16 18:00:08.473000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 616.6000366210938
+    },
+    {
+        "data_received_on": "2025-11-16 18:17:44.436000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 602.0
+    },
+    {
+        "data_received_on": "2025-11-16 18:33:42.735000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 603.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 18:49:32.077000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 580.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 19:05:07.908000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 546.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 19:22:58.743000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 513.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 19:38:50.172000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 520.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 19:55:03.198000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 20:11:10.975000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 523.4000244140625
+    },
+    {
+        "data_received_on": "2025-11-16 20:29:26.098000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 519.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 20:45:22.002000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 513.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 21:01:05.439000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 515.2000122070312
+    },
+    {
+        "data_received_on": "2025-11-16 21:19:03.733000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 508.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 21:35:02.182000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 505.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 21:51:21.866000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 496.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 22:09:10.979000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 482.0
+    },
+    {
+        "data_received_on": "2025-11-16 22:25:15.898000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-16 22:41:10.357000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 447.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-16 22:59:10.612000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 432.0
+    },
+    {
+        "data_received_on": "2025-11-16 23:15:04.582000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 434.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-16 23:31:40.212000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-16 23:47:32.977000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 443.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 00:03:39.292000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 443.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 00:19:18.984000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 445.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 00:39:26.519000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 447.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 00:58:01.427000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 452.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 01:13:46.159000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 458.0
+    },
+    {
+        "data_received_on": "2025-11-17 01:29:19.230000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 480.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 01:49:44.779000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 482.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 02:07:45.380000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 02:23:29.727000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 487.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 02:39:18.041000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 476.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 02:56:21.359000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 479.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 03:14:15.696000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 03:34:54.481000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 478.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 03:53:14.706000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 484.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 04:09:09.356000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 475.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 04:29:50.589000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 483.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 04:46:03.485000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 501.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 05:04:41.851000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 483.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 05:21:12.171000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 468.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 05:39:05.767000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 470.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 05:59:45.217000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 449.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 06:18:04.120000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 436.3999938964844
+    },
+    {
+        "data_received_on": "2025-11-17 06:34:14.825000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 439.8000183105469
+    },
+    {
+        "data_received_on": "2025-11-17 06:54:58.361000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.0
+    },
+    {
+        "data_received_on": "2025-11-17 07:11:20.983000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 429.6000061035156
+    },
+    {
+        "data_received_on": "2025-11-17 07:29:30.980000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 415.0
+    },
+    {
+        "data_received_on": "2025-11-17 07:50:15.664000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 407.2000122070313
+    },
+    {
+        "data_received_on": "2025-11-17 08:08:45.711000",
+        "Anomaly_Flag": 1,
+        "Co2RA": 401.0
+    }
+]
