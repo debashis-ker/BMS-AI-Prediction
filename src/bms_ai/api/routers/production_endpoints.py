@@ -19,6 +19,8 @@ import joblib
 import warnings
 import math
 import time
+import sys
+import numpy as np
 
 log = setup_logger(__name__)
 
@@ -88,6 +90,7 @@ class AnamolyPredictionResponse(BaseModel):
 
 ALL_AVAILABLE_ASSETS = ['OS01-AHU-02', 'OS04-AHU-52', 'OS02-AHU-04', 'OS02-AHU-05','OS01-AHU-03', 'OS01-AHU-01', 'OS04-AHU-08', 'OS04-AHU-06','OS04-AHU-13', 'OS04-AHU-07', 'OS05-AHU-09', 'OS05-AHU-11','OS05-AHU-12', 'OS05-AHU-10', 'OS02-AHU-15', 'OS02-AHU-16','OS02-AHU-14', 'OS01-AHU-17', 'OS04-AHU-74', 'OS01-AHU-74']
 ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1'] 
+EMISSION_FACTOR: float = 0.414
 
 class AnomalyVizRequest(BaseModel):
     chart_type: str = Field('pie', description="Type of visualization data requested: 'pie' or 'line'.")
@@ -95,6 +98,23 @@ class AnomalyVizRequest(BaseModel):
 class AnomalyVizResponse(BaseModel):
     chart_type: str
     data: Dict[str, Any] = Field(..., description="Data structure for the requested visualization.")
+
+class EmissionRequest(BaseModel):
+    data: Dict[str, Any] = Field(..., description="Raw input data, expected to contain 'queryResponse'.")
+    equipment_id: Optional[str] = Field(None, description="Optional filter for a specific equipment ID.")
+    zone: Optional[str] = Field(None, description="Optional filter for a specific site/zone.")
+
+class StaticEmissionRequest(BaseModel):
+    equipment_id: Optional[str] = Field(None, description="Optional filter for a specific equipment ID.")
+    zone: Optional[str] = Field(None, description="Optional filter for a specific site/zone.")
+
+class StaticEmissionResponse(BaseModel):
+    carbon_emission_kg: float
+    energy_consumed_kwh: float
+    breakdown_by_equipment_and_zone: List[Dict[str, Any]]
+
+class EmissionResponse(BaseModel):
+    data: Dict[str, Any] = Field(..., description="The final structured emission report.")
 
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
@@ -441,7 +461,305 @@ def damper_health_analysis(request_data: PredictionRequest):
         resampled_predicted_data=resampled_predicted_data
     )
 
+def transform_to_dataframe(json_input_data: Dict[str, Any]) -> pd.DataFrame:
+    GROUPING_COLS: List[str] = ['data_received_on', 'equipment_id', 'site']
+    empty_df = pd.DataFrame(columns=GROUPING_COLS + ['Eg'])
+    
+    try:
+        records: List[Dict[str, Any]] = (
+            json_input_data.get("data", {}).get("queryResponse", []) or 
+            json_input_data.get("queryResponse", []) or 
+            json_input_data.get("data", [])
+        )
+        if not records:
+            log.warning("No records found in the input JSON structure.")
+            return empty_df
 
+        df = pd.DataFrame(records)
+        
+        if 'system_type' not in df.columns:
+            log.error("'system_type' column missing in raw data.")
+            return empty_df
+            
+        mtr_df = df[df["system_type"] == "MtrEMU"].copy() 
+        if mtr_df.empty:
+            log.warning("No records found for 'MtrEMU' system type.")
+            return empty_df
+
+        mtr_df["data_received_on"] = pd.to_datetime(mtr_df["data_received_on"], errors='coerce')
+        if mtr_df["data_received_on"].dt.tz is not None:
+             mtr_df["data_received_on"] = mtr_df["data_received_on"].dt.tz_localize(None) 
+        
+        mtr_df.dropna(subset=["data_received_on"], inplace=True)
+        
+        if 'monitoring_data' in mtr_df.columns:
+            mtr_df['monitoring_data'] = mtr_df['monitoring_data'].astype(str).str.strip()
+        else:
+            log.error("'monitoring_data' column missing.")
+            return empty_df
+
+        pivoted_df = mtr_df.pivot_table(
+            index=['data_received_on', 'equipment_id', 'site'],
+            columns='datapoint',
+            values='monitoring_data',
+            aggfunc='first'
+        ).reset_index()
+
+        if isinstance(pivoted_df.columns, pd.MultiIndex):
+             pivoted_df.columns = [
+                col[-1] if col[-1] else str(col[0]) for col in pivoted_df.columns
+             ]
+        
+        if 'Eg' not in pivoted_df.columns:
+            log.error("The required 'Eg' datapoint is missing after pivoting.")
+            return empty_df
+
+        pivoted_df['Eg'] = pd.to_numeric(pivoted_df['Eg'], errors='coerce')
+        pivoted_df.dropna(subset=['Eg'], inplace=True)
+        
+        if pivoted_df.empty:
+            log.warning("All records were dropped after final 'Eg' cleanup.")
+            return empty_df
+        
+        required_cols = ['data_received_on', 'equipment_id', 'site', 'Eg']
+        missing_cols = [col for col in required_cols if col not in pivoted_df.columns]
+        
+        if missing_cols:
+            log.error(f"Final DataFrame is missing required columns: {missing_cols}")
+            return empty_df
+
+        log.info(f"Data processing successful. {len(pivoted_df)} rows ready for aggregation.")
+        return pivoted_df[required_cols].copy()
+        
+    except Exception as e:
+        log.error(f"Critical error in transform_to_dataframe: {e}", exc_info=True)
+        raise RuntimeError(f"Data transformation failed: {e}")
+
+def calculate_aggregate_emissions(df_input: pd.DataFrame) -> pd.DataFrame:
+    if df_input.empty:
+        return pd.DataFrame(columns=['equipment_id', 'site', 'min_Eg', 'max_Eg', 'count', 
+                                     'Energy_Range_kWh', 'carbon_emission_kg'])
+    
+    try:
+        df_input['Eg'] = df_input['Eg'].astype(np.float64) 
+        
+        emission_summary = df_input.groupby(['equipment_id', 'site']).agg(
+            min_Eg=('Eg', 'min'),
+            max_Eg=('Eg', 'max'),
+            count=('Eg', 'size')
+        ).reset_index()
+
+        emission_summary['Energy_Range_kWh'] = emission_summary['max_Eg'] - emission_summary['min_Eg']
+        
+        emission_summary = emission_summary[emission_summary['Energy_Range_kWh'] > 0].copy()
+        
+        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR
+        
+        return emission_summary
+
+    except Exception as e:
+        log.error(f"Error during emission calculation: {e}", exc_info=True)
+        raise RuntimeError(f"Aggregation failed: {e}")
+
+def get_emission_report(json_input_data: Dict[str, Any], equipment_id: Optional[str], zone: Optional[str]) -> Dict[str, Any]:
+    try:
+        df_processed = transform_to_dataframe(json_input_data)
+        
+        if df_processed.empty:
+            log.info("Returning empty report due to no processed data.")
+            return {
+                "Request_Parameters": {"equipment_id": equipment_id, "zone": zone},
+                "Target_Emission_Report": {"Target_ID": "All", "Target_Type": "Global", "carbon_emission_kg": 0, "energy_consumed_kwh": 0, "breakdown_by_equipment_and_zone": []},
+                "Total_Site_Emission_Report": {"Total_CO2_Emission_kg": 0, "Total_Energy_Consumed_kWh": 0, "Emission_Factor_kgCO2_per_kWh": EMISSION_FACTOR},
+                "Processing_Status": "No Data Processed"
+            }
+
+        df_emissions = calculate_aggregate_emissions(df_processed)
+
+        total_emission_kg = df_emissions['carbon_emission_kg'].sum()
+        total_energy_kwh = df_emissions['Energy_Range_kWh'].sum()
+        
+        total_report = {
+            "Total_CO2_Emission_kg": round(total_emission_kg, 2),
+            "Total_Energy_Consumed_kWh": round(total_energy_kwh, 2),
+            "Emission_Factor_kgCO2_per_kWh": EMISSION_FACTOR
+        }
+        
+        df_filtered = df_emissions.copy()
+
+        if equipment_id:
+            df_filtered = df_filtered[df_filtered['equipment_id'] == equipment_id]
+            
+        if zone:
+            df_filtered = df_filtered[df_filtered['site'] == zone] 
+
+        specific_emission_kg = df_filtered['carbon_emission_kg'].sum()
+        specific_energy_kwh = df_filtered['Energy_Range_kWh'].sum()
+
+        target_type = "Global"
+        target_id = "All"
+        if equipment_id and zone:
+            target_type = "Equipment_ID_and_Zone"
+            target_id = f"{equipment_id} @ {zone}"
+        elif equipment_id:
+            target_type = "Equipment_ID"
+            target_id = equipment_id
+        elif zone:
+            target_type = "Zone"
+            target_id = zone
+
+        df_breakdown = df_filtered.copy()
+        df_breakdown['Energy_Range_kWh'] = df_breakdown['Energy_Range_kWh'].round(2)
+        df_breakdown['carbon_emission_kg'] = df_breakdown['carbon_emission_kg'].round(2)
+        
+        specific_report = {
+            "Target_ID": target_id,
+            "Target_Type": target_type,
+            "carbon_emission_kg": round(specific_emission_kg, 2),
+            "energy_consumed_kwh": round(specific_energy_kwh, 2),
+            "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'Energy_Range_kWh', 'carbon_emission_kg']].to_dict('records')
+        }
+
+        final_report = {
+            "Request_Parameters": {"equipment_id": equipment_id, "zone": zone},
+            "Target_Emission_Report": specific_report,
+            "Total_Site_Emission_Report": total_report,
+            "Processing_Status": "Success"
+        }
+        
+        return final_report
+    
+    except RuntimeError as e:
+        log.error(f"API processing failed: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception as e:
+        log.critical(f"Unexpected critical error in get_emission_report: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred during report generation."
+        )
+
+EMISSION_FACTOR: float = 0.414 
+
+def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        df_emissions = pd.read_json('src/bms_ai/utils/carbon_emission/carbon_emission.json', orient='index')
+        
+        cleaned_index = (
+            df_emissions.index.to_series()
+            .str.strip("()")  
+            .str.replace("'", "", regex=False) 
+            .str.replace(" ", "", regex=False)
+        )
+        
+        df_emissions[['equipment_id', 'site']] = cleaned_index.str.split(',', expand=True)
+        df_emissions = df_emissions.reset_index(drop=True)
+        df_emissions.rename(columns={'diff': 'Energy_Range_kWh'}, inplace=True)
+        
+        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR
+        
+        df_filtered = df_emissions.copy()
+
+        if equipment_id:
+            df_filtered = df_filtered[df_filtered['equipment_id'] == equipment_id]
+            
+        if zone:
+            df_filtered = df_filtered[df_filtered['site'] == zone]
+            
+        if df_filtered.empty:
+            return {
+                "carbon_emission_kg": 0,
+                "energy_consumed_kwh": 0,
+                "breakdown_by_equipment_and_zone": []
+            }
+
+        specific_emission_kg = df_filtered['carbon_emission_kg'].sum()
+        specific_energy_kwh = df_filtered['Energy_Range_kWh'].sum()
+        
+        df_breakdown = df_filtered.copy()
+        
+        df_breakdown.rename(columns={'Energy_Range_kWh': 'energy_range_kwh'}, inplace=True)
+        
+        final_minimal_report = {
+            "carbon_emission_kg": round(specific_emission_kg, 2),
+            "energy_consumed_kwh": round(specific_energy_kwh, 2),
+            "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'energy_range_kwh', 'carbon_emission_kg']].round(2).to_dict('records')
+        }
+        
+        return final_minimal_report
+        
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration Error: The static data file was not"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Critical processing error: {e}"
+        )
+    
+@router.post('/carbon_emission_evaluation', response_model=EmissionResponse)
+def carbon_emission_evaluation(
+    request_data: EmissionRequest
+) -> EmissionResponse:
+    
+    start = time.time()
+    
+    input_data = request_data.data
+    equipment_id = request_data.equipment_id
+    zone = request_data.zone
+    
+    log.info(f"Request initiated for Equipment: {equipment_id}, Zone: {zone}")
+    
+    try:
+        emission_report_dict = get_emission_report(
+            input_data, 
+            equipment_id, 
+            zone
+        )
+    
+    except HTTPException:
+        raise HTTPException(
+            status_code=500,
+            detail="Error in generating Emission Report."
+        )
+    
+    except Exception as e:
+        log.error(f"Unhandled error in API endpoint: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="A critical error occurred."
+        )
+
+    end = time.time()
+    log.info(f"Evaluation completed in {end - start:.2f} seconds.")
+    
+    return EmissionResponse(data=emission_report_dict)
+
+@router.post('/carbon_emission_evaluation_static', response_model=StaticEmissionResponse)
+def carbon_emission_evaluation_static(
+    request_data: StaticEmissionRequest
+) -> Dict[str, Any]:
+    
+    equipment_id = request_data.equipment_id
+    zone = request_data.zone
+    
+    log.info(f"Static Report Request initiated for Equipment: {equipment_id}, Zone: {zone}")
+    
+    emission_report_dict = get_emission_report_from_json(
+        equipment_id, 
+        zone
+    )
+    
+    log.info("Static Evaluation completed.")
+    
+    return emission_report_dict
 
 @router.post('/damper_health_prediction', response_model=PredictionResponse)
 def damper_health_prediction(
@@ -454,8 +772,8 @@ def damper_health_prediction(
     log.info(f"VOX AHU1 Damper End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
 
-@router.post('/fan_Speed_health_prediction', response_model=PredictionResponse)
-def fan_Speed_health_prediction(
+@router.post('/fan_speed_health_prediction', response_model=PredictionResponse)
+def fan_speed_health_prediction(
     request_data: PredictionRequest
 ):
     start = time.time()
