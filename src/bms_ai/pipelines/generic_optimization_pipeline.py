@@ -482,18 +482,41 @@ class GenericDataTransformation:
             df_processed = input_df.copy()
             
             temporal_features = ['month', 'hour', 'week_number', 'is_weekend']
-            for temp_feat in temporal_features:
-                if temp_feat in selected_features and temp_feat not in df_processed.columns:
-                    from datetime import datetime
-                    now = datetime.now()
-                    if temp_feat == 'month':
-                        df_processed[temp_feat] = now.month
-                    elif temp_feat == 'hour':
-                        df_processed[temp_feat] = now.hour
-                    elif temp_feat == 'week_number':
-                        df_processed[temp_feat] = now.isocalendar()[1]
-                    elif temp_feat == 'is_weekend':
-                        df_processed[temp_feat] = 1 if now.weekday() >= 5 else 0
+            missing_temporal = [f for f in temporal_features if f in selected_features and f not in df_processed.columns]
+            
+            if missing_temporal:
+                if 'timestamp' in df_processed.columns:
+                    log.info("Generating temporal features from provided timestamp")
+                    timestamp_val = df_processed['timestamp'].iloc[0]
+                    
+                    if isinstance(timestamp_val, str):
+                        timestamp_dt = pd.to_datetime(timestamp_val)
+                    elif isinstance(timestamp_val, pd.Timestamp):
+                        timestamp_dt = timestamp_val
+                    else:
+                        from datetime import datetime
+                        timestamp_dt = pd.to_datetime(timestamp_val)
+                    
+                    if timestamp_dt.tz is not None:
+                        timestamp_dt = timestamp_dt.tz_localize(None)
+                    
+                    for temp_feat in missing_temporal:
+                        if temp_feat == 'month':
+                            df_processed[temp_feat] = timestamp_dt.month
+                        elif temp_feat == 'hour':
+                            df_processed[temp_feat] = timestamp_dt.hour
+                        elif temp_feat == 'week_number':
+                            df_processed[temp_feat] = timestamp_dt.isocalendar()[1]
+                        elif temp_feat == 'is_weekend':
+                            df_processed[temp_feat] = 1 if timestamp_dt.weekday() >= 5 else 0
+                    
+                    df_processed.drop(columns=['timestamp'], inplace=True)
+                    log.info(f"Generated temporal features from timestamp: {missing_temporal}")
+                else:
+                    raise ValueError(
+                        f"Temporal features {missing_temporal} are required by the model but not provided. "
+                        f"Please provide either these temporal features directly or a 'timestamp' field to generate them."
+                    )
             for col in df_processed.columns:
                 df_processed[col] = pd.to_numeric(df_processed[col], errors='ignore')
             
@@ -854,7 +877,16 @@ def optimize_generic(current_conditions: Dict[str, Any],
                     if feat not in input_df.columns and feat not in temporal_features:
                         input_df[feat] = 0
                 
-                input_df = transformer.transform_input(input_df, selected_features)
+                try:
+                    input_df = transformer.transform_input(input_df, selected_features)
+                except ValueError as e:
+                    if 'Temporal features' in str(e) and 'timestamp' in str(e):
+                        raise ValueError(
+                            f"Temporal features are required for optimization. "
+                            f"Please provide either {temporal_features} in 'current_conditions' "
+                            f"or include a 'timestamp' field."
+                        ) from e
+                    raise
                 input_df = input_df[selected_features]
                 predicted_value = trainer.model.predict(input_df)[0]
                 
@@ -884,7 +916,17 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 for feat in selected_features:
                     if feat not in input_df.columns and feat not in temporal_features:
                         input_df[feat] = 0
-                input_df = transformer.transform_input(input_df, selected_features)
+                
+                try:
+                    input_df = transformer.transform_input(input_df, selected_features)
+                except ValueError as e:
+                    if 'Temporal features' in str(e) and 'timestamp' in str(e):
+                        raise ValueError(
+                            f"Temporal features are required for optimization. "
+                            f"Please provide either {temporal_features} in 'current_conditions' "
+                            f"or include a 'timestamp' field."
+                        ) from e
+                    raise
                 input_df = input_df[selected_features]
                 predicted_value = trainer.model.predict(input_df)[0]
                 
