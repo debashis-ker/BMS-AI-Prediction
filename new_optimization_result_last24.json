@@ -1,0 +1,1362 @@
+﻿[
+    {
+        "timestamp":  "2025-11-23 10:14:52.852000",
+        "actual_value":  51.69999694824219,
+        "predicted_value":  51.119529724121094,
+        "difference_actual_and_pred":  0.5804672241210938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  21.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 10:33:03.910000",
+        "actual_value":  84.0,
+        "predicted_value":  83.76116943359375,
+        "difference_actual_and_pred":  0.23883056640625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  60.0,
+                                    "SpTREff":  21.0,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 10:49:08.979000",
+        "actual_value":  100.87999725341797,
+        "predicted_value":  100.29597473144531,
+        "difference_actual_and_pred":  0.5840225219726562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  65.0,
+                                    "SpTREff":  18.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 11:05:08.496000",
+        "actual_value":  100.77999877929688,
+        "predicted_value":  100.37351989746094,
+        "difference_actual_and_pred":  0.4064788818359375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  15.0,
+                                    "SpTREff":  23.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 11:21:50.568000",
+        "actual_value":  74.04000091552734,
+        "predicted_value":  69.35784149169922,
+        "difference_actual_and_pred":  4.682159423828125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 11:39:55.770000",
+        "actual_value":  51.14999771118164,
+        "predicted_value":  50.70320129394531,
+        "difference_actual_and_pred":  0.4467964172363281,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  60.0,
+                                    "SpTREff":  19.0,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 11:57:23.443000",
+        "actual_value":  51.18000030517578,
+        "predicted_value":  50.7011833190918,
+        "difference_actual_and_pred":  0.4788169860839844,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  40.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 12:13:16.001000",
+        "actual_value":  52.779998779296875,
+        "predicted_value":  51.261722564697266,
+        "difference_actual_and_pred":  1.5182762145996094,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  75.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 12:30:03.131000",
+        "actual_value":  72.30999755859375,
+        "predicted_value":  71.93867492675781,
+        "difference_actual_and_pred":  0.3713226318359375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  26.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 12:46:40.540000",
+        "actual_value":  100.58999633789062,
+        "predicted_value":  100.07079315185547,
+        "difference_actual_and_pred":  0.5192031860351562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  21.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 13:02:37.279000",
+        "actual_value":  100.93999481201172,
+        "predicted_value":  100.66829681396484,
+        "difference_actual_and_pred":  0.271697998046875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  90.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  22.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 13:18:16.197000",
+        "actual_value":  100.90999603271484,
+        "predicted_value":  100.36805725097656,
+        "difference_actual_and_pred":  0.5419387817382812,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  100.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 13:34:39.836000",
+        "actual_value":  100.91999816894531,
+        "predicted_value":  100.40018463134766,
+        "difference_actual_and_pred":  0.5198135375976562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  27.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 13:55:15.820000",
+        "actual_value":  100.8699951171875,
+        "predicted_value":  100.56440734863281,
+        "difference_actual_and_pred":  0.3055877685546875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  80.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 14:11:40.176000",
+        "actual_value":  100.88999938964844,
+        "predicted_value":  100.56318664550781,
+        "difference_actual_and_pred":  0.326812744140625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  25.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 14:27:27.286000",
+        "actual_value":  91.9000015258789,
+        "predicted_value":  93.24612426757812,
+        "difference_actual_and_pred":  -1.3461227416992188,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  90.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  27.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 14:43:22.737000",
+        "actual_value":  83.5199966430664,
+        "predicted_value":  81.86985778808594,
+        "difference_actual_and_pred":  1.6501388549804688,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 14:59:32.455000",
+        "actual_value":  63.19999694824219,
+        "predicted_value":  66.63737487792969,
+        "difference_actual_and_pred":  -3.4373779296875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  27.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 15:15:36.076000",
+        "actual_value":  63.34000015258789,
+        "predicted_value":  66.25817108154297,
+        "difference_actual_and_pred":  -2.918170928955078,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  25.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 15:33:40.057000",
+        "actual_value":  63.29999923706055,
+        "predicted_value":  66.05860137939453,
+        "difference_actual_and_pred":  -2.7586021423339844,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  19.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 15:49:39.466000",
+        "actual_value":  63.3599967956543,
+        "predicted_value":  66.5872573852539,
+        "difference_actual_and_pred":  -3.2272605895996094,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 16:07:53.351000",
+        "actual_value":  63.25,
+        "predicted_value":  66.47992706298828,
+        "difference_actual_and_pred":  -3.2299270629882812,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  100.0,
+                                    "SpTREff":  23.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 16:24:17.099000",
+        "actual_value":  58.79999923706055,
+        "predicted_value":  61.543006896972656,
+        "difference_actual_and_pred":  -2.7430076599121094,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  90.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 16:45:15.039000",
+        "actual_value":  100.19999694824219,
+        "predicted_value":  100.51726531982422,
+        "difference_actual_and_pred":  -0.31726837158203125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  90.0,
+                                    "SpTREff":  23.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 17:03:33.040000",
+        "actual_value":  100.70999908447266,
+        "predicted_value":  99.89285278320312,
+        "difference_actual_and_pred":  0.8171463012695312,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 17:19:16.854000",
+        "actual_value":  100.93999481201172,
+        "predicted_value":  101.35306549072266,
+        "difference_actual_and_pred":  -0.4130706787109375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  18.0,
+                                  "SpTROcc":  18.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 17:38:26.257000",
+        "actual_value":  51.18000030517578,
+        "predicted_value":  52.472225189208984,
+        "difference_actual_and_pred":  -1.2922248840332031,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  100.0,
+                                    "SpTREff":  23.0,
+                                    "SpTROcc":  27.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 17:54:12.180000",
+        "actual_value":  51.13999938964844,
+        "predicted_value":  50.68656539916992,
+        "difference_actual_and_pred":  0.4534339904785156,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  35.0,
+                                    "SpTREff":  22.5,
+                                    "SpTROcc":  22.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 18:09:40.433000",
+        "actual_value":  51.189998626708984,
+        "predicted_value":  50.696834564208984,
+        "difference_actual_and_pred":  0.4931640625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  20.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  23.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 18:27:45.060000",
+        "actual_value":  51.18000030517578,
+        "predicted_value":  50.68172073364258,
+        "difference_actual_and_pred":  0.4982795715332031,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  60.0,
+                                    "SpTREff":  26.0,
+                                    "SpTROcc":  28.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 18:43:29.944000",
+        "actual_value":  51.209999084472656,
+        "predicted_value":  50.6600456237793,
+        "difference_actual_and_pred":  0.5499534606933594,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  22.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 18:59:32.206000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.6469612121582,
+        "difference_actual_and_pred":  0.5230369567871094,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  25.5,
+                                    "SpTROcc":  26.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 19:18:18.734000",
+        "actual_value":  51.19999694824219,
+        "predicted_value":  50.71862030029297,
+        "difference_actual_and_pred":  0.48137664794921875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  25.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  25.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 19:34:12.798000",
+        "actual_value":  51.209999084472656,
+        "predicted_value":  50.72102355957031,
+        "difference_actual_and_pred":  0.48897552490234375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  25.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 19:50:00.670000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.765541076660156,
+        "difference_actual_and_pred":  0.40445709228515625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  75.0,
+                                    "SpTREff":  20.5,
+                                    "SpTROcc":  27.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 20:10:17.470000",
+        "actual_value":  51.14999771118164,
+        "predicted_value":  50.735591888427734,
+        "difference_actual_and_pred":  0.41440582275390625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  23.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 20:29:18.593000",
+        "actual_value":  51.189998626708984,
+        "predicted_value":  50.80318832397461,
+        "difference_actual_and_pred":  0.386810302734375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  40.0,
+                                    "SpTREff":  25.5,
+                                    "SpTROcc":  24.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 20:47:54.184000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.80318832397461,
+        "difference_actual_and_pred":  0.3668098449707031,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  35.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  24.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 21:03:44.632000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.761634826660156,
+        "difference_actual_and_pred":  0.3683624267578125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  0.0,
+                                    "SpTREff":  22.5,
+                                    "SpTROcc":  22.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 21:19:41.647000",
+        "actual_value":  51.21999740600586,
+        "predicted_value":  50.83855056762695,
+        "difference_actual_and_pred":  0.38144683837890625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  50.0,
+                                    "SpTREff":  21.0,
+                                    "SpTROcc":  25.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 21:39:44.918000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.83855056762695,
+        "difference_actual_and_pred":  0.3314476013183594,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  21.0,
+                                    "SpTROcc":  28.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 21:58:10.295000",
+        "actual_value":  51.18000030517578,
+        "predicted_value":  50.85628890991211,
+        "difference_actual_and_pred":  0.3237113952636719,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  22.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 22:14:23.747000",
+        "actual_value":  51.189998626708984,
+        "predicted_value":  50.74574661254883,
+        "difference_actual_and_pred":  0.44425201416015625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  21.0,
+                                  "SpTROcc":  21.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  18.0,
+                                    "SpTROcc":  25.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 22:33:11.879000",
+        "actual_value":  51.19999694824219,
+        "predicted_value":  50.7925910949707,
+        "difference_actual_and_pred":  0.4074058532714844,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  40.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 22:49:13.468000",
+        "actual_value":  50.84000015258789,
+        "predicted_value":  50.75350570678711,
+        "difference_actual_and_pred":  0.08649444580078125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 23:06:06.359000",
+        "actual_value":  50.78999710083008,
+        "predicted_value":  50.67654037475586,
+        "difference_actual_and_pred":  0.11345672607421875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  10.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  23.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 23:24:01.914000",
+        "actual_value":  50.779998779296875,
+        "predicted_value":  50.70382308959961,
+        "difference_actual_and_pred":  0.07617568969726562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  80.0,
+                                    "SpTREff":  18.5,
+                                    "SpTROcc":  23.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 23:40:32.924000",
+        "actual_value":  50.7599983215332,
+        "predicted_value":  50.6994743347168,
+        "difference_actual_and_pred":  0.06052398681640625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  55.0,
+                                    "SpTREff":  19.0,
+                                    "SpTROcc":  25.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-23 23:58:35.170000",
+        "actual_value":  50.75,
+        "predicted_value":  50.61325454711914,
+        "difference_actual_and_pred":  0.13674545288085938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  5.0,
+                                    "SpTREff":  26.0,
+                                    "SpTROcc":  26.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 00:14:33.309000",
+        "actual_value":  50.709999084472656,
+        "predicted_value":  50.64402770996094,
+        "difference_actual_and_pred":  0.06597137451171875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  26.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 00:33:18.952000",
+        "actual_value":  50.72999954223633,
+        "predicted_value":  50.62034225463867,
+        "difference_actual_and_pred":  0.10965728759765625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  22.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 00:49:13.181000",
+        "actual_value":  50.779998779296875,
+        "predicted_value":  50.57478713989258,
+        "difference_actual_and_pred":  0.20521163940429688,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  80.0,
+                                    "SpTREff":  23.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 01:05:25.853000",
+        "actual_value":  50.78999710083008,
+        "predicted_value":  50.61763000488281,
+        "difference_actual_and_pred":  0.17236709594726562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  95.0,
+                                    "SpTREff":  22.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 01:21:25.094000",
+        "actual_value":  50.77000045776367,
+        "predicted_value":  50.64107131958008,
+        "difference_actual_and_pred":  0.12892913818359375,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 01:39:13.812000",
+        "actual_value":  50.71999740600586,
+        "predicted_value":  50.64107131958008,
+        "difference_actual_and_pred":  0.07892608642578125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 01:55:13.694000",
+        "actual_value":  50.73999786376953,
+        "predicted_value":  50.64107131958008,
+        "difference_actual_and_pred":  0.09892654418945312,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  25.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 02:11:08.447000",
+        "actual_value":  50.78999710083008,
+        "predicted_value":  50.64107131958008,
+        "difference_actual_and_pred":  0.14892578125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  55.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 02:27:05.518000",
+        "actual_value":  50.78999710083008,
+        "predicted_value":  50.66912078857422,
+        "difference_actual_and_pred":  0.12087631225585938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  23.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 02:43:01.059000",
+        "actual_value":  50.77000045776367,
+        "predicted_value":  50.649627685546875,
+        "difference_actual_and_pred":  0.12037277221679688,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 02:59:03.438000",
+        "actual_value":  50.71999740600586,
+        "predicted_value":  50.649627685546875,
+        "difference_actual_and_pred":  0.07036972045898438,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  15.0,
+                                    "SpTREff":  20.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 03:14:48.036000",
+        "actual_value":  50.78999710083008,
+        "predicted_value":  50.649627685546875,
+        "difference_actual_and_pred":  0.14036941528320312,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  75.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 03:35:12.223000",
+        "actual_value":  50.72999954223633,
+        "predicted_value":  50.62922286987305,
+        "difference_actual_and_pred":  0.10077667236328125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 03:51:41.912000",
+        "actual_value":  0.019999999552965164,
+        "predicted_value":  -0.4717787504196167,
+        "difference_actual_and_pred":  0.49177874997258186,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 04:07:35.041000",
+        "actual_value":  0.029999999329447746,
+        "predicted_value":  -0.4717787504196167,
+        "difference_actual_and_pred":  0.5017787497490644,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  100.0,
+                                    "SpTREff":  21.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 04:23:40.717000",
+        "actual_value":  0.029999999329447746,
+        "predicted_value":  -0.4740753471851349,
+        "difference_actual_and_pred":  0.5040753465145826,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 04:39:26.824000",
+        "actual_value":  0.029999999329447746,
+        "predicted_value":  -0.46631062030792236,
+        "difference_actual_and_pred":  0.4963106196373701,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  10.0,
+                                    "SpTREff":  23.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 04:59:32.756000",
+        "actual_value":  0.029999999329447746,
+        "predicted_value":  -0.4692862033843994,
+        "difference_actual_and_pred":  0.49928620271384716,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  26.0,
+                                  "SpTROcc":  26.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  65.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 05:18:26.211000",
+        "actual_value":  100.97999572753906,
+        "predicted_value":  100.31847381591797,
+        "difference_actual_and_pred":  0.6615219116210938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  65.0,
+                                    "SpTREff":  24.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 05:34:28.249000",
+        "actual_value":  100.88999938964844,
+        "predicted_value":  100.3583755493164,
+        "difference_actual_and_pred":  0.5316238403320312,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  20.0,
+                                    "SpTREff":  18.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 05:55:11.142000",
+        "actual_value":  100.88999938964844,
+        "predicted_value":  100.42233276367188,
+        "difference_actual_and_pred":  0.4676666259765625,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  20.0,
+                                  "SpTROcc":  20.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  10.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 06:12:56.994000",
+        "actual_value":  51.06999969482422,
+        "predicted_value":  50.4686279296875,
+        "difference_actual_and_pred":  0.6013717651367188,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  20.0,
+                                    "SpTREff":  22.5,
+                                    "SpTROcc":  27.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 06:28:53.549000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.576820373535156,
+        "difference_actual_and_pred":  0.5531768798828125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  40.0,
+                                    "SpTREff":  21.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 06:44:52.504000",
+        "actual_value":  51.11000061035156,
+        "predicted_value":  50.553245544433594,
+        "difference_actual_and_pred":  0.5567550659179688,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 07:02:33.542000",
+        "actual_value":  51.119998931884766,
+        "predicted_value":  50.51168441772461,
+        "difference_actual_and_pred":  0.6083145141601562,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  100.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  23.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 07:18:06.231000",
+        "actual_value":  51.119998931884766,
+        "predicted_value":  50.5322380065918,
+        "difference_actual_and_pred":  0.5877609252929688,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  85.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 07:34:15.661000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.60052490234375,
+        "difference_actual_and_pred":  0.5294723510742188,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  0.0,
+                                    "SpTREff":  22.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 07:50:19.211000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.60615921020508,
+        "difference_actual_and_pred":  0.5238380432128906,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  55.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 08:09:14.599000",
+        "actual_value":  51.11000061035156,
+        "predicted_value":  50.59716033935547,
+        "difference_actual_and_pred":  0.5128402709960938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  0.0,
+                                    "SpTREff":  19.5,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 08:25:07.709000",
+        "actual_value":  51.11000061035156,
+        "predicted_value":  50.622684478759766,
+        "difference_actual_and_pred":  0.4873161315917969,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  15.0,
+                                    "SpTREff":  24.5,
+                                    "SpTROcc":  21.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 08:41:23.018000",
+        "actual_value":  51.119998931884766,
+        "predicted_value":  50.60762405395508,
+        "difference_actual_and_pred":  0.5123748779296875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  45.0,
+                                    "SpTREff":  21.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 08:59:13.920000",
+        "actual_value":  51.14999771118164,
+        "predicted_value":  50.32378005981445,
+        "difference_actual_and_pred":  0.8262176513671875,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  55.0,
+                                    "SpTREff":  23.0,
+                                    "SpTROcc":  23.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 09:15:00.088000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.343788146972656,
+        "difference_actual_and_pred":  0.7862091064453125,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  30.0,
+                                    "SpTREff":  26.0,
+                                    "SpTROcc":  23.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 09:32:58.482000",
+        "actual_value":  51.12999725341797,
+        "predicted_value":  50.354251861572266,
+        "difference_actual_and_pred":  0.7757453918457031,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  70.0,
+                                    "SpTREff":  25.0,
+                                    "SpTROcc":  20.5
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 09:48:42.755000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.46733856201172,
+        "difference_actual_and_pred":  0.7026596069335938,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  20.0,
+                                    "SpTREff":  20.0,
+                                    "SpTROcc":  20.0
+                                }
+    },
+    {
+        "timestamp":  "2025-11-24 10:04:16.686000",
+        "actual_value":  51.16999816894531,
+        "predicted_value":  50.46487045288086,
+        "difference_actual_and_pred":  0.7051277160644531,
+        "current_setpoints":  {
+                                  "SpMinVFD":  50.0,
+                                  "SpTREff":  23.0,
+                                  "SpTROcc":  23.0
+                              },
+        "optimized_setpoints":  {
+                                    "SpMinVFD":  5.0,
+                                    "SpTREff":  23.0,
+                                    "SpTROcc":  21.5
+                                }
+    }
+]

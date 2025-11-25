@@ -190,6 +190,12 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
 
             df_report = df[['date', 'Anomaly_Flag', feature]].copy()
             
+            if not df_report['date'].isna().all():
+                max_timestamp = df_report['date'].max()
+                cutoff_timestamp = max_timestamp - pd.Timedelta(days=1)
+                df_report = df_report[df_report['date'] >= cutoff_timestamp].copy()
+                log.info(f"Feature '{feature}': Filtered to last 24h. Max: {max_timestamp}, Cutoff: {cutoff_timestamp}, Records: {len(df_report)}")
+            
             df_report.rename(columns={
                 'date': 'timestamp', 
                 'Anomaly_Flag': 'Anamoly_Flag'
