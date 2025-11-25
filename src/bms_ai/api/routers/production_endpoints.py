@@ -704,6 +704,21 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
             detail=f"Critical processing error: {e}"
         )
     
+try:
+    STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
+except Exception as e:
+    print(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
+    STATIC_PEAK_DATA = pd.DataFrame()
+
+@router.get("/get_peak_demand", response_model=Dict[str, Dict[str, Any]])
+def get_all_peak_demand() -> Dict[str, Dict[str, Any]]:
+    if STATIC_PEAK_DATA.empty:
+        raise HTTPException(
+            status_code=500, 
+            detail="Peak demand data is not loaded or is empty."
+        )
+    return STATIC_PEAK_DATA.to_dict(orient='index')
+
 @router.post('/carbon_emission_evaluation', response_model=EmissionResponse)
 def carbon_emission_evaluation(
     request_data: EmissionRequest

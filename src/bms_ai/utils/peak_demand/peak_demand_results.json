@@ -1,0 +1,26 @@
+{
+    "EMU01": {
+        "peak_demand_power": 67.31746673583984,
+        "peak_demand_date": "2025-11-13 04:37:40"
+    },
+    "EMU03": {
+        "peak_demand_power": 328.4595642089844,
+        "peak_demand_date": "2025-11-09 16:35:04"
+    },
+    "EMU02": {
+        "peak_demand_power": 108.66203308105467,
+        "peak_demand_date": "2025-11-16 06:08:41"
+    },
+    "EMU06": {
+        "peak_demand_power": 4.442032814025879,
+        "peak_demand_date": "2025-11-09 09:43:57"
+    },
+    "EMU05": {
+        "peak_demand_power": 45.53971099853516,
+        "peak_demand_date": "2025-11-07 12:10:29"
+    },
+    "EMU04": {
+        "peak_demand_power": 0.0001605637080501,
+        "peak_demand_date": "2025-11-12 14:20:08"
+    }
+}
