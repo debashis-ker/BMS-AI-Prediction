@@ -74,8 +74,7 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
             raise HTTPException(status_code=400, detail="Date Column Input Not Found or processing failed.")
 
         for col_name, mapping in [
-            ('monitoring_data', {'inactive': 0.0, 'active': 1.0}),
-            ('site', {'Ground Floor': 0.0, 'Rooftop': 1.0})
+            ('monitoring_data', {'inactive': 0.0, 'active': 1.0})
         ]:
             if col_name in df_ahu.columns:
                 try:
@@ -83,7 +82,7 @@ def data_pipeline(data: Dict[str, Any], date_column: str, site : str, system_typ
                 except Exception as e:
                     log.warning(f"Failed to convert/replace for column '{col_name}': {e}")
             else:
-                 if col_name in ['monitoring_data', 'site']:
+                 if col_name in ['monitoring_data']:
                     log.error(f"Required column '{col_name}' not found.")
                  
         Required_Columns = ['datapoint', 'monitoring_data'] 
