@@ -165,6 +165,11 @@ def resampling_data_pipeline(
                 status_code=400,
                 detail=f'Date Column "{date_column}" not found in data.'
             )
+        
+        null_strings = ["null", "NaN", "NA"]
+        df["monitoring_data"].replace(null_strings, np.nan, inplace=True)
+        
+        df.dropna(subset=["monitoring_data"], inplace=True)
 
         df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
         df[date_column] = df[date_column].dt.tz_localize(None)
@@ -177,6 +182,7 @@ def resampling_data_pipeline(
         if from_date or to_date:
             try:
                 df = df.loc[from_date:to_date]
+                # print(df.head())
             except Exception:
                 pass
 
@@ -201,28 +207,33 @@ def resampling_data_pipeline(
 
 def resample_by_bins(df: pd.DataFrame, n_points: int) -> pd.DataFrame:
     total_len = len(df) 
-    
     bins = np.linspace(0, total_len, n_points + 1) 
     bin_index = np.digitize(np.arange(total_len), bins) - 1 
 
     print(bin_index)
 
-    first_time_index = df.index.to_series().groupby(bin_index).first()
+    unix_timestamps_ns = df.index.to_series().view(np.int64)
+    
+    average_unix_timestamp_ns = unix_timestamps_ns.groupby(bin_index).mean()
+    
+    average_time_index = pd.to_datetime(average_unix_timestamp_ns, unit='ns')
     
     df_num = df.select_dtypes(include=[np.number]) 
     df_cat = df.select_dtypes(exclude=[np.number]) 
 
-    df_num_resampled = df_num.groupby(bin_index).mean()
+    df_num = df_num.apply(pd.to_numeric, errors='coerce')
+
+    df_num_resampled = df_num.groupby(bin_index).mean().iloc[:n_points]
 
     df_cat_resampled = df_cat.groupby(bin_index).agg(
         lambda x: x.mode().iloc[0] if not x.mode().empty else None
-    )
+    ).iloc[:n_points]
 
     df_resampled = pd.concat([df_num_resampled, df_cat_resampled], axis=1)
 
-    df_resampled.index = first_time_index # type: ignore
+    df_resampled.index = average_time_index.iloc[:n_points] #type:ignore
     
-    return df_resampled.iloc[:n_points]
+    return df_resampled
 
 def multi_col_resample_data_dynamically(
     df: pd.DataFrame,
