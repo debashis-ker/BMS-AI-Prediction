@@ -190,6 +190,12 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
 
             df_report = df[['date', 'Anomaly_Flag', feature]].copy()
             
+            if not df_report['date'].isna().all():
+                max_timestamp = df_report['date'].max()
+                cutoff_timestamp = max_timestamp - pd.Timedelta(days=1)
+                df_report = df_report[df_report['date'] >= cutoff_timestamp].copy()
+                log.info(f"Feature '{feature}': Filtered to last 24h. Max: {max_timestamp}, Cutoff: {cutoff_timestamp}, Records: {len(df_report)}")
+            
             df_report.rename(columns={
                 'date': 'timestamp', 
                 'Anomaly_Flag': 'Anamoly_Flag'
@@ -642,7 +648,7 @@ def get_emission_report(json_input_data: Dict[str, Any], equipment_id: Optional[
             detail="An unexpected error occurred during report generation."
         )
 
-EMISSION_FACTOR: float = 0.414 
+# EMISSION_FACTOR: float = 0.414 
 
 def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Optional[str] = None) -> Dict[str, Any]:
     try:
@@ -1092,14 +1098,19 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/optimization_results", response_class=FileResponse)
+class OptimizationResultsResponse(BaseModel):
+    optimized_percentage: float = Field(..., description="Average difference between actual and predicted values as percentage")
+    results: List[Dict[str, Any]] = Field(..., description="Optimization results with timestamps, actual values, and predicted values")
+
+
+@router.get("/optimization_results", response_model=OptimizationResultsResponse)
 async def get_optimization_results():
     """
-    Returns the optimization results JSON file.
+    Returns the optimization results with optimized percentage.
     
     Returns:
-        JSON file containing optimization results with timestamps, actual values,
-        predicted values, and setpoint comparisons.
+        JSON containing optimization results with timestamps, actual values,
+        predicted values, setpoint comparisons, and optimized percentage.
     """
     file_path = Path.cwd() / "test_optimization_results.json"
     
@@ -1107,9 +1118,20 @@ async def get_optimization_results():
         log.error(f"Optimization results file not found: {file_path}")
         raise HTTPException(status_code=404, detail="Optimization results file not found")
     
-    log.info(f"Serving optimization results from {file_path}")
-    return FileResponse(
-        path=str(file_path),
-        media_type="application/json",
-        filename="test_optimization_results.json"
-    )
+    try:
+        with open(file_path, 'r') as f:
+            results = json.load(f)
+        
+        # Calculate average difference
+        differences = [r['difference_actual_and_pred'] for r in results if r.get('difference_actual_and_pred') is not None]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+        log.info(f"Serving optimization results from {file_path} with avg difference: {avg_difference:.2f}")
+        
+        return OptimizationResultsResponse(
+            optimized_percentage=round(avg_difference, 2)*10,
+            results=results
+        )
+    except Exception as e:
+        log.error(f"Error reading optimization results: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
