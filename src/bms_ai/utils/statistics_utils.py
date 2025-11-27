@@ -4,12 +4,24 @@ from typing import List
 def find_min(datapoint : str, data : pd.DataFrame):
     if data.empty:
         return "N/A"
-    return data[datapoint].min().item()
+    if pd.api.types.is_numeric_dtype(data[datapoint].dtype):
+        non_na_min = data[datapoint].min()
+        try:
+            return non_na_min.item()
+        except AttributeError:
+            return non_na_min 
+    return data[datapoint].min()
 
 def find_max(datapoint : str, data : pd.DataFrame):
     if data.empty:
         return "N/A"
-    return data[datapoint].max().item()
+    if pd.api.types.is_numeric_dtype(data[datapoint].dtype):
+        non_na_max = data[datapoint].max()
+        try:
+            return non_na_max.item()
+        except AttributeError:
+            return non_na_max
+    return data[datapoint].max()
 
 def find_mean(datapoint : str, data : pd.DataFrame):
     if data.empty:
@@ -22,7 +34,11 @@ def find_mode(datapoint : str, data : pd.DataFrame):
     
     mode_val = data[datapoint].mode()
     if not mode_val.empty:
-        return mode_val.iloc[0].item()
+        val = mode_val.iloc[0]
+        try:
+            return val.item()
+        except AttributeError:
+            return val
     return None
 
 def find_std(datapoint : str , data : pd.DataFrame):
@@ -67,39 +83,35 @@ def format_datetime(ts: pd.Timestamp) -> str:
         offset = offset.replace(':', '')
     return f"{formatted_time}{offset}"
 
-
 def format_timestamps_list(timestamps: pd.DatetimeIndex) -> List[str]:
     return [format_datetime(ts) for ts in timestamps]
-
 
 def find_min_dates(datapoint : str, data : pd.DataFrame) -> List:
     min_val = find_min(datapoint, data) 
     
-    if isinstance(min_val, str) and min_val == "N/A":
+    if isinstance(min_val, (str, type(None))):
         return []
 
     min_indices = pd.DatetimeIndex(data.index[data[datapoint] == min_val])
     
     return format_timestamps_list(min_indices)
 
-
 def find_max_dates(datapoint : str, data : pd.DataFrame) -> List:
     max_val = find_max(datapoint, data)
     
-    if isinstance(max_val, str) and max_val == "N/A":
+    if isinstance(max_val, (str, type(None))):
         return []
         
     max_indices = pd.DatetimeIndex(data.index[data[datapoint] == max_val])
     
     return format_timestamps_list(max_indices)
 
-
 def find_last_min_date(datapoint : str, data : pd.DataFrame) -> str:
     if data.empty:
         return "N/A"
 
     min_val = find_min(datapoint, data)
-    if isinstance(min_val, str) and min_val == "N/A":
+    if isinstance(min_val, (str, type(None))):
         return "N/A"
 
     min_indices = pd.DatetimeIndex(data.index[data[datapoint] == min_val])
@@ -113,7 +125,7 @@ def find_last_max_date(datapoint : str, data : pd.DataFrame) -> str:
         return "N/A"
         
     max_val = find_max(datapoint, data)
-    if isinstance(max_val, str) and max_val == "N/A":
+    if isinstance(max_val, (str, type(None))):
         return "N/A"
         
     max_indices = pd.DatetimeIndex(data.index[data[datapoint] == max_val])
