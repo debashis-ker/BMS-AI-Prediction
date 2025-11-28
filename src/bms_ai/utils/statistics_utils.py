@@ -321,55 +321,45 @@ def try_numeric_conversion(series: pd.Series) -> pd.Series:
     else:
         return series.astype(str).replace("nan", None).replace("null", None).replace("", None).dropna()
 
+# --- NEW CONSTANT: Master list of all canonical output keys ---
+MASTER_CANONICAL_STATS = [
+    "min", "max", "mean", "mode", "variance", "standard deviation", 
+    "count_max_hits", "count_min_hits", "dates_of_min_value", "dates_of_max_value", 
+    "last_date_of_min_value", "last_date_of_max_value", "count", "top" # Including all numeric, date, and core categorical keys
+]
+
 def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dict[str, Any]:
     datapoint_name = df_series.columns[0]
     
-    filtered_stats_list = [
-        stat for stat in stats_list if stat not in ["count"]
+    valid_numeric_stats = [
+        stat for stat in stats_list if stat in MASTER_CANONICAL_STATS and stat not in ["count"]
     ]
-    out = {st: None for st in filtered_stats_list}
+    
+    out = {st: None for st in valid_numeric_stats}
     
     non_null_count = int(df_series[datapoint_name].count())
     
     if df_series.empty or non_null_count == 0:
         return out
 
-    if "min" in out:
-        out["min"] = find_min(datapoint_name, df_series) #type:ignore
-    if "max" in out:
-        out["max"] = find_max(datapoint_name, df_series) #type:ignore
-    if "mean" in out:
-        out["mean"] = find_mean(datapoint_name, df_series) #type:ignore
-    if "mode" in out:
-        out["mode"] = find_mode(datapoint_name, df_series) #type:ignore
-    if "standard deviation" in out:
-        out["standard deviation"] = find_std(datapoint_name, df_series) #type:ignore
-    if "variance" in out:
-        out["variance"] = find_var(datapoint_name, df_series) #type:ignore
+    if "min" in out: out["min"] = find_min(datapoint_name, df_series) #type:ignore
+    if "max" in out: out["max"] = find_max(datapoint_name, df_series) #type:ignore
+    if "mean" in out: out["mean"] = find_mean(datapoint_name, df_series) #type:ignore
+    if "mode" in out: out["mode"] = find_mode(datapoint_name, df_series) #type:ignore
+    if "standard deviation" in out: out["standard deviation"] = find_std(datapoint_name, df_series) #type:ignore
+    if "variance" in out: out["variance"] = find_var(datapoint_name, df_series) #type:ignore
 
     for k, v in out.items():
-        if v == "N/A":
-            out[k] = None
+        if v == "N/A": out[k] = None
         
-    if "count_min_hits" in out:
-        out["count_min_hits"] = count_min_feature_occurence(datapoint_name, df_series) #type:ignore
+    if "count_min_hits" in out: out["count_min_hits"] = count_min_feature_occurence(datapoint_name, df_series) #type:ignore
+    if "count_max_hits" in out: out["count_max_hits"] = count_max_feature_occurence(datapoint_name, df_series) #type:ignore
         
-    if "count_max_hits" in out:
-        out["count_max_hits"] = count_max_feature_occurence(datapoint_name, df_series) #type:ignore
-        
-    if "dates_of_min_value" in out:
-        min_dates = find_min_dates(datapoint_name, df_series)
-        out["dates_of_min_value"] = min_dates  #type: ignore
+    if "dates_of_min_value" in out: out["dates_of_min_value"] = find_min_dates(datapoint_name, df_series) #type:ignore
+    if "dates_of_max_value" in out: out["dates_of_max_value"] = find_max_dates(datapoint_name, df_series) #type:ignore
 
-    if "dates_of_max_value" in out:
-        max_dates = find_max_dates(datapoint_name, df_series)
-        out["dates_of_max_value"] = max_dates #type: ignore
-
-    if "last_date_of_min_value" in out:
-        out["last_date_of_min_value"] = find_last_min_date(datapoint_name, df_series) #type: ignore
-
-    if "last_date_of_max_value" in out:
-        out["last_date_of_max_value"] = find_last_max_date(datapoint_name, df_series) #type: ignore
+    if "last_date_of_min_value" in out: out["last_date_of_min_value"] = find_last_min_date(datapoint_name, df_series) #type:ignore
+    if "last_date_of_max_value" in out: out["last_date_of_max_value"] = find_last_max_date(datapoint_name, df_series) #type:ignore
 
     return out
 
