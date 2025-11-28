@@ -29,7 +29,7 @@ class HierStatsRequest(BaseModel):
     data: Dict[str, Any] = Field(..., description="Raw JSON. Must contain key 'queryResponse' -> list[dict]")
     date_column: str = Field(default="data_received_on", description="Name of datetime column in the records (e.g. 'data_received_on')")
     columns: Optional[List[str]] = Field(None, description="Columns to compute stats for. if omitted, compute for all.")
-    hierarchy: Optional[List[str]] = Field(None, description="Hierarchy columns, top->child (e.g. ['site','equipment_id'])")
+    hierarchy: Optional[List[str]] = Field([], description="Hierarchy columns, top->child (e.g. ['site','equipment_id'])")
     stats: Optional[List[str]] = Field(None, description="Numeric stats to compute, e.g. ['min','max','mean','std','count']")
     from_date: Optional[str] = Field(None, description="Trim start date (inclusive)")
     to_date: Optional[str] = Field(None, description="Trim end date (inclusive)")

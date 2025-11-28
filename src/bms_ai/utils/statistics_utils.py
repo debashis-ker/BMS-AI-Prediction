@@ -321,11 +321,10 @@ def try_numeric_conversion(series: pd.Series) -> pd.Series:
     else:
         return series.astype(str).replace("nan", None).replace("null", None).replace("", None).dropna()
 
-# --- NEW CONSTANT: Master list of all canonical output keys ---
 MASTER_CANONICAL_STATS = [
     "min", "max", "mean", "mode", "variance", "standard deviation", 
     "count_max_hits", "count_min_hits", "dates_of_min_value", "dates_of_max_value", 
-    "last_date_of_min_value", "last_date_of_max_value", "count", "top" # Including all numeric, date, and core categorical keys
+    "last_date_of_min_value", "last_date_of_max_value", "count", "top" 
 ]
 
 def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dict[str, Any]:
@@ -342,9 +341,9 @@ def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dic
     if df_series.empty or non_null_count == 0:
         return out
 
-    if "min" in out: out["min"] = find_min(datapoint_name, df_series) #type:ignore
-    if "max" in out: out["max"] = find_max(datapoint_name, df_series) #type:ignore
-    if "mean" in out: out["mean"] = find_mean(datapoint_name, df_series) #type:ignore
+    if "min" in out: out["min"] = find_min(datapoint_name, df_series)
+    if "max" in out: out["max"] = find_max(datapoint_name, df_series) 
+    if "mean" in out: out["mean"] = find_mean(datapoint_name, df_series) 
     if "mode" in out: out["mode"] = find_mode(datapoint_name, df_series) #type:ignore
     if "standard deviation" in out: out["standard deviation"] = find_std(datapoint_name, df_series) #type:ignore
     if "variance" in out: out["variance"] = find_var(datapoint_name, df_series) #type:ignore
