@@ -77,8 +77,7 @@ def hier_stats_endpoint(request: HierStatsRequest):
     try:
         hierarchy = request.hierarchy if request.hierarchy is not None else DEFAULT_HIERARCHY
         
-        stats_list_raw = request.stats if request.stats is not None else DEFAULT_NUMERIC_STATS
-        stats_list = [standardize_stat_key(s) for s in stats_list_raw]
+        stats_list = request.stats if request.stats is not None else DEFAULT_NUMERIC_STATS
         
         for cat_stat in DEFAULT_CATEGORICAL_STATS:
              if cat_stat not in stats_list:

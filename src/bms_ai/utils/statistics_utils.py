@@ -140,11 +140,10 @@ def find_last_max_date(datapoint : str, data : pd.DataFrame) -> str:
     return "N/A"
 
 DEFAULT_HIERARCHY = ["site", "equipment_id"]
-DEFAULT_CATEGORICAL_STATS = ["count", "top", "mode"]
+DEFAULT_CATEGORICAL_STATS = ["count", "mode"]
 DEFAULT_NUMERIC_STATS = [
-    "min", "max", "mean", "mode", "variance", "standard deviation", 
-    "find_last_min", "find_last_max", "count_max_hits", "count_min_hits", 
-    "min_date_hits", "max_data_hits", "min_date_hits_in_range", "max_date_hits_in_range"
+    "min", "max", "mean", "mode", "variance", "standard deviation", "count_max_hits", "count_min_hits", 
+    "dates_of_min_value", "dates_of_max_value", "last_date_of_min_value", "last_date_of_max_value"
 ]
 
 def resampling_data_pipeline(
@@ -322,50 +321,13 @@ def try_numeric_conversion(series: pd.Series) -> pd.Series:
     else:
         return series.astype(str).replace("nan", None).replace("null", None).replace("", None).dropna()
 
-def standardize_stat_key(key: str) -> str:
-    """Maps common variations of stat names to the required output keys."""
-    key = key.lower()
-    if key in ("std", "standard_deviation", "standard deviation"):
-        return "standard deviation"
-    elif key in ("mean", "avg", "average"):
-        return "mean"
-    elif key in ("min", "minimum"):
-        return "min"
-    elif key in ("max", "maximum"):
-        return "max"
-    elif key in ("count", "n"):
-        return "count"
-    elif key in ("mode",):
-        return "mode"
-    elif key in ("top",): 
-        return "top"
-    elif key in ("variance",):
-        return "variance"
-    elif key in ("find_last_min",):
-        return "find_last_min"
-    elif key in ("find_last_max",):
-        return "find_last_max"
-    elif key in ("count_min_hits",):
-        return "count_min_hits"
-    elif key in ("count_max_hits",):
-        return "count_max_hits"
-    elif key in ("min_date_hits",):
-        return "min_date_hits"
-    elif key in ("max_data_hits",):
-        return "max_data_hits"
-    elif key in ("min_date_hits_in_range",):
-        return "min_date_hits_in_range"
-    elif key in ("max_date_hits_in_range",):
-        return "max_date_hits_in_range"
-    return key
-
 def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dict[str, Any]:
     datapoint_name = df_series.columns[0]
     
     filtered_stats_list = [
-        stat for stat in stats_list if standardize_stat_key(stat) not in ["count", "top"]
+        stat for stat in stats_list if stat not in ["count"]
     ]
-    out = {standardize_stat_key(st): None for st in filtered_stats_list}
+    out = {st: None for st in filtered_stats_list}
     
     non_null_count = int(df_series[datapoint_name].count())
     
@@ -388,12 +350,6 @@ def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dic
     for k, v in out.items():
         if v == "N/A":
             out[k] = None
-
-    if "find_last_min" in out:
-        out["find_last_min"] = find_min(datapoint_name, df_series)  #type:ignore
-
-    if "find_last_max" in out:
-        out["find_last_max"] = find_max(datapoint_name, df_series) #type:ignore
         
     if "count_min_hits" in out:
         out["count_min_hits"] = count_min_feature_occurence(datapoint_name, df_series) #type:ignore
@@ -401,20 +357,19 @@ def compute_numeric_stats(df_series: pd.DataFrame, stats_list: List[str]) -> Dic
     if "count_max_hits" in out:
         out["count_max_hits"] = count_max_feature_occurence(datapoint_name, df_series) #type:ignore
         
-    if "min_date_hits" in out:
+    if "dates_of_min_value" in out:
         min_dates = find_min_dates(datapoint_name, df_series)
-        out["min_date_hits"] = min_dates[0] if min_dates else None
+        out["dates_of_min_value"] = min_dates  #type: ignore
 
-    if "max_data_hits" in out:
+    if "dates_of_max_value" in out:
         max_dates = find_max_dates(datapoint_name, df_series)
-        out["max_data_hits"] = max_dates[0] if max_dates else None
+        out["dates_of_max_value"] = max_dates #type: ignore
 
-    if "min_date_hits_in_range" in out:
-        min_dates = find_min_dates(datapoint_name, df_series)
-        out["min_date_hits_in_range"] = min_dates[0] if min_dates else None
+    if "last_date_of_min_value" in out:
+        out["last_date_of_min_value"] = find_last_min_date(datapoint_name, df_series) #type: ignore
 
-    if "max_date_hits_in_range" in out:
-        out["max_date_hits_in_range"] = find_last_max_date(datapoint_name, df_series) #type:ignore
+    if "last_date_of_max_value" in out:
+        out["last_date_of_max_value"] = find_last_max_date(datapoint_name, df_series) #type: ignore
 
     return out
 
@@ -422,7 +377,7 @@ def compute_categorical_stats(df_series: pd.DataFrame, stats_list: List[str]) ->
     datapoint_name = df_series.columns[0]
     out: Dict[str, Any] = {}
     
-    categorical_keys_requested = [key for key in stats_list if key in ["count", "top", "mode"]]
+    categorical_keys_requested = [key for key in stats_list if key in ["count", "mode"]]
 
     total_record_count = len(df_series)
     
@@ -433,8 +388,6 @@ def compute_categorical_stats(df_series: pd.DataFrame, stats_list: List[str]) ->
             out["count"] = total_record_count
         if "mode" in categorical_keys_requested:
             out["mode"] = None
-        if "top" in categorical_keys_requested:
-            out["top"] = None
         return out
     
     if "count" in categorical_keys_requested:
@@ -444,9 +397,6 @@ def compute_categorical_stats(df_series: pd.DataFrame, stats_list: List[str]) ->
     
     if "mode" in categorical_keys_requested:
         out["mode"] = mode_val
-        
-    if "top" in categorical_keys_requested:
-        out["top"] = mode_val
             
     return out
 
@@ -495,8 +445,14 @@ def data_pipeline(
 
         if date_column not in df.columns: return {"raw_df": df}
 
+        null_strings = ["null", "NaN", "NA"]
+        df["monitoring_data"].replace(null_strings, np.nan, inplace=True)
+        
+        df.dropna(subset=["monitoring_data"], inplace=True)
+
         df[date_column] = pd.to_datetime(df[date_column], errors="coerce", utc=True)
-        df = df.dropna(subset=[date_column]).set_index(date_column) 
+        df = df.dropna(subset=[date_column]).set_index(date_column)
+         
         if df.empty: return {"raw_df": pd.DataFrame()}
 
         if from_date:
