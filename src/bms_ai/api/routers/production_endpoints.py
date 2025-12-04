@@ -328,7 +328,7 @@ def anomaly_detection(request_data: AnamolyPredictionRequest) -> AnamolyPredicti
     return AnamolyPredictionResponse(
         asset_code=asset_code,
         feature=feature,
-        predictions=report_list, # type: ignore
+        predictions=report_list,
         total_anomalies=total_anomalies
     )
 
@@ -978,12 +978,14 @@ class GenericTrainRequest(BaseModel):
     search_method: str = Field("random", description="Hyperparameter search method: 'random' or 'grid'")
     cv_folds: int = Field(5, description="Number of cross-validation folds")
     n_iter: int = Field(20, description="Number of iterations for RandomizedSearchCV")
+    setpoints: Optional[List[str]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")
 
 
 class GenericTrainResponse(BaseModel):
     status: str
     best_model_name: str
     selected_features: List[str]
+    setpoints: List[str]
     metrics: Dict[str, Any]
     model_path: str
     scaler_path: str
@@ -1023,12 +1025,15 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
             test_size=request_data.test_size,
             search_method=request_data.search_method,
             cv_folds=request_data.cv_folds,
-            n_iter=request_data.n_iter
+            n_iter=request_data.n_iter,
+            setpoints=request_data.setpoints
         )
         
         end = time.time()
         log.info(f"Generic model training completed in {end - start:.2f} seconds")
         log.info(f"Selected {len(result.get('selected_features', []))} features for {request_data.target_variable}")
+        if result.get('setpoints'):
+            log.info(f"Tracked {len(result['setpoints'])} setpoints: {result['setpoints']}")
         
         return GenericTrainResponse(**result)
         
@@ -1122,7 +1127,6 @@ async def get_optimization_results():
         with open(file_path, 'r') as f:
             results = json.load(f)
         
-        # Calculate average difference
         differences = [r['difference_actual_and_pred'] for r in results if r.get('difference_actual_and_pred') is not None]
         avg_difference = sum(differences) / len(differences) if differences else 0
         

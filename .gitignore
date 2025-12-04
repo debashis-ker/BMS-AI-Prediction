@@ -219,6 +219,8 @@ logs/
 # Notebook data files
 notebooks/data/
 notebooks/*.csv
+notebooks/*.ipynb
+notebooks/*.json
 
 # local resources
 resources/
