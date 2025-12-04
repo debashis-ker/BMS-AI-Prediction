@@ -11,7 +11,7 @@ router = APIRouter(prefix="/fetch-datapoints", tags=["BMS Data Points"])
 
 class FetchDataPointsRequest(BaseModel):
     building_id: str = Field(..., description="Building ID")
-    floor_id: str = Field(..., description="Floor ID")
+    floor_id: Optional[str] = Field(None, description="Floor ID")
     equipment_id: str = Field(..., description="Equipment ID (can be empty string)")
     search_tag_groups: List[List[str]] = Field(..., description="Array of Haystack tag arrays to search")
     ticket: str = Field(..., description="Authentication ticket")

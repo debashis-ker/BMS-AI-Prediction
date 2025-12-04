@@ -7,82 +7,82 @@ Total Features Selected: 20
 Feature Scores:
 ------------------------------------------------------------
 CMDSpdVFD:
-  Correlation: 0.9991
-  Mutual Info: 2.0447
+  Correlation: 0.9983
+  Mutual Info: 2.1944
 
 PIDVFD:
-  Correlation: 0.9974
-  Mutual Info: 1.8484
+  Correlation: 0.9937
+  Mutual Info: 1.9707
 
 CmdCHW:
-  Correlation: 0.5547
-  Mutual Info: 0.9411
+  Correlation: 0.6721
+  Mutual Info: 1.2572
 
 PIDTR:
-  Correlation: 0.1927
-  Mutual Info: 0.8438
+  Correlation: 0.4942
+  Mutual Info: 1.1228
 
 hour:
-  Correlation: 0.3184
-  Mutual Info: 0.7433
+  Correlation: 0.3275
+  Mutual Info: 0.7313
 
 SpTROcc:
-  Correlation: -0.5683
-  Mutual Info: 0.5552
+  Correlation: -0.5998
+  Mutual Info: 0.6921
 
 SpTREff:
-  Correlation: -0.5674
-  Mutual Info: 0.5436
-
-StaFlw:
-  Correlation: -0.8878
-  Mutual Info: 0.5011
-
-HuSu:
-  Correlation: 0.0925
-  Mutual Info: 0.4982
-
-StaVFDSf:
-  Correlation: -0.8878
-  Mutual Info: 0.4845
-
-CmdVFD:
-  Correlation: -0.8878
-  Mutual Info: 0.4845
-
-TsOn:
-  Correlation: 0.6726
-  Mutual Info: 0.4838
-
-TempSp1:
-  Correlation: -0.6085
-  Mutual Info: 0.4293
-
-TrAvg:
-  Correlation: -0.4980
-  Mutual Info: 0.3385
-
-SpMinVFD:
-  Correlation: 0.4353
-  Mutual Info: 0.4283
-
-HuR:
-  Correlation: -0.3906
-  Mutual Info: 0.3733
+  Correlation: -0.5995
+  Mutual Info: 0.6696
 
 TSu:
-  Correlation: -0.3876
-  Mutual Info: 0.4535
+  Correlation: -0.3214
+  Mutual Info: 0.5026
 
-week_number:
-  Correlation: -0.3452
-  Mutual Info: 0.2244
+TsOn:
+  Correlation: 0.5079
+  Mutual Info: 0.4828
+
+HuSu:
+  Correlation: 0.2590
+  Mutual Info: 0.4654
+
+CmdVFD:
+  Correlation: -0.7573
+  Mutual Info: 0.3295
+
+StaFlw:
+  Correlation: -0.7573
+  Mutual Info: 0.3256
+
+StaVFDSf:
+  Correlation: -0.7573
+  Mutual Info: 0.3270
+
+TempSp1:
+  Correlation: -0.5358
+  Mutual Info: 0.3468
+
+TrAvg:
+  Correlation: -0.4231
+  Mutual Info: 0.3024
+
+SpMinVFD:
+  Correlation: 0.2615
+  Mutual Info: 0.2981
 
 TempSp2:
-  Correlation: -0.2870
-  Mutual Info: 0.2853
+  Correlation: -0.2192
+  Mutual Info: 0.3002
 
-TRe:
-  Correlation: 0.1169
-  Mutual Info: 0.2676
+HuR1:
+  Correlation: 0.1979
+  Mutual Info: 0.2778
+
+HuAvg1:
+  Correlation: 0.1517
+  Mutual Info: 0.2340
+
+Co2RA:
+  Correlation: 0.1440
+  Mutual Info: 0.2173
 

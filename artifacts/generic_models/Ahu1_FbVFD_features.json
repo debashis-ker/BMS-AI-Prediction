@@ -9,100 +9,188 @@
     "hour",
     "SpTROcc",
     "SpTREff",
-    "StaFlw",
-    "HuSu",
-    "StaVFDSf",
-    "CmdVFD",
+    "TSu",
     "TsOn",
+    "HuSu",
+    "CmdVFD",
+    "StaFlw",
+    "StaVFDSf",
     "TempSp1",
     "TrAvg",
     "SpMinVFD",
-    "HuR",
-    "TSu",
-    "week_number",
     "TempSp2",
-    "TRe"
+    "HuR1",
+    "HuAvg1",
+    "Co2RA"
   ],
   "feature_scores": {
     "CMDSpdVFD": {
-      "correlation": 0.9991488042728387,
-      "mutual_info": 2.0446958481351327
+      "correlation": 0.9982622881238478,
+      "mutual_info": 2.1944094988397005
     },
     "PIDVFD": {
-      "correlation": 0.9974101825155537,
-      "mutual_info": 1.8483912274596337
+      "correlation": 0.9937017682918051,
+      "mutual_info": 1.9706896195239563
     },
     "CmdCHW": {
-      "correlation": 0.5547290699414504,
-      "mutual_info": 0.9411395457184271
+      "correlation": 0.6720760796269836,
+      "mutual_info": 1.2571779710815347
     },
     "PIDTR": {
-      "correlation": 0.19272118332979113,
-      "mutual_info": 0.8437543113846364
+      "correlation": 0.4942220133234081,
+      "mutual_info": 1.1227842556768746
     },
     "hour": {
-      "correlation": 0.318415922482358,
-      "mutual_info": 0.7432935067603954
+      "correlation": 0.3275211016088483,
+      "mutual_info": 0.7313316813348529
     },
     "SpTROcc": {
-      "correlation": -0.568347512401637,
-      "mutual_info": 0.5552248844485361
+      "correlation": -0.5998131677088788,
+      "mutual_info": 0.6921350076839445
     },
     "SpTREff": {
-      "correlation": -0.5674310142140432,
-      "mutual_info": 0.5435774123451789
-    },
-    "StaFlw": {
-      "correlation": -0.8877928480893751,
-      "mutual_info": 0.5011066801581634
-    },
-    "HuSu": {
-      "correlation": 0.0924689406053317,
-      "mutual_info": 0.498245733187459
-    },
-    "StaVFDSf": {
-      "correlation": -0.8877928480893751,
-      "mutual_info": 0.4845149568271976
-    },
-    "CmdVFD": {
-      "correlation": -0.8877928480893751,
-      "mutual_info": 0.48447816439658764
-    },
-    "TsOn": {
-      "correlation": 0.672608111865862,
-      "mutual_info": 0.48383637828383397
-    },
-    "TempSp1": {
-      "correlation": -0.608540107157845,
-      "mutual_info": 0.42934703526323936
-    },
-    "TrAvg": {
-      "correlation": -0.49804894019722756,
-      "mutual_info": 0.3384700277503647
-    },
-    "SpMinVFD": {
-      "correlation": 0.4352710377456228,
-      "mutual_info": 0.4283274412454259
-    },
-    "HuR": {
-      "correlation": -0.39058867509982065,
-      "mutual_info": 0.3733191283713282
+      "correlation": -0.5994528319369673,
+      "mutual_info": 0.669648406437648
     },
     "TSu": {
-      "correlation": -0.387593404164372,
-      "mutual_info": 0.4534994097149374
+      "correlation": -0.32138288180014424,
+      "mutual_info": 0.5026008107134654
     },
-    "week_number": {
-      "correlation": -0.34516949306276157,
-      "mutual_info": 0.22444763434145987
+    "TsOn": {
+      "correlation": 0.507856635858869,
+      "mutual_info": 0.482814360512148
+    },
+    "HuSu": {
+      "correlation": 0.25895789832343113,
+      "mutual_info": 0.46542575903859884
+    },
+    "CmdVFD": {
+      "correlation": -0.7572900370845447,
+      "mutual_info": 0.3294809609229452
+    },
+    "StaFlw": {
+      "correlation": -0.7572900370845447,
+      "mutual_info": 0.32561997626798944
+    },
+    "StaVFDSf": {
+      "correlation": -0.7572900370845447,
+      "mutual_info": 0.32695391982417266
+    },
+    "TempSp1": {
+      "correlation": -0.5357724746230796,
+      "mutual_info": 0.34680684328003775
+    },
+    "TrAvg": {
+      "correlation": -0.42306287478694304,
+      "mutual_info": 0.30240273801321926
+    },
+    "SpMinVFD": {
+      "correlation": 0.26150440482876564,
+      "mutual_info": 0.2980948598060902
     },
     "TempSp2": {
-      "correlation": -0.28699557832572886,
-      "mutual_info": 0.28534122849038734
+      "correlation": -0.21920760581883572,
+      "mutual_info": 0.30021290651876864
     },
-    "TRe": {
-      "correlation": 0.11688569037391,
-      "mutual_info": 0.26755268182367864
+    "HuR1": {
+      "correlation": 0.1979449085394718,
+      "mutual_info": 0.277759182648289
+    },
+    "HuAvg1": {
+      "correlation": 0.15173316009052665,
+      "mutual_info": 0.23398131160627944
+    },
+    "Co2RA": {
+      "correlation": 0.14404695960814115,
+      "mutual_info": 0.2172772978365023
+    }
+  },
+  "setpoints": [
+    "SpMinVFD",
+    "SpTREff",
+    "SpTROcc"
+  ],
+  "setpoint_ranges": {
+    "SpMinVFD": {
+      "min": 50.0,
+      "max": 80.0,
+      "lookup": [
+        50.0,
+        51.5,
+        53.0,
+        54.5,
+        56.0,
+        57.5,
+        59.0,
+        60.5,
+        62.0,
+        63.5,
+        65.0,
+        66.5,
+        68.0,
+        69.5,
+        71.0,
+        72.5,
+        74.0,
+        75.5,
+        77.0,
+        78.5,
+        80.0
+      ]
+    },
+    "SpTREff": {
+      "min": 18.0,
+      "max": 26.0,
+      "lookup": [
+        18.0,
+        18.4,
+        18.8,
+        19.2,
+        19.6,
+        20.0,
+        20.4,
+        20.8,
+        21.2,
+        21.6,
+        22.0,
+        22.4,
+        22.8,
+        23.2,
+        23.6,
+        24.0,
+        24.4,
+        24.8,
+        25.2,
+        25.6,
+        26.0
+      ]
+    },
+    "SpTROcc": {
+      "min": 18.0,
+      "max": 26.0,
+      "lookup": [
+        18.0,
+        18.4,
+        18.8,
+        19.2,
+        19.6,
+        20.0,
+        20.4,
+        20.8,
+        21.2,
+        21.6,
+        22.0,
+        22.4,
+        22.8,
+        23.2,
+        23.6,
+        24.0,
+        24.4,
+        24.8,
+        25.2,
+        25.6,
+        26.0
+      ]
     }
   }
 }

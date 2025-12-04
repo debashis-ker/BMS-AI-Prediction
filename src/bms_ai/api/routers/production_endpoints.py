@@ -971,7 +971,8 @@ def damper_optimize_endpoint(request_data: DamperOptimizeRequest):
 # Generic Optimization Endpoints
 
 class GenericTrainRequest(BaseModel):
-    data_path: str = Field("C:\\Users\\debas\\OneDrive\\Desktop\\actual_data.csv", description="Path to training data CSV file")
+    #data_path: str = Field("C:\\Users\\debas\\OneDrive\\Desktop\\actual_data.csv", description="Path to training data CSV file")
+    data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
     equipment_id: str = Field("Ahu1", description="Equipment ID to filter")
     target_variable: str = Field(..., description="Target variable to optimize (must be numeric)")
     test_size: float = Field(0.2, description="Fraction of data for testing")

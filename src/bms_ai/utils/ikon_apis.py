@@ -430,7 +430,8 @@ def fetch_and_find_data_points(
             software_id=software_id,
             account_id=account_id,
             predefined_filters={'taskName': 'Building Association'},
-            process_variable_filters=process_variable_filter,
+            #process_variable_filters=process_variable_filter,
+            #process_variable_filters=None,
             env=env
         )
         

@@ -6,20 +6,21 @@
     "PIDTR",
     "SpTROcc",
     "SpTREff",
-    "HuSu",
+    "TSu",
     "TsOn",
+    "HuSu",
     "TempSp1",
     "TrAvg",
     "SpMinVFD",
-    "HuR",
-    "TSu",
     "TempSp2",
-    "TRe"
+    "HuR1",
+    "HuAvg1",
+    "Co2RA"
   ],
   "categorical_cols_at_training": [
+    "CmdVFD",
     "StaFlw",
-    "StaVFDSf",
-    "CmdVFD"
+    "StaVFDSf"
   ],
   "selected_features": [
     "CMDSpdVFD",
@@ -29,23 +30,23 @@
     "hour",
     "SpTROcc",
     "SpTREff",
-    "StaFlw",
-    "HuSu",
-    "StaVFDSf",
-    "CmdVFD",
+    "TSu",
     "TsOn",
+    "HuSu",
+    "CmdVFD",
+    "StaFlw",
+    "StaVFDSf",
     "TempSp1",
     "TrAvg",
     "SpMinVFD",
-    "HuR",
-    "TSu",
-    "week_number",
     "TempSp2",
-    "TRe"
+    "HuR1",
+    "HuAvg1",
+    "Co2RA"
   ],
   "label_encoder_columns": [
+    "CmdVFD",
     "StaFlw",
-    "StaVFDSf",
-    "CmdVFD"
+    "StaVFDSf"
   ]
 }
