@@ -14,6 +14,8 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
     optimize_generic
 )
 
+from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
+
 import pandas as pd
 import joblib
 import warnings
@@ -981,6 +983,22 @@ class GenericTrainRequest(BaseModel):
     n_iter: int = Field(20, description="Number of iterations for RandomizedSearchCV")
     setpoints: Optional[List[str]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")
 
+class GenericTrainRequestV2(BaseModel):
+    data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
+    #data : dict = Field(..., description="Input data in JSON format")
+    ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    account_id: str = Field(..., description="Account ID associated with the training job")
+    software_id: str = Field(..., description="Software ID for versioning")
+    building_id: str = Field(..., description="Building ID where the equipment is located")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field("Ahu1", description="Equipment ID to filter")
+    target_variable_tag: List[List[str]] = Field(..., description="Target variable to optimize (must be numeric)")
+    test_size: float = Field(0.2, description="Fraction of data for testing")
+    search_method: str = Field("random", description="Hyperparameter search method: 'random' or 'grid'")
+    cv_folds: int = Field(5, description="Number of cross-validation folds")
+    n_iter: int = Field(20, description="Number of iterations for RandomizedSearchCV")
+    setpoints: Optional[List[str]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")    
+
 
 class GenericTrainResponse(BaseModel):
     status: str
@@ -1042,11 +1060,104 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
         log.error(f"Generic training failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post('/generic_trainV2', response_model=GenericTrainResponse)
+def generic_train_endpointV2(request_data: GenericTrainRequestV2):
+    """
+    Train a generic optimization surrogate model with automatic feature selection.
+    
+    Uses correlation and mutual information analysis to automatically select the top 20 most
+    relevant features from the dataset. Always includes mandatory setpoints: SpMinVFD, SpTREff, SpTROcc.
+    
+    Args:
+        data_path: Path to CSV file with training data
+        equipment_id: Equipment ID to filter
+        target_variable: Target variable to optimize (must be numeric)
+        test_size: Fraction for test split
+        search_method: 'random' for RandomizedSearchCV or 'grid' for GridSearchCV
+        cv_folds: Number of cross-validation folds
+        n_iter: Number of iterations for RandomizedSearchCV
+        
+    Returns:
+        Training results including selected features, metrics, and artifact paths
+    """
+    results = fetch_and_find_data_points(
+            building_id=request_data.building_id,
+            floor_id=None,
+            equipment_id=request_data.equipment_id,
+            search_tag_groups=request_data.target_variable_tag,
+            ticket=request_data.ticket,
+            software_id=request_data.software_id,
+            account_id=request_data.account_id,
+            system_type=request_data.system_type,
+            env="prod"
+        )
+    
+    target_variable = ""
+
+    print(f"Fetched data points: {results}")
+
+
+    if len(results) > 0:
+        #target_variable = results[0].get("dataPointName")
+        try:
+            target_variable = results[0]["dataPointName"]
+            print(f"Using target variable: {target_variable}")
+        except KeyError:
+            print("Data point name not found in results.")
+            print(f"Results content: {results[0]}")
+            raise HTTPException(status_code=500, detail="Data point name not found in results.")
+    else:
+        raise HTTPException(status_code=404, detail="No data points found for the specified target variable tags.")
+      
+    
+
+    
+    start = time.time()
+    log.info(f"Generic training request: {request_data.dict()}")
+    print(f"Generic training request: {request_data.dict()}")
+    
+    try:
+        result = train_generic(
+            data_path=request_data.data_path,
+            equipment_id=request_data.equipment_id,
+            target_column=target_variable,  
+            test_size=request_data.test_size,
+            search_method=request_data.search_method,
+            cv_folds=request_data.cv_folds,
+            n_iter=request_data.n_iter,
+            setpoints=request_data.setpoints
+        )
+        
+        end = time.time()
+        log.info(f"Generic model training completed in {end - start:.2f} seconds")
+        log.info(f"Selected {len(result.get('selected_features', []))} features for {target_variable}")
+        if result.get('setpoints'):
+            log.info(f"Tracked {len(result['setpoints'])} setpoints: {result['setpoints']}")
+        
+        return GenericTrainResponse(**result)
+        
+    except Exception as e:
+        log.error(f"Generic training failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
     equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
     target_variable: str = Field(..., description="Target variable to optimize (must match training)")
+    search_space: Optional[Dict[str, List[float]]] = Field(None, description="Setpoint ranges to search")
+    optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid' or 'random'")
+    n_iterations: Optional[int] = Field(1000, description="Number of iterations for random search (ignored for grid)")
+    direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
+
+class GenericOptimizeRequestV2(BaseModel):
+    current_conditions: Dict[str, Any] = Field(..., description="Current system state")
+    ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    account_id: str = Field(..., description="Account ID associated with the training job")
+    software_id: str = Field(..., description="Software ID for versioning")
+    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
+    target_variable_tag: List[List[str]] = Field(..., description="Target haystacks to optimize (must match training)")
     search_space: Optional[Dict[str, List[float]]] = Field(None, description="Setpoint ranges to search")
     optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid' or 'random'")
     n_iterations: Optional[int] = Field(1000, description="Number of iterations for random search (ignored for grid)")
@@ -1096,6 +1207,66 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
         end = time.time()
         log.info(f"Generic optimization completed in {end - start:.2f} seconds")
         log.info(f"Best setpoints: {result['best_setpoints']}, Best {request_data.target_variable}: {result['best_target_value']:.4f}")
+        
+        return GenericOptimizeResponse(**result)
+        
+    except Exception as e:
+        log.error(f"Generic optimization failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post('/generic_optimizeV2', response_model=GenericOptimizeResponse)
+def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
+    """
+    Optimize AHU setpoints to minimize or maximize any specified target variable.
+    
+    Args:
+        current_conditions: Current system state with all required features
+        target_variable: Target variable to optimize
+        search_space: Optional setpoint ranges (defaults provided if not specified)
+        optimization_method: 'grid' or 'random'
+        n_iterations: Number of iterations for random search
+        direction: 'minimize' or 'maximize' the target variable
+    Returns:
+        Best setpoints and optimized target value
+    """
+
+    results = fetch_and_find_data_points( building_id=request_data.building_id,
+            equipment_id=request_data.equipment_id,
+            floor_id=None,
+            search_tag_groups=request_data.target_variable_tag,
+            ticket=request_data.ticket,
+            software_id=request_data.software_id,
+            account_id=request_data.account_id,
+            system_type=request_data.system_type,
+            env="prod")
+    
+    target_variable = ""
+    print(f"Fetched data points: {results}")
+    if len(results) > 0:
+        try:
+            target_variable = results[0]["dataPointName"]
+            print(f"Using target variable: {target_variable}")
+        except KeyError:
+            print("Data point name not found in results.")
+            print(f"Results content: {results[0]}")
+            raise HTTPException(status_code=500, detail="Data point name not found in results.")
+    start = time.time()
+    log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={target_variable}, method={request_data.optimization_method}, direction={request_data.direction}")
+    
+    try:
+        result = optimize_generic(
+            current_conditions=request_data.current_conditions,
+            equipment_id=request_data.equipment_id,
+            target_column=target_variable,  
+            search_space=request_data.search_space,
+            optimization_method=request_data.optimization_method or "random",
+            n_iterations=request_data.n_iterations or 1000,
+            direction=request_data.direction or "minimize"
+        )
+    
+        end = time.time()
+        log.info(f"Generic optimization completed in {end - start:.2f} seconds")
+        log.info(f"Best setpoints: {result['best_setpoints']}, Best {target_variable}: {result['best_target_value']:.4f}")
         
         return GenericOptimizeResponse(**result)
         
