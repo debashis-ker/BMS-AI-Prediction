@@ -67,6 +67,8 @@ class GenericFeatureSelector:
             log.info("STARTING AUTOMATIC FEATURE SELECTION")
             log.info(f"Target: {self.target_column}")
             log.info("="*60)
+            log.info(f"Data shape before feature selection: {df.shape}")
+            log.info(f"Columns: {df.columns.tolist()}")
             
             if self.target_column not in df.columns:
                 raise ValueError(f"Target column '{self.target_column}' not found in data")
@@ -266,7 +268,8 @@ class GenericDataTransformation:
         self.numeric_cols_at_training = []
         self.categorical_cols_at_training = []
         
-    def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    #def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    def transform_dataset(self, data: List[dict], setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Transform entire dataset from CSV with automatic feature selection.
         
@@ -283,8 +286,8 @@ class GenericDataTransformation:
             log.info(f"Equipment: {self.equipment_id}, Target: {self.target_column}")
             log.info("="*60)
             
-            log.info(f"Loading raw BMS data from {data_path}")
-            df = pd.read_csv(data_path)
+            #log.info(f"Loading raw BMS data from {data_path}")
+            df = pd.DataFrame(data)
             log.info(f"Raw data shape: {df.shape}")
             
             if 'system_type' in df.columns:
@@ -757,7 +760,10 @@ class GenericModelTrainer:
             raise CustomException(e, sys)
 
 
-def train_generic(data_path: str, equipment_id: str, target_column: str,
+'''def train_generic(data_path: str, equipment_id: str, target_column: str,
+                  test_size: float = 0.2, search_method: str = 'random',
+                  cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:'''
+def train_generic(data: List[dict], equipment_id: str, target_column: str,
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -785,7 +791,7 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints)
+        X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints)
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42

@@ -984,8 +984,8 @@ class GenericTrainRequest(BaseModel):
     setpoints: Optional[List[str]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")
 
 class GenericTrainRequestV2(BaseModel):
-    data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
-    #data : dict = Field(..., description="Input data in JSON format")
+    #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
+    data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
@@ -1118,7 +1118,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     
     try:
         result = train_generic(
-            data_path=request_data.data_path,
+            #data_path=request_data.data_path,
+            data=request_data.data,
             equipment_id=request_data.equipment_id,
             target_column=target_variable,  
             test_size=request_data.test_size,
