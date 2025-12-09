@@ -239,7 +239,6 @@ def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: 
             
     return report_list
 
-
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
@@ -391,71 +390,6 @@ def anamoly_data_pipeline(data: Dict[str, Any], target_asset_code: str) -> pd.Da
     except Exception as e:
         log.error(f"Data pipeline failed: {e}")
         raise Exception(f"Data pipeline failed: {e}")
-    
-def anomaly_detection(request_data: AnamolyPredictionRequest) -> AnamolyPredictionResponse:
-    if anamoly_model is None:
-        log.error("Anomaly Detection model is unavailable.")
-        raise HTTPException(status_code=503, detail="Anomaly Detection model is currently unavailable.")
-
-    asset_code = request_data.asset
-    feature = request_data.feature
-    
-    try:
-        model_package = anamoly_model[feature][asset_code]
-    except KeyError:
-        log.warning(f"Model package not found for Feature: {feature} and Asset: {asset_code}")
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Trained model not found for asset '{asset_code}' and feature '{feature}'. Available models: {list(anamoly_model.keys())}"
-        )
-
-    try:
-        wrapped_data = {"data": {"queryResponse": [rec.dict() for rec in request_data.queryResponse]}}
-        
-        date_col_name = "data_received_on" 
-        
-        df_wide = anamoly_data_pipeline(wrapped_data, date_col_name, asset_code)
-        
-        if df_wide.empty:
-            return AnamolyPredictionResponse(
-                asset_code=asset_code, feature=feature, predictions=[], total_anomalies=0
-            )
-            
-    except Exception as e:
-        log.error(f"Data pipeline error during anomaly detection: {e}")
-        raise HTTPException(status_code=400, detail=f"Data processing failed: {e}")
-
-    X_df = df_wide[[feature, "data_received_on"]].copy().dropna(subset=[feature])
-    
-    if X_df.empty:
-        log.warning(f"No valid, non-null data found for feature {feature} after preprocessing.")
-        return AnamolyPredictionResponse(
-            asset_code=asset_code, feature=feature, predictions=[], total_anomalies=0
-        )
-        
-    X_scaled = model_package['scaler'].transform(X_df[[feature]])
-    
-    predictions = model_package['model'].predict(X_scaled)
-
-    X_df['Anomaly_Flag'] = predictions
-    X_df['timestamp'] = X_df["data_received_on"].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
-    X_df.drop(columns=["data_received_on"], inplace=True)
-    
-    total_anomalies = (X_df['Anomaly_Flag'] == -1).sum()
-    log.info(f"Asset {asset_code}, Feature {feature}: Detected {total_anomalies} anomalies.")
-
-    report_list = X_df.to_dict('records')
-    
-    for record in report_list:
-        record['Anomaly_Flag'] = int(record['Anomaly_Flag'])
-        record[feature] = float(record[feature])
-
-    return AnamolyPredictionResponse(
-        asset_code=asset_code,
-        feature=feature,
-        predictions=report_list,
-        total_anomalies=total_anomalies
-    )
 
 def get_resample_rule(months_input: int) -> str:
     """
