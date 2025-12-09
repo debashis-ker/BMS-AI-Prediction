@@ -2,7 +2,7 @@ Selected Features for Ahu1
 Target: FbVFD
 ============================================================
 
-Total Features Selected: 20
+Total Features Selected: 21
 
 Feature Scores:
 ------------------------------------------------------------
@@ -85,4 +85,8 @@ HuAvg1:
 Co2RA:
   Correlation: 0.1263
   Mutual Info: 0.2349
+
+HuR2:
+  Correlation: 0.0948
+  Mutual Info: 0.2642
 

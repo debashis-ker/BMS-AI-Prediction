@@ -15,7 +15,8 @@
     "SpMinVFD",
     "HuR1",
     "HuAvg1",
-    "Co2RA"
+    "Co2RA",
+    "HuR2"
   ],
   "categorical_cols_at_training": [
     "CmdVFD",
@@ -42,7 +43,8 @@
     "SpMinVFD",
     "HuR1",
     "HuAvg1",
-    "Co2RA"
+    "Co2RA",
+    "HuR2"
   ],
   "label_encoder_columns": [
     "CmdVFD",

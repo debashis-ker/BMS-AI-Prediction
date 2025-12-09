@@ -997,7 +997,7 @@ class GenericTrainRequestV2(BaseModel):
     search_method: str = Field("random", description="Hyperparameter search method: 'random' or 'grid'")
     cv_folds: int = Field(5, description="Number of cross-validation folds")
     n_iter: int = Field(20, description="Number of iterations for RandomizedSearchCV")
-    setpoints: Optional[List[str]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")    
+    setpoints: Optional[List[List[str]]] = Field(None, description="Optional list of setpoints to include in selection (defaults to primary setpoints)")    
 
 
 class GenericTrainResponse(BaseModel):
@@ -1080,11 +1080,19 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     Returns:
         Training results including selected features, metrics, and artifact paths
     """
+    matches_tags = []
+    matches_tags = matches_tags + request_data.target_variable_tag
+    print(f"Target variable tags: {matches_tags}")
+    if request_data.setpoints != None:
+        matches_tags = matches_tags + request_data.setpoints
+        print(f"Setpoint tags: {matches_tags}")
+
     results = fetch_and_find_data_points(
             building_id=request_data.building_id,
             floor_id=None,
             equipment_id=request_data.equipment_id,
-            search_tag_groups=request_data.target_variable_tag,
+            #search_tag_groups= request_data.target_variable_tag,
+            search_tag_groups= matches_tags,
             ticket=request_data.ticket,
             software_id=request_data.software_id,
             account_id=request_data.account_id,
@@ -1093,6 +1101,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
         )
     
     target_variable = ""
+    setpoints = []
 
     print(f"Fetched data points: {results}")
 
@@ -1102,6 +1111,11 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
         try:
             target_variable = results[0]["dataPointName"]
             print(f"Using target variable: {target_variable}")
+            if len(results) > 1:
+                print("Additional fetched data points (likely setpoints):")
+                for res in results[1:]:
+                    print(f"- {res.get('dataPointName')}")
+                    setpoints.append(res.get('dataPointName'))
         except KeyError:
             print("Data point name not found in results.")
             print(f"Results content: {results[0]}")
@@ -1115,6 +1129,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     start = time.time()
     log.info(f"Generic training request: {request_data.dict()}")
     print(f"Generic training request: {request_data.dict()}")
+    log.info(f"Using target variable: {target_variable}")
+    log.info(f"Using setpoints: {setpoints}")
     
     try:
         result = train_generic(
@@ -1126,7 +1142,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             search_method=request_data.search_method,
             cv_folds=request_data.cv_folds,
             n_iter=request_data.n_iter,
-            setpoints=request_data.setpoints
+            #setpoints=request_data.setpoints
+            setpoints=setpoints
         )
         
         end = time.time()
