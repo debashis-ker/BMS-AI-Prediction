@@ -395,7 +395,7 @@ def find_data_points_by_floor_and_tags(
 
 def fetch_and_find_data_points(
     building_id: str,
-    floor_id: str,
+    floor_id: Optional[str],
     equipment_id: str,
     search_tag_groups: List[List[str]],
     ticket: str,
@@ -409,7 +409,7 @@ def fetch_and_find_data_points(
     
     Args:
         building_id: The ID of the building
-        floor_id: The ID of the floor to search within
+        floor_id: The ID of the floor to search within (if None, searches all floors)
         equipment_id: The ID/key of the specific equipment
         search_tag_groups: Array of arrays of Haystack tags
         ticket: Authentication ticket
@@ -421,7 +421,6 @@ def fetch_and_find_data_points(
         List of matched data points
     """
     try:
-        # Step 1: Fetch building-to-BACnet association
         process_variable_filter = {'buildingId': building_id} if building_id else None
         
         building_associated_data = get_my_instances_v2(
@@ -440,27 +439,34 @@ def fetch_and_find_data_points(
             log.warning("No building association data found")
             return []
         
-        # Step 2: Access floorAssociations and find the correct floor
         first_instance_data = building_associated_data[0].get('data', {})
         bacnet_association_data = first_instance_data.get('floorAssociations', [])
         
         log.debug(f"Floor associations data: {bacnet_association_data}")
         
-        floor_association = None
-        for association in bacnet_association_data:
-            if association.get('floorId') == floor_id:
-                floor_association = association
-                break
+        floor_names_to_search = []
         
-        if not floor_association or not floor_association.get('bacnetSite'):
-            log.warning(f"No association or bacnetSite found for floorId: {floor_id}")
-            log.warning(f"Available floor IDs: {[a.get('floorId') for a in bacnet_association_data]}")
-            return []
+        if floor_id:
+            floor_association = None
+            for association in bacnet_association_data:
+                if association.get('floorId') == floor_id:
+                    floor_association = association
+                    break
+            
+            if not floor_association or not floor_association.get('bacnetSite'):
+                log.warning(f"No association or bacnetSite found for floorId: {floor_id}")
+                log.warning(f"Available floor IDs: {[a.get('floorId') for a in bacnet_association_data]}")
+                return []
+            
+            floor_names_to_search = [floor_association['bacnetSite']]
+            log.info(f"Resolved floor name: {floor_names_to_search[0]} for floorId: {floor_id}")
+        else:
+            floor_names_to_search = [
+                assoc.get('bacnetSite') for assoc in bacnet_association_data 
+                if assoc.get('bacnetSite')
+            ]
+            log.info(f"No floor_id provided. Searching across all {len(floor_names_to_search)} floors: {floor_names_to_search}")
         
-        floor_name = floor_association['bacnetSite']
-        log.info(f"Resolved floor name: {floor_name} for floorId: {floor_id}")
-        
-        # Step 3: Fetch hierarchy data
         tree_data = get_building_hierarchy_data(
             building_id=building_id,
             ticket=ticket,
@@ -476,20 +482,22 @@ def fetch_and_find_data_points(
             return []
         
         log.debug(f"Hierarchy data keys: {list(hierarchy_data.keys()) if isinstance(hierarchy_data, dict) else 'Not a dict'}")
-        log.info(f"Searching for floor: {floor_name}, equipment: {equipment_id}, system_type: {system_type}")
+        log.info(f"Searching for floor(s): {floor_names_to_search}, equipment: {equipment_id}, system_type: {system_type}")
         log.info(f"Search tag groups: {search_tag_groups}")
         
-        # Step 4: Find data points
-        results = find_data_points_by_floor_and_tags(
-            hierarchy_data,
-            floor_name,
-            equipment_id,
-            search_tag_groups,
-            system_type
-        )
+        all_results = []
+        for floor_name in floor_names_to_search:
+            floor_results = find_data_points_by_floor_and_tags(
+                hierarchy_data,
+                floor_name,
+                equipment_id,
+                search_tag_groups,
+                system_type
+            )
+            all_results.extend(floor_results)
         
-        log.info(f"Found {len(results)} matching data points")
-        return results
+        log.info(f"Found {len(all_results)} matching data points across {len(floor_names_to_search)} floor(s)")
+        return all_results
     
     except Exception as error:
         log.error(f"Error fetching or processing hierarchy data: {error}", exc_info=True)

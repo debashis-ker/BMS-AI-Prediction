@@ -96,10 +96,12 @@ class GenericFeatureSelector:
             df_temp = pd.concat([X_transformed, y], axis=1)
             corr_matrix = df_temp.corr()
             target_corr = corr_matrix[self.target_column].drop(self.target_column)
+            self.correlation = target_corr 
             
             log.info("Calculating mutual information with target...")
             mi_scores = mutual_info_regression(X_transformed, y, random_state=42)
             mi_series = pd.Series(mi_scores, index=X_transformed.columns)
+            self.mutual_info = mi_series 
             
             self._plot_feature_importance(target_corr, mi_series)
             
@@ -174,8 +176,10 @@ class GenericFeatureSelector:
         except Exception as e:
             log.error(f"Error creating plots: {e}")
     
-    def _save_selected_features(self, correlation: pd.Series, mutual_info: pd.Series):
-        """Save selected features and their scores to file."""
+    def _save_selected_features(self, correlation: pd.Series, mutual_info: pd.Series, 
+                                setpoints: Optional[List[str]] = None, 
+                                setpoint_ranges: Optional[Dict[str, Any]] = None):
+        """Save selected features and their scores to file, including setpoints and ranges."""
         try:
             os.makedirs(os.path.dirname(self.config.selected_features_path), exist_ok=True)
             
@@ -211,6 +215,11 @@ class GenericFeatureSelector:
                 }
             }
             
+            if setpoints:
+                metadata['setpoints'] = setpoints
+            if setpoint_ranges:
+                metadata['setpoint_ranges'] = setpoint_ranges
+            
             json_path = os.path.join(
                 'artifacts', 'generic_models', 
                 f"{self.equipment_id}_{self.target_column}_features.json"
@@ -219,6 +228,8 @@ class GenericFeatureSelector:
                 json.dump(metadata, f, indent=2)
             
             log.info(f"Selected features metadata saved to {json_path}")
+            if setpoints:
+                log.info(f"Saved {len(setpoints)} setpoints with ranges")
             
         except Exception as e:
             log.error(f"Error saving selected features: {e}")
@@ -255,12 +266,13 @@ class GenericDataTransformation:
         self.numeric_cols_at_training = []
         self.categorical_cols_at_training = []
         
-    def transform_dataset(self, data_path: str) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Transform entire dataset from CSV with automatic feature selection.
         
         Args:
             data_path: Path to CSV file with raw BMS data
+            setpoints: Optional list of setpoint columns to include and track
             
         Returns:
             Tuple of (X_processed, y, selected_features)
@@ -347,8 +359,42 @@ class GenericDataTransformation:
             selected_features = feature_selector.select_features(pivoted_df, n_features=20)
             self.selected_features = selected_features
             
-            available_features = [f for f in selected_features if f in pivoted_df.columns]
-            missing_features = [f for f in selected_features if f not in pivoted_df.columns]
+            setpoints = setpoints or SETPOINT_NAMES
+            present_setpoints = [s for s in setpoints if s in pivoted_df.columns]
+            for sp in present_setpoints:
+                if sp not in self.selected_features:
+                    self.selected_features.append(sp)
+                    log.info(f"Added setpoint to selected features: {sp}")
+            
+            setpoint_ranges = {}
+            for sp in present_setpoints:
+                try:
+                    col_vals = pd.to_numeric(pivoted_df[sp].dropna(), errors='coerce')
+                    if col_vals.empty:
+                        continue
+                    min_val = float(col_vals.min())
+                    max_val = float(col_vals.max())
+                    if abs(max_val - min_val) < 1e-6:
+                        min_val = max(0, min_val - 0.1)
+                        max_val = max_val + 0.1
+                    setpoint_ranges[sp] = {
+                        "min": min_val,
+                        "max": max_val,
+                        "lookup": list(np.linspace(min_val, max_val, num=21))
+                    }
+                    log.info(f"Setpoint {sp} range: [{min_val:.2f}, {max_val:.2f}]")
+                except Exception as e:
+                    log.warning(f"Could not compute range for setpoint {sp}: {e}")
+            
+            feature_selector._save_selected_features(
+                correlation=getattr(feature_selector, 'correlation', pd.Series()),
+                mutual_info=getattr(feature_selector, 'mutual_info', pd.Series()),
+                setpoints=present_setpoints,
+                setpoint_ranges=setpoint_ranges
+            )
+            
+            available_features = [f for f in self.selected_features if f in pivoted_df.columns]
+            missing_features = [f for f in self.selected_features if f not in pivoted_df.columns]
             
             if missing_features:
                 log.warning(f"Some selected features not in data: {missing_features}")
@@ -713,7 +759,7 @@ class GenericModelTrainer:
 
 def train_generic(data_path: str, equipment_id: str, target_column: str,
                   test_size: float = 0.2, search_method: str = 'random',
-                  cv_folds: int = 5, n_iter: int = 20) -> Dict[str, Any]:
+                  cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Main generic training function with automatic feature selection.
     
@@ -725,6 +771,7 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         search_method: 'random' or 'grid'
         cv_folds: Number of CV folds
         n_iter: Number of iterations for RandomizedSearchCV
+        setpoints: Optional list of setpoint columns to include and track
         
     Returns:
         Dictionary with training results
@@ -733,10 +780,12 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         log.info("="*60)
         log.info("STARTING GENERIC OPTIMIZATION MODEL TRAINING")
         log.info(f"Equipment: {equipment_id}, Target: {target_column}")
+        if setpoints:
+            log.info(f"Tracking setpoints: {setpoints}")
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data_path)
+        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints)
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42
@@ -761,10 +810,14 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         
         feature_config = FeatureSelectionConfig()
         
+        setpoints_used = setpoints or SETPOINT_NAMES
+        trained_setpoints = [s for s in setpoints_used if s in selected_features]
+        
         return {
             'status': 'success',
             'best_model_name': metrics['best_model_name'],
             'selected_features': selected_features,
+            'setpoints': trained_setpoints,
             'metrics': metrics,
             'model_path': trainer.config.model_path,
             'scaler_path': transformer.config.scaler_path,
@@ -802,6 +855,48 @@ def optimize_generic(current_conditions: Dict[str, Any],
     try:
         log.info("="*60)
         log.info("STARTING GENERIC SETPOINT OPTIMIZATION")
+        log.info(f"Equipment: {equipment_id}, Target: {target_column}, Direction: {direction}")
+        log.info("="*60)
+        
+        import time
+        start_time = time.time()
+        
+        import json
+        features_json_path = os.path.join(
+            'artifacts', 'generic_models',
+            f"{equipment_id}_{target_column}_features.json"
+        )
+        
+        with open(features_json_path, 'r') as f:
+            features_metadata = json.load(f)
+        
+        selected_features = features_metadata.get('selected_features', [])
+        saved_setpoints = features_metadata.get('setpoints', [])
+        setpoint_ranges_meta = features_metadata.get('setpoint_ranges', {})
+        
+        for sp in saved_setpoints:
+            if sp not in selected_features:
+                selected_features.append(sp)
+        
+        if not search_space:
+            search_space = {}
+            for sp, rng in setpoint_ranges_meta.items():
+                if isinstance(rng, dict) and 'lookup' in rng:
+                    search_space[sp] = rng['lookup']
+                elif isinstance(rng, dict) and 'min' in rng and 'max' in rng:
+                    search_space[sp] = list(np.linspace(rng['min'], rng['max'], 21))
+            
+            if search_space:
+                log.info(f"Using saved setpoint ranges from metadata for: {list(search_space.keys())}")
+            else:
+                log.warning("No setpoint ranges found in metadata, using defaults")
+                search_space = {
+                    'SpMinVFD': list(np.linspace(0, 100, 21)),
+                    'SpTREff': list(np.linspace(18, 26, 17)),
+                    'SpTROcc': list(np.linspace(20, 28, 17))
+                }
+        else:
+            log.info("Using user-provided search_space")
         log.info(f"Equipment: {equipment_id}, Target: {target_column}")
         log.info(f"Setpoints to optimize: {SETPOINT_NAMES}")
         log.info("="*60)
