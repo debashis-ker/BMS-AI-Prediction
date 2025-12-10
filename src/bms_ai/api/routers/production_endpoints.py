@@ -84,7 +84,7 @@ EMISSION_FACTOR = 0.4041
 
 FEATURE_FALLBACKS = {
     'TSu': ['TempSu'],
-    'Co2RA': ['Co2RA1'],
+    'Co2RA': ['Co2Avg'],
     'HuAvg1': ['HuR1', 'HuRt']
 }
 
