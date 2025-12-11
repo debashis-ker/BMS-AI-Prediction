@@ -11,12 +11,11 @@
     "HuSu",
     "TempSp1",
     "TrAvg",
-    "TempSp2",
-    "SpMinVFD",
     "HuR1",
     "HuAvg1",
-    "Co2RA",
-    "HuR2"
+    "TempSp2",
+    "HuR2",
+    "SpMinVFD"
   ],
   "categorical_cols_at_training": [
     "CmdVFD",
@@ -28,9 +27,9 @@
     "PIDVFD",
     "CmdCHW",
     "PIDTR",
-    "hour",
     "SpTROcc",
     "SpTREff",
+    "hour",
     "TSu",
     "TsOn",
     "HuSu",
@@ -39,12 +38,11 @@
     "StaVFDSf",
     "TempSp1",
     "TrAvg",
-    "TempSp2",
-    "SpMinVFD",
     "HuR1",
     "HuAvg1",
-    "Co2RA",
-    "HuR2"
+    "TempSp2",
+    "HuR2",
+    "SpMinVFD"
   ],
   "label_encoder_columns": [
     "CmdVFD",

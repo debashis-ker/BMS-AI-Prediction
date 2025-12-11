@@ -17,6 +17,7 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 )
 
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
+from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
 
 import requests
 import pandas as pd
@@ -137,6 +138,52 @@ def fetch_all_ahu_data(
         f"and datapoint IN ({datapoint_list}) "
         f"allow filtering;"
     )
+
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse')
+        else:
+            raise ValueError(f"API response format unexpected: {raw_api_response}")
+
+        if not isinstance(data_list, list):
+            raise ValueError(f"'queryResponse' key found but its value is not a list, or the top-level object was empty.")
+        
+        return data_list
+    
+    except Exception as e:
+        log.error(f"Failed to fetch batch data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
+    
+def fetch_all_ahu_dataV2(
+        building_id: str = DEFAULT_BUILDING_ID,
+        url: str = API_URL,
+        site: str = "",
+        system_type: str = FIXED_SYSTEM_TYPE,
+        equipment_id: Optional[str] = None
+    ) -> List[Dict]:
+    """Fetches ALL historical data for AHUs in a single API call."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
+    datapoint_list = ', '.join([f"'{f}'" for f in ALL_AVAILABLE_FEATURES])
+    previous_week_day_in_UTC = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
+    log.debug(f"Fetching data since: {previous_week_day_in_UTC}")
+    query = (
+        f"select * from {location_table_name} "
+        f"where site = '{site}' " + 
+        f"and system_type = '{system_type}' " +
+        (f"and equipment_id = '{equipment_id}' " if equipment_id else ' ') +
+        f"and data_received_on >= '{previous_week_day_in_UTC}' "
+        #f"and data_received_on >= '2025-11-08T00:00:00.000 UTC' " +
+        f"allow filtering;"
+    )
+    log.debug(f"Constructed Query: {query}")
 
     API_PAYLOAD = {"query": query}
     try:
@@ -1140,11 +1187,12 @@ class GenericTrainRequest(BaseModel):
 
 class GenericTrainRequestV2(BaseModel):
     #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
-    data : List[dict] = Field(..., description="Input data in JSON format")
+    #data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field(..., description="Building ID where the equipment is located")
+    site: str = Field(..., description="Site name where the equipment is located")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID to filter")
     target_variable_tag: List[List[str]] = Field(..., description="Target variable to optimize (must be numeric)")
@@ -1278,6 +1326,14 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     else:
         raise HTTPException(status_code=404, detail="No data points found for the specified target variable tags.")
       
+    data = fetch_all_ahu_dataV2(
+            building_id=request_data.building_id,
+            site=request_data.site,
+            system_type=request_data.system_type,
+            equipment_id=request_data.equipment_id
+        )
+    
+    log.debug(f"Data fetched for training: {data}")
     
 
     
@@ -1290,7 +1346,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     try:
         result = train_generic(
             #data_path=request_data.data_path,
-            data=request_data.data,
+            #data=request_data.data,
+            data=data,
             equipment_id=request_data.equipment_id,
             target_column=target_variable,  
             test_size=request_data.test_size,
@@ -1328,6 +1385,7 @@ class GenericOptimizeRequestV2(BaseModel):
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    site: str = Field(..., description="Site name where the equipment is located")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
     target_variable_tag: List[List[str]] = Field(..., description="Target haystacks to optimize (must match training)")
@@ -1440,6 +1498,16 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
         end = time.time()
         log.info(f"Generic optimization completed in {end - start:.2f} seconds")
         log.info(f"Best setpoints: {result['best_setpoints']}, Best {target_variable}: {result['best_target_value']:.4f}")
+
+        save_data_to_cassandraV2(
+            data_chunk=[result],
+            building_id=request_data.building_id,
+            metadata={
+                "site": request_data.site,
+                "equipment_id": request_data.equipment_id,
+                "system_type": request_data.system_type
+            }
+        )
         
         return GenericOptimizeResponse(**result)
         

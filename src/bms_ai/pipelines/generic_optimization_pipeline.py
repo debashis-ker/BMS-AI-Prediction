@@ -1127,7 +1127,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
             'selected_features_used': selected_features,
             'total_combinations_tested': total_tested,
             'optimization_method': optimization_method,
-            'optimization_time_seconds': elapsed_time
+            'optimization_time_seconds': elapsed_time,
+            "timestamp" : time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
         }
         
     except Exception as e:
