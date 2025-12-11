@@ -67,6 +67,8 @@ class GenericFeatureSelector:
             log.info("STARTING AUTOMATIC FEATURE SELECTION")
             log.info(f"Target: {self.target_column}")
             log.info("="*60)
+            log.info(f"Data shape before feature selection: {df.shape}")
+            log.info(f"Columns: {df.columns.tolist()}")
             
             if self.target_column not in df.columns:
                 raise ValueError(f"Target column '{self.target_column}' not found in data")
@@ -266,7 +268,8 @@ class GenericDataTransformation:
         self.numeric_cols_at_training = []
         self.categorical_cols_at_training = []
         
-    def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    #def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    def transform_dataset(self, data: List[dict], setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Transform entire dataset from CSV with automatic feature selection.
         
@@ -283,8 +286,8 @@ class GenericDataTransformation:
             log.info(f"Equipment: {self.equipment_id}, Target: {self.target_column}")
             log.info("="*60)
             
-            log.info(f"Loading raw BMS data from {data_path}")
-            df = pd.read_csv(data_path)
+            #log.info(f"Loading raw BMS data from {data_path}")
+            df = pd.DataFrame(data)
             log.info(f"Raw data shape: {df.shape}")
             
             if 'system_type' in df.columns:
@@ -757,7 +760,82 @@ class GenericModelTrainer:
             raise CustomException(e, sys)
 
 
-def train_generic(data_path: str, equipment_id: str, target_column: str,
+'''def train_generic(data_path: str, equipment_id: str, target_column: str,
+                  test_size: float = 0.2, search_method: str = 'random',
+                  cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:'''
+def train_generic(data: List[dict], equipment_id: str, target_column: str,
+                  test_size: float = 0.2, search_method: str = 'random',
+                  cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Main generic training function with automatic feature selection.
+    
+    Args:
+        data_path: Path to CSV with raw BMS data
+        equipment_id: Equipment ID to filter
+        target_column: Target variable to optimize
+        test_size: Fraction for test split
+        search_method: 'random' or 'grid'
+        cv_folds: Number of CV folds
+        n_iter: Number of iterations for RandomizedSearchCV
+        setpoints: Optional list of setpoint columns to include and track
+        
+    Returns:
+        Dictionary with training results
+    """
+    try:
+        log.info("="*60)
+        log.info("STARTING GENERIC OPTIMIZATION MODEL TRAINING")
+        log.info(f"Equipment: {equipment_id}, Target: {target_column}")
+        if setpoints:
+            log.info(f"Tracking setpoints: {setpoints}")
+        log.info("="*60)
+        
+        transformer = GenericDataTransformation(equipment_id, target_column)
+        X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints)
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42
+        )
+        log.info(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
+        
+        transformer.save_transformers()
+        
+        trainer = GenericModelTrainer(equipment_id=equipment_id, target_column=target_column)
+        metrics = trainer.train_model(
+            X_train, y_train, X_test, y_test,
+            search_method=search_method,
+            cv_folds=cv_folds,
+            n_iter=n_iter
+        )
+        
+        trainer.save_model()
+        
+        log.info("="*60)
+        log.info("TRAINING COMPLETED SUCCESSFULLY")
+        log.info("="*60)
+        
+        feature_config = FeatureSelectionConfig()
+        
+        setpoints_used = setpoints or SETPOINT_NAMES
+        trained_setpoints = [s for s in setpoints_used if s in selected_features]
+        
+        return {
+            'status': 'success',
+            'best_model_name': metrics['best_model_name'],
+            'selected_features': selected_features,
+            'setpoints': trained_setpoints,
+            'metrics': metrics,
+            'model_path': trainer.config.model_path,
+            'scaler_path': transformer.config.scaler_path,
+            'correlation_plot': feature_config.correlation_plot_path,
+            'mi_plot': feature_config.mutual_info_plot_path
+        }
+        
+    except Exception as e:
+        log.error(f"Training failed: {e}")
+        raise CustomException(e, sys)
+    
+def train_genericV2(data: dict, equipment_id: str, target_column: str,
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -827,7 +905,8 @@ def train_generic(data_path: str, equipment_id: str, target_column: str,
         
     except Exception as e:
         log.error(f"Training failed: {e}")
-        raise CustomException(e, sys)
+        raise CustomException(e, sys)       
+        
 
 
 def optimize_generic(current_conditions: Dict[str, Any],
@@ -1048,7 +1127,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
             'selected_features_used': selected_features,
             'total_combinations_tested': total_tested,
             'optimization_method': optimization_method,
-            'optimization_time_seconds': elapsed_time
+            'optimization_time_seconds': elapsed_time,
+            "timestamp" : time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
         }
         
     except Exception as e:
