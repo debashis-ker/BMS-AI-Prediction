@@ -221,6 +221,7 @@ notebooks/data/
 notebooks/*.csv
 notebooks/*.ipynb
 notebooks/*.json
+notebooks/vox_ahu1_static_training.ipynb
 
 # local resources
 resources/

@@ -1,0 +1,201 @@
+{
+  "equipment_id": "Ahu2",
+  "target_column": "FbVFD",
+  "selected_features": [
+    "CMDSpdVFD",
+    "PIDVFD",
+    "CmdCHW",
+    "ChwFb",
+    "PIDTR",
+    "hour",
+    "SpTROcc",
+    "SpTREff",
+    "StaVFDSf",
+    "CmdVFD",
+    "StaFlw",
+    "TsOn",
+    "TempSu",
+    "TrAvg",
+    "TempSp2",
+    "HuR",
+    "TempSp1",
+    "Almbag",
+    "TRe",
+    "HuR2",
+    "SpMinVFD"
+  ],
+  "feature_scores": {
+    "CMDSpdVFD": {
+      "correlation": 0.997109545278517,
+      "mutual_info": 2.577315393277543
+    },
+    "PIDVFD": {
+      "correlation": 0.9926926655967411,
+      "mutual_info": 2.304015911340285
+    },
+    "CmdCHW": {
+      "correlation": 0.6693676749945726,
+      "mutual_info": 1.7604393729589365
+    },
+    "ChwFb": {
+      "correlation": 0.6628496794084191,
+      "mutual_info": 1.5837901924669255
+    },
+    "PIDTR": {
+      "correlation": 0.5829802560930526,
+      "mutual_info": 1.5048104979660177
+    },
+    "hour": {
+      "correlation": 0.44271185996402884,
+      "mutual_info": 0.7654865069103431
+    },
+    "SpTROcc": {
+      "correlation": -0.8127424304319824,
+      "mutual_info": 0.7611943004046577
+    },
+    "SpTREff": {
+      "correlation": -0.8127424304319824,
+      "mutual_info": 0.7517181337133478
+    },
+    "StaVFDSf": {
+      "correlation": -0.8874465088364644,
+      "mutual_info": 0.5799002005861518
+    },
+    "CmdVFD": {
+      "correlation": -0.8862311230206139,
+      "mutual_info": 0.567161256567964
+    },
+    "StaFlw": {
+      "correlation": -0.8850154917591279,
+      "mutual_info": 0.5670170232279739
+    },
+    "TsOn": {
+      "correlation": 0.5911791500121941,
+      "mutual_info": 0.2188631698769723
+    },
+    "TempSu": {
+      "correlation": -0.4554926022873459,
+      "mutual_info": 0.5491188411194257
+    },
+    "TrAvg": {
+      "correlation": -0.439347378922128,
+      "mutual_info": 0.35899299965670384
+    },
+    "TempSp2": {
+      "correlation": -0.43182013899840777,
+      "mutual_info": 0.27865514712633566
+    },
+    "HuR": {
+      "correlation": 0.420690676067103,
+      "mutual_info": 0.3177006675966041
+    },
+    "TempSp1": {
+      "correlation": -0.41907678285196154,
+      "mutual_info": 0.3236853713529717
+    },
+    "Almbag": {
+      "correlation": -0.40955093561262124,
+      "mutual_info": 0.19353012498656597
+    },
+    "TRe": {
+      "correlation": -0.3312602344688,
+      "mutual_info": 0.2876876081937496
+    },
+    "HuR2": {
+      "correlation": 0.19412815181312199,
+      "mutual_info": 0.22423953541772956
+    },
+    "SpMinVFD": {
+      "correlation": 0.18909032550293847,
+      "mutual_info": 0.25484837962605233
+    }
+  },
+  "setpoints": [
+    "SpMinVFD",
+    "SpTREff",
+    "SpTROcc"
+  ],
+  "setpoint_ranges": {
+    "SpMinVFD": {
+      "min": 50.0,
+      "max": 80.0,
+      "lookup": [
+        50.0,
+        51.5,
+        53.0,
+        54.5,
+        56.0,
+        57.5,
+        59.0,
+        60.5,
+        62.0,
+        63.5,
+        65.0,
+        66.5,
+        68.0,
+        69.5,
+        71.0,
+        72.5,
+        74.0,
+        75.5,
+        77.0,
+        78.5,
+        80.0
+      ]
+    },
+    "SpTREff": {
+      "min": 18.0,
+      "max": 26.0,
+      "lookup": [
+        18.0,
+        18.4,
+        18.8,
+        19.2,
+        19.6,
+        20.0,
+        20.4,
+        20.8,
+        21.2,
+        21.6,
+        22.0,
+        22.4,
+        22.8,
+        23.2,
+        23.6,
+        24.0,
+        24.4,
+        24.8,
+        25.2,
+        25.6,
+        26.0
+      ]
+    },
+    "SpTROcc": {
+      "min": 18.0,
+      "max": 26.0,
+      "lookup": [
+        18.0,
+        18.4,
+        18.8,
+        19.2,
+        19.6,
+        20.0,
+        20.4,
+        20.8,
+        21.2,
+        21.6,
+        22.0,
+        22.4,
+        22.8,
+        23.2,
+        23.6,
+        24.0,
+        24.4,
+        24.8,
+        25.2,
+        25.6,
+        26.0
+      ]
+    }
+  }
+}
