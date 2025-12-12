@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Tuple, Iterator
 from collections import defaultdict
@@ -8,12 +8,18 @@ import pandas as pd
 import time
 import requests
 import logging
+import os
 from dateutil import parser
 from dateutil import tz
 from sklearn.preprocessing import LabelEncoder
 from src.bms_ai.utils.cassandra_utils import fetch_all_ahu_data # Assuming this fetches raw data
 import joblib
-from cassandra.cluster import Cluster
+from cassandra.cluster import Session
+from src.bms_ai.api.dependencies import get_cassandra_session
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 log = setup_logger(__name__)
 
@@ -21,15 +27,13 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/anomalies",tags=["Anomalies"])
 
-# --- API CONSTANTS ---
 FIXED_SYSTEM_TYPE = "AHU"
 DEFAULT_BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
 API_INTERNAL_URL = "http://127.0.0.1:8000/prod/anomalies/anomaly_detection_all_ahu"
 
-# --- CASSANDRA CONSTANTS ---
-CASSANDRA_HOST = ['127.0.0.1']
-CASSANDRA_PORT = 9041
-KEYSPACE_NAME = 'anamoly'
+CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', 'localhost').split(',')
+CASSANDRA_PORT = int(os.getenv('CASSANDRA_PORT', '9042'))
+KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
 CHUNK_SIZE = 100
 HISTORY_TABLE_SUFFIX = "historical_data"
 ANAMOLY_TABLE_SUFFIX = "anamoly_data"
@@ -425,9 +429,8 @@ def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[
         
         yield building_id, asset_metadata, chunk_iterator
 
-def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict) -> int:
-    """Saves data chunk to Cassandra. Returns the number of rows inserted (into history)."""
-    cluster = None
+def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict, session: Session) -> int:
+    """Saves data chunk to Cassandra using provided session. Returns the number of rows inserted (into history)."""
     rows_inserted = 0
     
     site_value = metadata["site"]
@@ -457,9 +460,6 @@ def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: d
     """
     
     try:
-        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
-        session = cluster.connect(KEYSPACE_NAME)
-        
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=anamoly_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
         
@@ -520,18 +520,16 @@ def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: d
         print(f"Cassandra insert error: {type(e).__name__}: {e}")
         # print(traceback.format_exc()) 
         raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
-    finally:
-        if cluster:
-            cluster.shutdown()
             
     return rows_inserted
 
 # --- NEW ENDPOINT FOR INGESTION ---
 @router.post("/store_anamolies")
-def store_anamolies_endpoint() -> IngestionResponse:
+def store_anamolies_endpoint(session: Session = Depends(get_cassandra_session)) -> IngestionResponse:
     """
     Triggers the full batch process: fetches anomaly detection results from the 
     external API and inserts them into Cassandra's historical and anomaly tables.
+    Uses a shared Cassandra session with 1-hour TTL for better performance.
     """
     start_time = time.time()
     total_assets_processed = 0
@@ -547,7 +545,7 @@ def store_anamolies_endpoint() -> IngestionResponse:
             log.info(f"Processing Asset {total_assets_processed}: {api_metadata['site']}/{api_metadata['equipment_id']}")
             
             for i, chunk in enumerate(api_chunks):
-                inserted_count = save_data_to_cassandra(chunk, building_id, api_metadata)
+                inserted_count = save_data_to_cassandra(chunk, building_id, api_metadata, session)
                 total_records_inserted += inserted_count
                 
         duration = time.time() - start_time

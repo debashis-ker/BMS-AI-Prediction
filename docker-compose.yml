@@ -21,7 +21,7 @@ services:
     container_name: bms_prediction
     # Remove restart: unless-stopped if you don't want it to restart automatically
     ports:
-      - "9041:9041"
+      - "9042:9042"
     volumes:
       - bms_prediction_volume:/var/lib/cassandra
     environment:
