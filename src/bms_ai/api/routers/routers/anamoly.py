@@ -1,58 +1,19 @@
-import os
 import time
 import warnings
-from typing import Optional, List, Dict, Any, Tuple, Iterator
-from collections import defaultdict
-import pandas as pd
-import requests
-import joblib
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Depends
-from dateutil import parser, tz
-from sklearn.preprocessing import LabelEncoder
-from cassandra.cluster import Session, ConsistencyLevel
-from cassandra.query import SimpleStatement
+from fastapi import APIRouter, Depends
+from cassandra.cluster import Session
 from dotenv import load_dotenv
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.utils.cassandra_utils import fetch_all_ahu_data
-from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.api.dependencies import get_cassandra_session
+from src.bms_ai.components.anamoly_functions import *
 
 load_dotenv()
 log = setup_logger(__name__)
 warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/anomalies",tags=["Anomalies"])
-
-FIXED_SYSTEM_TYPE = "AHU"
-DEFAULT_BUILDING_ID = os.getenv('DEFAULT_BUILDING_ID', '36c27828-d0b4-4f1e-8a94-d962d342e7c2')
-API_INTERNAL_URL = os.getenv('ANOMALY_DETECTION_URL')
-BUILDING_IDS = [DEFAULT_BUILDING_ID]
-
-CASSANDRA_HOST = os.getenv('CASSANDRA_HOST')
-CASSANDRA_PORT = os.getenv('CASSANDRA_PORT')
-KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE')
-CASSANDRA_DEFAULT_TZ = tz.gettz('UTC')
-
-HISTORY_TABLE_SUFFIX = "historical_data"
-ANAMOLY_TABLE_SUFFIX = "anamoly_data"
-ANAMOLY_TTL_SECONDS = 2592000
-STANDARD_DATE_COLUMN = "data_received_on"
-
-CO2RA_CEILING_THRESHOLD = 850.0
-FBVFD_NORMAL_MAX = 1.0
-
-MASTER_LOGICAL_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
-KNOWN_MODEL_FILE_NAMES = ['TempSu', 'Co2Avg', 'HuR1', 'HuRt']
-DEFAULT_METADATA = {"equipment_id": "", "system_type": "AHU", "site": ""}
-
-class IngestionResponse(BaseModel):
-    """Schema for the response after storing anomaly data."""
-    status: str = Field(...)
-    total_assets_processed: int
-    total_records_inserted: int
-    duration_seconds: float
-    message: str
 
 class DataQueryRequest(BaseModel):
     """Schema for querying historical or anomaly data."""
@@ -65,485 +26,15 @@ class DataQueryRequest(BaseModel):
     start_date: Optional[str] = Field(None, description="Start timestamp for range filtering.")
     end_date: Optional[str] = Field(None, description="End timestamp for range filtering.")
 
-def wrap_data_list(data_list: List[Dict]) -> Dict[str, Any]:
-    """Wraps the list of datapoint records into the dictionary structure expected by build_dynamic_features."""
-    return {"success": True, "data": data_list, "count": len(data_list)}
-
-def build_dynamic_features(json_record: Dict[str, Any]) -> Tuple[List[str], Dict[str, List[str]], Dict[str, str]]:
-    """Generates the dynamic mapping based on fetched datapoint tags."""
-    dynamic_fallbacks = defaultdict(list)
-    consolidation_map = {}
-    
-    for record in json_record.get('data', []):
-        physical_name = record.get('dataPointName')
-        tags = set(record.get('queryTags', []))
-        
-        if not physical_name: continue
-            
-        master_feature = None
-        
-        if 'temp' in tags and 'supply' in tags and 'sp' not in tags: master_feature = 'TSu'
-        elif 'co2' in tags: master_feature = 'Co2RA'
-        elif 'damper' in tags and 'outside' in tags: master_feature = 'FbFAD'
-        elif 'speed' in tags and 'vfd' in tags and 'sp' not in tags: master_feature = 'FbVFD'
-        elif 'humidity' in tags and ('average' in tags or 'space' in tags or 'return' in tags): master_feature = 'HuAvg1'
-        
-        if master_feature is None and physical_name in MASTER_LOGICAL_FEATURES:
-             master_feature = physical_name
-
-        if master_feature and master_feature in MASTER_LOGICAL_FEATURES:
-            consolidation_map[physical_name] = master_feature
-            
-            if physical_name != master_feature:
-                if physical_name not in dynamic_fallbacks[master_feature]:
-                    dynamic_fallbacks[master_feature].append(physical_name)
-    
-    all_available_physical_features = list(consolidation_map.keys())
-    
-    return all_available_physical_features, dict(dynamic_fallbacks), consolidation_map
-
-raw_data_list = fetch_and_find_data_points(building_id=DEFAULT_BUILDING_ID, floor_id=None, equipment_id="", 
-    search_tag_groups=[["point", "co2", "co", "sensor", "space", "air", "average"],["point", "co2", "co", "space", "air", "sensor"],["point", "ahu", "airHandlingEquip", "sp", "temp", "supply", "air"],["point", "sp", "speed", "vfd"],["point", "sensor", "speed", "vfd"],["point", "sensor", "damper", "outside", "air"],["point", "sensor", "humidity", "space", "air", "average"],["point", "humidity", "space", "air", "sensor"],["point", "sensor", "humidity", "return", "air"]],
-    ticket=os.getenv('IKON_TICKET_ID'), software_id = os.getenv('IKON_SOFTWARE_ID'), account_id = os.getenv('IKON_ACCOUNT_ID'), system_type="AHU", env="prod") #type:ignore
-
-json_record = wrap_data_list(raw_data_list)
-(
-    ALL_QUERY_FEATURES,
-    FEATURE_FALLBACKS,
-    CONSOLIDATION_MAP
-) = build_dynamic_features(json_record) #type:ignore
-
-ALL_AVAILABLE_FEATURES = MASTER_LOGICAL_FEATURES 
-
-REVERSE_FEATURE_MAP = {
-    physical_name: master_name 
-    for physical_name, master_name in CONSOLIDATION_MAP.items()
-}
-
-for master_feat in MASTER_LOGICAL_FEATURES:
-    if master_feat not in REVERSE_FEATURE_MAP:
-         REVERSE_FEATURE_MAP[master_feat] = master_feat
-
-MASTER_ANAMOLY_MODELS: Dict[str, Dict[str, Any]] = {} 
-log.info("Starting model loading and consolidation...")
-
-all_model_keys_to_load = set(MASTER_LOGICAL_FEATURES)
-for fallbacks in FEATURE_FALLBACKS.values():
-    all_model_keys_to_load.update(fallbacks)
-
-all_model_keys_to_load.update(KNOWN_MODEL_FILE_NAMES)
-
-for model_key_in_file in all_model_keys_to_load:
-    model_file = f"artifacts/generic_anamoly_models/{model_key_in_file}_model.joblib"
-    master_key = CONSOLIDATION_MAP.get(model_key_in_file, REVERSE_FEATURE_MAP.get(model_key_in_file))
-    
-    if master_key is None: continue
-
-    try:
-        feature_models = joblib.load(model_file)
-        if not feature_models:
-             log.warning(f"[SKIP] Model file '{model_key_in_file}' loaded but contains NO models.")
-             continue 
-
-        if master_key not in MASTER_ANAMOLY_MODELS:
-            MASTER_ANAMOLY_MODELS[master_key] = {}
-        
-        MASTER_ANAMOLY_MODELS[master_key].update(feature_models)
-        log.info(f"Loaded '{model_key_in_file}' models (Assets: {len(feature_models)}) under MASTER KEY: '{master_key}'.")
-        
-    except FileNotFoundError:
-        log.warning(f"Model file not found for {model_key_in_file}. Skipping.")
-    except Exception as e:
-        log.error(f"FATAL: Error loading model {model_key_in_file}. Skipping: {e}")
-        
-anamoly_model = MASTER_ANAMOLY_MODELS
-
-def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
-    """Runs the loaded model prediction pipeline on raw data for a specific asset and feature."""
-    if feature not in anamoly_model: #type:ignore
-        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
-
-    try:
-        model_package = anamoly_model[feature].get(asset_code) #type:ignore
-        if model_package is None: raise KeyError("Model not found for specific asset.")
-        model_features = model_package.get('feature_cols', [feature]) 
-    except KeyError as e:
-        log.warning(f"[{asset_code}/{feature}] Model package not found for key: {e}. Returning empty list.")
-        return [] 
-    
-    try:
-        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
-        if df_wide.empty: return []
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
-        return [] 
-        
-    data_column = model_features[0] 
-    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
-    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
-    
-    if X_df.empty:
-        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
-        return []
-        
-    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
-
-    try:
-        X_scaled = model_package['scaler'].transform(X_for_model)
-        predictions = model_package['model'].predict(X_scaled)
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
-        return []
-
-    X_df['Anomaly_Flag'] = predictions
-    
-    # Post-processing/Hard-coded rules for specific features
-    if feature == 'Co2RA' and data_column in X_df.columns:
-        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
-        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
-        X_df.loc[condition_high, 'Anomaly_Flag'] = -1
-        X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
-
-    if feature == 'FbVFD' and data_column in X_df.columns:
-        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
-        X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
-    
-    final_df = X_df.copy() 
-    if final_df.empty: return []
-    
-    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
-
-    report_list = []
-    for _, row in final_df.iterrows():
-        record = {
-            "data_received_on": row['data_received_on_str'],
-            "Anomaly_Flag": str(int(row['Anomaly_Flag']))
-        }
-        data_column = model_features[0] 
-        record[data_column] = str(float(row[data_column])) 
-        report_list.append(record)
-    return report_list
-
-def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_package: Dict[str, Any], feature_name: str) -> pd.DataFrame:
-    """Preprocesses raw data into a wide format DataFrame suitable for model prediction."""
-    if not records: return pd.DataFrame()
-    df = pd.DataFrame(records)
-    
-    if 'monitoring_data' in df.columns:
-        mapping = {'inactive': 0.0, 'active': 1.0}
-        df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
-        df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
-    
-    if 'site' in df.columns and 'equipment_name' in df.columns:
-        df['asset_code'] = df['site'].astype(str) + '_' + df['equipment_name'].astype(str)
-    elif 'asset_code' not in df.columns:
-        df['asset_code'] = asset_code 
-
-    df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
-    df = df[df['asset_code'] == asset_code].copy()
-    df = df.dropna(subset=[STANDARD_DATE_COLUMN, 'monitoring_data'])
-    
-    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
-        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
-        
-    if df.empty: return pd.DataFrame()
-
-    # Pivot to wide format for ML model
-    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
-    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
-    
-    # Feature engineering for ML model
-    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
-    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
-    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
-    
-    if 'asset_code' in result_df.columns:
-        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
-
-    # Apply pre-trained label encoders
-    label_encoders = model_package.get('label_encoders', {})
-    
-    for cat_col in ['site', 'equipment_id', 'weekday_name']:
-        if cat_col in result_df.columns and cat_col in label_encoders:
-            le: LabelEncoder = label_encoders[cat_col]
-            def transform_with_fallback(value):
-                try: return le.transform([value])[0] #type:ignore
-                except ValueError: return -1
-                except TypeError: return -1
-            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
-        else:
-             result_df[cat_col + '_encoded'] = -1 
-    return result_df
-
-def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> Dict[str, Any]:
-    safety_checker_results: Dict[str, Any] = {}
-    
-    for asset_code_key, asset_records in grouped_data_by_asset.items():
-        site, equipment_id = asset_code_key.split('_', 1) 
-        asset_historical_data: Dict[str, List[Dict[str, Any]]] = {}
-        
-        for feature in ALL_AVAILABLE_FEATURES:
-            
-            datapoint_name = feature
-            if feature in FEATURE_FALLBACKS:
-                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
-            
-            feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
-            
-            if feature_raw_data:
-                latest_record = max(feature_raw_data, key=lambda x: x.get(STANDARD_DATE_COLUMN, ''))
-                data_value = latest_record.get('monitoring_data', 'NaN')
-                
-                try:
-                    float_value = float(data_value)
-                    
-                    record = {
-                        "data_received_on": latest_record.get(STANDARD_DATE_COLUMN).replace(' UTC', '.000000') if latest_record.get(STANDARD_DATE_COLUMN) else "", #type:ignore
-                        "Anomaly_Flag": "1", # Default to 1 (normal) before ML prediction
-                        datapoint_name: str(float_value)
-                    }
-                    logical_feature_key = CONSOLIDATION_MAP.get(datapoint_name, datapoint_name) 
-                    asset_historical_data[logical_feature_key] = [record]
-                except (ValueError, TypeError):
-                    pass 
-                
-        if asset_historical_data:
-            safety_checker_results[asset_code_key] = {
-                "data": asset_historical_data,
-                "site": site,
-                "equipment_id": equipment_id,
-                "system_type": FIXED_SYSTEM_TYPE
-            }
-            
-    log.info(f"[SafetyChecker] Created baseline for {len(safety_checker_results)} assets.")
-    return safety_checker_results
-
-def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[str, str], Iterator[List[Dict]]]]:
-    """Fetches anomaly results from the detection API and yields them in chunks."""
-    print(f"Fetching data from batch endpoint {url}...")
-    
-    response = requests.post(url, json={})
-    response.raise_for_status()
-    api_data: Dict[str, Any] = response.json()
-    
-    all_assets_results = api_data.get('data', {}).get('all_anomalies_by_asset', {})
-
-    if not all_assets_results:
-        raise ValueError("Error: 'all_anomalies_by_asset' key not found or empty in API response.")
-
-    for asset_code, asset_details in all_assets_results.items():
-        
-        asset_metadata = {
-            "site": asset_details.get('site', DEFAULT_METADATA['site']),
-            "equipment_id": asset_details.get('equipment_id', DEFAULT_METADATA['equipment_id']),
-            "system_type": asset_details.get('system_type', DEFAULT_METADATA['system_type']),
-        }
-        
-        building_id = BUILDING_IDS[0] 
-        historical_data_map = asset_details.get('data', {})
-        
-        if not historical_data_map:
-            print(f"Warning: No feature map found for asset {asset_code}. Skipping.")
-            continue
-            
-        all_readings = []
-        for feature_name, readings in historical_data_map.items():
-            for reading in readings:
-                
-                value = reading.get(feature_name)
-                
-                # Fallback logic to check other possible datapoint names in the reading
-                if value is None and feature_name in FEATURE_FALLBACKS:
-                    for fallback_key in FEATURE_FALLBACKS[feature_name]:
-                        value = reading.get(fallback_key)
-                        if value is not None:
-                            break
-                            
-                if value is None and feature_name == 'Co2RA' and 'Co2Avg' in reading:
-                    value = reading.get('Co2Avg')
-
-                flat_record = {
-                    'feature_name': feature_name, 
-                    'data_value': value,
-                    'data_received_on_str': reading.get('data_received_on'),
-                    'Anomaly_Flag': reading.get('Anomaly_Flag')
-                }
-                all_readings.append(flat_record)
-        
-        chunk_iterator = (all_readings[i:i + chunk_size] 
-                              for i in range(0, len(all_readings), chunk_size))
-        
-        yield building_id, asset_metadata, chunk_iterator
-
-def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict, session: Session) -> int:
-    """Saves data chunk to Cassandra using prepared statements."""
-    rows_inserted = 0
-    
-    site_value = metadata["site"]
-    equipment_id_value = metadata["equipment_id"]
-    system_type_value = metadata["system_type"]
-
-    history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
-    anamoly_table = f"{building_id.replace('-', '').lower()}_{ANAMOLY_TABLE_SUFFIX}"
-    
-    CREATE_BASE_CQL = """
-    CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
-        datapoint text, 
-        timestamp timestamp, 
-        value text, 
-        anomaly_flag int, 
-        site text, 
-        equipment_id text, 
-        system_type text,
-        PRIMARY KEY ((site, system_type, equipment_id), datapoint, timestamp)) 
-        WITH CLUSTERING ORDER BY (datapoint ASC, timestamp ASC) {ttl_option};
-    """
-    
-    INSERT_BASE_CQL = f"""
-    INSERT INTO {KEYSPACE_NAME}."{{table_name}}" 
-    (datapoint, timestamp, value, anomaly_flag, site, equipment_id, system_type) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """
-    
-    try:
-        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
-        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=anamoly_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
-        
-        history_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=history_table))
-        anamoly_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=anamoly_table))
-        
-        for reading in data_chunk:
-            timestamp_str = reading.get('data_received_on_str')
-            
-            if timestamp_str and timestamp_str.count('.') > 1 and 'T' in timestamp_str:
-                try:
-                    first_dot_pos = timestamp_str.find('.')
-                    second_dot_pos = timestamp_str.find('.', first_dot_pos + 1)
-                    if second_dot_pos != -1:
-                        timestamp_str = timestamp_str[:second_dot_pos]
-                except Exception:
-                    pass
-
-            try:
-                timestamp_dt = parser.parse(timestamp_str) if timestamp_str else None
-                if timestamp_dt and (timestamp_dt.tzinfo is None or timestamp_dt.tzinfo.utcoffset(timestamp_dt) is None):
-                    timestamp_dt = timestamp_dt.replace(tzinfo=CASSANDRA_DEFAULT_TZ)
-            except Exception as e:
-                print(f"SKIPPED (Timestamp Error): Asset {metadata['equipment_id']} Feature {reading.get('feature_name')} Time {timestamp_str}. Error: {e}")
-                timestamp_dt = None
-            
-            if timestamp_dt is None: continue 
-
-            physical_datapoint = str(reading.get('feature_name'))
-            datapoint = physical_datapoint
-            
-            value_to_insert = str(reading.get('data_value')) if reading.get('data_value') is not None else None
-            if value_to_insert is None: 
-                print(f"SKIPPED (Null Value): Asset {metadata['equipment_id']} Feature {physical_datapoint} Time {timestamp_str}.")
-                continue 
-            
-            anomaly_flag_value = reading.get('Anomaly_Flag')
-            try:
-                anomaly_flag = int(anomaly_flag_value) if anomaly_flag_value is not None else 0
-            except ValueError:
-                anomaly_flag = 0 
-            
-            data_tuple = (datapoint, timestamp_dt, value_to_insert, anomaly_flag, 
-                          site_value, equipment_id_value, system_type_value)
-            
-            session.execute(history_stmt, data_tuple)
-            rows_inserted += 1
-
-            session.execute(anamoly_stmt, data_tuple)
-            
-    except Exception as e:
-        print(f"Cassandra insert error: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
-            
-    return rows_inserted
-
-def format_cassandra_output(data_records: List[Dict], limit: Optional[int]) -> Dict[str, Any]:
-    """Formats raw Cassandra query results into the desired API output structure."""
-    historical_data: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    
-    for record in data_records:
-        datapoint = record.pop('datapoint') 
-        
-        record_output = {
-            "timestamp": record['timestamp'],
-            "Anamoly_Flag": str(record['anomaly_flag']),
-            datapoint: record['value'] 
-        }
-        
-        historical_data[datapoint].append(record_output)
-
-    final_historical_data = {}
-    if limit is not None:
-        for feature, records in historical_data.items():
-            final_historical_data[feature] = records[:limit]
-    else:
-        final_historical_data = dict(historical_data)
-
-    return {
-        "data": {
-            "historical_data": final_historical_data
-        }
-    }
-
-def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session: Session) -> List[Dict]:
-    """Constructs and executes a CQL query against the specified Cassandra table."""
-    building_id = params['building_id']
-    limit = params.get('limit', 1000)
-    
-    cleaned_building_id = building_id.replace("-", "").lower()
-    table_name = f'"{cleaned_building_id}_{table_suffix}"'
-
-    where_clauses = []
-    features = params.get('feature')
-    if features:
-        if isinstance(features, list):
-            if features:
-                feature_list_str = ", ".join([f"'{f}'" for f in features])
-                where_clauses.append(f"datapoint IN ({feature_list_str})")
-        else:
-            where_clauses.append(f"datapoint = '{features}'")
-    if params.get('site'): where_clauses.append(f"site = '{params['site']}'")
-    if params.get('equipment_id'): where_clauses.append(f"equipment_id = '{params['equipment_id']}'")
-    if params.get('system_type'): where_clauses.append(f"system_type = '{params['system_type']}'")
-    if params.get('start_date'): where_clauses.append(f"timestamp >= '{params['start_date']}'")
-    if params.get('end_date'): where_clauses.append(f"timestamp <= '{params['end_date']}'")
-    
-    where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    
-    cql_query = f"""
-        SELECT datapoint, timestamp, value, anomaly_flag
-        FROM {KEYSPACE_NAME}.{table_name}
-        {where_clause}
-        ALLOW FILTERING;
-    """
-
-    results_list = []
-    
-    try:
-        print(f"Querying table: {table_name}. Filters: {where_clause}")
-        
-        statement = SimpleStatement(cql_query, consistency_level=ConsistencyLevel.LOCAL_QUORUM)
-        rows = session.execute(statement, timeout=30.0) 
-        
-        for row in rows:
-            results_list.append({
-                "datapoint": row.datapoint,
-                "timestamp": row.timestamp.isoformat(),
-                "value": row.value,
-                "anomaly_flag": row.anomaly_flag
-            })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cassandra query failed for table {table_name}: {e}")
-            
-    return results_list
+class DatapointFetchingRequest(BaseModel):
+    ticket: str = Field(..., description="Ticket ID for datapoint fetching")
+    floor_id: Optional[str] = Field(None, description="Building ID (optional)")
+    account_id: str = Field(..., description="Account ID  for datapoint fetching")
+    software_id: str = Field(..., description="Software ID for datapoint fetching")
+    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field("Ahu1", description="Equipment ID for datapoint fetching")
+    search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
 
 def common_response_handler(request: DataQueryRequest, table_suffix: str, session: Session) -> Dict[str, Any]:
     """Handles query execution and response formatting for both historical and anomaly fetch endpoints."""
@@ -564,137 +55,50 @@ def common_response_handler(request: DataQueryRequest, table_suffix: str, sessio
     return final_response
 
 @router.post('/anomaly_detection_all_ahu')
-def anomaly_detection_all_ahu() -> Dict[str, Any]:
+def anomaly_detection_all_ahu(request: DatapointFetchingRequest) -> Dict[str, Any]:
     """Endpoint to trigger the anomaly detection process for all AHU assets."""
     start_time = time.time()
-    
-    all_data_records = fetch_all_ahu_data(DEFAULT_BUILDING_ID)
-    
-    if not all_data_records:
-        return {"data": {"all_anomalies_by_asset": {}}, "message": "No data found for AHU systems."}
-        
-    grouped_data_by_asset: Dict[str, List[Dict]] = defaultdict(list)
-    for record in all_data_records:
-        site = record.get('site')
-        equipment_name = record.get('equipment_name')
-        if site and equipment_name:
-            asset_code_key = f"{site}_{equipment_name}" 
-            record['asset_code'] = asset_code_key 
-            grouped_data_by_asset[asset_code_key].append(record)
 
-    log.info(f"[A2] Total grouped assets: {len(grouped_data_by_asset)}")
+    building_id = request.building_id
+    floor_id = request.floor_id
+    equipment_id = request.equipment_id
+    search_tags = request.search_tag_groups
+    ticket_id = request.ticket
+    software_id = request.software_id
+    account_id = request.account_id
+    system_type = request.system_type
 
-    reconciled_results = create_safety_checker_json(grouped_data_by_asset)
-    total_anomalous_assets = 0
-    
-    for asset_code_key, asset_records in grouped_data_by_asset.items():
-        
-        found_anomaly_for_asset = False
-        current_asset_anomalies: Dict[str, List[Dict[str, Any]]] = {}
+    if not building_id:
+        building_id = DEFAULT_BUILDING_ID
 
-        for feature in ALL_AVAILABLE_FEATURES:
-            
-            datapoint_name = feature
-            if feature in FEATURE_FALLBACKS:
-                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
-            
-            feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
-            
-            if not feature_raw_data:
-                continue
-
-            try:
-                feature_results = anomaly_detection(feature_raw_data, asset_code_key, feature)
-                
-                if feature_results:
-                    current_asset_anomalies[datapoint_name] = feature_results 
-                    
-                    if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
-                        found_anomaly_for_asset = True
-                            
-            except HTTPException:
-                raise
-            except Exception as e:
-                log.error(f"Prediction logic failed for {asset_code_key}/{feature}: {e}")
-                continue
-        
-        if asset_code_key in reconciled_results and 'data' in reconciled_results[asset_code_key]:
-             reconciled_results[asset_code_key]['data'].update(current_asset_anomalies)
-        elif current_asset_anomalies:
-             site, equipment_id = asset_code_key.split('_', 1) 
-             reconciled_results[asset_code_key] = {
-                 "data": current_asset_anomalies,
-                 "site": site,
-                 "equipment_id": equipment_id,
-                 "system_type": FIXED_SYSTEM_TYPE
-             }
-             
-        if found_anomaly_for_asset:
-             total_anomalous_assets += 1
-    
-    output_assets = {
-        key: {
-            "data": value['data'],
-            "site": value['site'],
-            "equipment_id": value['equipment_id'],
-            "system_type": value['system_type']
-        }
-        for key, value in reconciled_results.items()
-        if 'data' in value and value['data']
-    }
-    
-    final_output = {
-        "data": {
-            "all_anomalies_by_asset": output_assets
-        },
-        "total_assets_processed": len(grouped_data_by_asset),
-        "anomalous_assets_count": total_anomalous_assets
-    }
-    
+    result = anamoly_evaluation(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type) 
     log.info(f"Anomaly detection completed in {time.time() - start_time:.2f} seconds.")
-    return final_output
-
+    return result
+    
 @router.post("/store_anamolies")
-def store_anamolies_endpoint(session: Session = Depends(get_cassandra_session)) -> IngestionResponse:
+def store_anamolies_endpoint(request: DatapointFetchingRequest, session: Session = Depends(get_cassandra_session)):
     """
-    Triggers the batch process: fetches anomaly detection results and inserts them 
-    into Cassandra's historical and anomaly tables.
+    Triggers the process: calls anamoly_evaluation to get results and inserts them 
+    into Cassandra's historical and anomaly tables, asset by asset.
     """
     start_time = time.time()
-    total_assets_processed = 0
-    total_records_inserted = 0
-    
-    try:
-        api_iterator = fetch_data_in_chunks(API_INTERNAL_URL, 100) #type:ignore
-        
-        for building_id, api_metadata, api_chunks in api_iterator:
-            total_assets_processed += 1
-            log.info(f"Processing Asset {total_assets_processed}: {api_metadata['site']}/{api_metadata['equipment_id']}")
-            
-            for i, chunk in enumerate(api_chunks):
-                inserted_count = save_data_to_cassandra(chunk, building_id, api_metadata, session)
-                total_records_inserted += inserted_count
-                
-        duration = time.time() - start_time
-        
-        return IngestionResponse(
-            status="SUCCESS",
-            total_assets_processed=total_assets_processed,
-            total_records_inserted=total_records_inserted,
-            duration_seconds=round(duration, 3),
-            message="Batch ingestion completed successfully."
-        )
-        
-    except requests.exceptions.RequestException as req_err:
-        log.error(f"External API fetch failed: {req_err}")
-        raise HTTPException(status_code=500, detail=f"External API fetch failed: {req_err}")
-    except ValueError as val_err:
-        log.error(f"Data processing error: {val_err}")
-        raise HTTPException(status_code=500, detail=f"Data processing error: {val_err}")
-    except Exception as e:
-        log.error(f"An unexpected error occurred during batch execution: {e}")
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during batch execution: {e}")
 
+    building_id = request.building_id
+    floor_id = request.floor_id
+    equipment_id = request.equipment_id
+    search_tags = request.search_tag_groups
+    ticket_id = request.ticket
+    software_id = request.software_id
+    account_id = request.account_id
+    system_type = request.system_type
+
+    if not building_id:
+        building_id = DEFAULT_BUILDING_ID
+
+    result = save_data_to_cassandra(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type,session=session) 
+    log.info(f"Anomaly detection completed in {time.time() - start_time:.2f} seconds.")
+    return result
+    
 @router.post("/fetch_historical_data")
 def fetch_historical_data_endpoint(
     request: DataQueryRequest, 

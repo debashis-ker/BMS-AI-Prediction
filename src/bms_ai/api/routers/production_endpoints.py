@@ -24,6 +24,10 @@ import warnings
 import math
 import time
 import numpy as np
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 log = setup_logger(__name__)
 
@@ -31,6 +35,8 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
+
+EMISSION_FACTOR = os.getenv("EMISSION_FACTOR")
 
 damper_forecast_model = None
 fan_forecast_model = None
@@ -88,56 +94,16 @@ class StaticEmissionResponse(BaseModel):
 class EmissionResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="The final structured emission report.")
 
-def fetch_all_ahu_data(
-    building_id: str = DEFAULT_BUILDING_ID,
-    url: str = API_URL
-) -> List[Dict]:
-    """Fetches ALL historical data for AHUs in a single API call."""
-    cleaned_id = building_id.replace("-", "").lower()
-    location_table_name = f"datapoint_live_monitoring_values{cleaned_id}"
-    
-    datapoint_list = ', '.join([f"'{f}'" for f in QUERY_FEATURES])
-    
-    query = (
-        f"select * from {location_table_name} "
-        f"where system_type = '{FIXED_SYSTEM_TYPE}' "
-        f"and datapoint IN ({datapoint_list}) "
-        f"allow filtering;"
-    )
-
-    API_PAYLOAD = {"query": query}
-    try:
-        response = requests.post(url, json=API_PAYLOAD, timeout=60)
-        response.raise_for_status()
-        raw_api_response = response.json()
-        
-        if isinstance(raw_api_response, list):
-            data_list = raw_api_response
-        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
-            data_list = raw_api_response.get('queryResponse')
-        else:
-            raise ValueError(f"API response format unexpected: {raw_api_response}")
-
-        if not isinstance(data_list, list):
-            raise ValueError(f"'queryResponse' key found but its value is not a list, or the top-level object was empty.")
-        
-        return data_list
-    
-    except Exception as e:
-        log.error(f"Failed to fetch batch data: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
-    
 def fetch_all_ahu_dataV2(
-        building_id: str = DEFAULT_BUILDING_ID,
-        url: str = API_URL,
+        building_id: str,
+        url: str = "",
         site: str = "",
-        system_type: str = FIXED_SYSTEM_TYPE,
+        system_type: str = "",
         equipment_id: Optional[str] = None
     ) -> List[Dict]:
     """Fetches ALL historical data for AHUs in a single API call."""
     cleaned_id = building_id.replace("-", "").lower()
     location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
-    datapoint_list = ', '.join([f"'{f}'" for f in ALL_AVAILABLE_FEATURES])
     previous_week_day_in_UTC = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
     log.debug(f"Fetching data since: {previous_week_day_in_UTC}")
     query = (
@@ -173,165 +139,6 @@ def fetch_all_ahu_dataV2(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
-def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
-    if feature not in anamoly_model: #type:ignore
-        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
-
-    try:
-        model_package = anamoly_model[feature].get(asset_code) #type:ignore
-        
-        if model_package is None:
-             raise KeyError("Model not found for specific asset.")
-
-        model_features = model_package.get('feature_cols', [feature]) 
-        log.info(f"[{asset_code}/{feature}] [B1] Model FOUND. Features needed: {model_features}")
-        
-    except KeyError as e:
-        log.warning(f"[{asset_code}/{feature}] Model package not found for key: {e}. Returning empty list.")
-        return [] 
-    
-    try:
-        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
-            
-        if df_wide.empty:
-            return []
-            
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
-        return [] 
-            
-    data_column = model_features[0] 
-    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
-    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
-    
-    if X_df.empty:
-        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
-        return []
-            
-    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
-    log.info(f"[{asset_code}/{feature}] [B3] Rows sent to IF model: {len(X_for_model)}. Input cols: {X_for_model.columns.tolist()}")
-
-    try:
-        X_scaled = model_package['scaler'].transform(X_for_model)
-        predictions = model_package['model'].predict(X_scaled)
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
-        return []
-
-    X_df['Anomaly_Flag'] = predictions
-    log.info(f"[{asset_code}/{feature}] [C1] Raw IF anomalies: {(predictions == -1).sum()}")
-    
-    # 5. Post-processing Overrides (Ceiling Layer)
-    
-    # Co2RA Ceiling Check (UPDATED LOGIC from training pipeline)
-    if feature == 'Co2RA' and data_column in X_df.columns:
-        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        
-        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
-        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
-        
-        if condition_high.any():
-            override_count_to_anomaly = (condition_high & (X_df['Anomaly_Flag'] == 1)).sum()
-            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_anomaly} normal points as -1 (Anomaly) because value > {CO2RA_CEILING_THRESHOLD}.")
-            X_df.loc[condition_high, 'Anomaly_Flag'] = -1
-        
-        if condition_low.any():
-            override_count_to_normal = (condition_low & (X_df['Anomaly_Flag'] == -1)).sum()
-            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_normal} anomaly points as 1 (Normal) because value < {CO2RA_CEILING_THRESHOLD}.")
-            X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
-
-
-    # FbVFD Normal Range Override (Unchanged)
-    if feature == 'FbVFD' and data_column in X_df.columns:
-        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
-        if normal_fbvfd_condition.any():
-            override_count = (normal_fbvfd_condition & (X_df['Anomaly_Flag'] == -1)).sum()
-            if override_count > 0:
-                log.warning(f"[{asset_code}/{feature}] FbVFD override: Reverted {override_count} anomalies to normal (1) because value is 0-{FBVFD_NORMAL_MAX}.")
-            X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
-    
-    # 6. Final Formatting
-    
-    # FIX: Keep ALL rows (Normal and Anomaly) as requested.
-    final_df = X_df.copy() 
-    
-    if final_df.empty:
-        log.info(f"[{asset_code}/{feature}] Final report size: 0. No data points processed.")
-        return []
-    
-    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
-
-    report_list = []
-    for _, row in final_df.iterrows():
-        record = {
-            "data_received_on": row['data_received_on_str'],
-            "Anomaly_Flag": str(int(row['Anomaly_Flag']))
-        }
-        # FIX: Key the value by the actual data column name (data_column), removing the redundant primary name.
-        data_column = model_features[0] 
-        record[data_column] = str(float(row[data_column])) 
-        
-        report_list.append(record)
-
-    log.info(f"[{asset_code}/{feature}] [C2] Final report list size: {len(report_list)}")
-    return report_list
-
-def anamoly_data_pipeline(
-    records: List[Dict[str, Any]], 
-    asset_code: str, 
-    model_package: Dict[str, Any],
-    feature_name: str
-) -> pd.DataFrame:
-    """ Processes long-format records into a wide-format DataFrame, adds temporal, and handles encoding."""
-    
-    if not records:
-        log.warning(f"[{asset_code}/{feature_name}] Pipeline received zero records.")
-        return pd.DataFrame()
-        
-    df = pd.DataFrame(records)
-    
-    df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
-    df = df.dropna(subset=[STANDARD_DATE_COLUMN])
-    
-    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
-        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
-        
-    if 'monitoring_data' in df.columns:
-        mapping = {'inactive': 0.0, 'active': 1.0}
-        df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
-        df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
-    
-    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
-    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
-    
-    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
-    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
-    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
-    
-    if 'asset_code' in result_df.columns:
-        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
-
-    label_encoders = model_package.get('label_encoders', {})
-    
-    for cat_col in ['site', 'equipment_id', 'weekday_name']:
-        if cat_col in result_df.columns and cat_col in label_encoders:
-            le: LabelEncoder = label_encoders[cat_col]
-            def transform_with_fallback(value):
-                try:
-                    return le.transform([value])[0] #type:ignore
-                except ValueError:
-                    return -1
-                except TypeError:
-                    return -1
-            
-            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
-        else:
-             result_df[cat_col + '_encoded'] = -1 
-
-    log.info(f"[{asset_code}/{feature_name}] [B2] Wide DF rows after pivot: {len(result_df)}")
-    return result_df
-
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
@@ -662,7 +469,7 @@ def calculate_aggregate_emissions(df_input: pd.DataFrame) -> pd.DataFrame:
         
         emission_summary = emission_summary[emission_summary['Energy_Range_kWh'] > 0].copy()
         
-        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR
+        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR #type:ignore
         
         return emission_summary
 
@@ -766,7 +573,7 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
         df_emissions = df_emissions.reset_index(drop=True)
         df_emissions.rename(columns={'diff': 'Energy_Range_kWh'}, inplace=True)
         
-        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR
+        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR #type:ignore
         
         df_filtered = df_emissions.copy()
 
@@ -1125,7 +932,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
     
     try:
         result = train_generic(
-            data_path=request_data.data_path,
+            data_path=request_data.data_path, #type:ignore
             equipment_id=request_data.equipment_id,
             target_column=request_data.target_variable,  
             test_size=request_data.test_size,
@@ -1133,7 +940,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
             cv_folds=request_data.cv_folds,
             n_iter=request_data.n_iter,
             setpoints=request_data.setpoints
-        )
+        ) #type:ignore
         
         end = time.time()
         log.info(f"Generic model training completed in {end - start:.2f} seconds")
@@ -1290,7 +1097,7 @@ class GenericOptimizeResponse(BaseModel):
 
 
 @router.post('/generic_optimize', response_model=GenericOptimizeResponse)
-def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
+def generic_optimize_endpoint(request_data: GenericOptimizeRequest): #type:ignore
     """
     Optimize AHU setpoints to minimize or maximize any specified target variable.
     
@@ -1345,7 +1152,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
         Best setpoints and optimized target value
     """
 
-    results = fetch_and_find_data_points( building_id=request_data.building_id,
+    results = fetch_and_find_data_points( building_id=request_data.building_id, #type:ignore
             equipment_id=request_data.equipment_id,
             floor_id=None,
             search_tag_groups=request_data.target_variable_tag,
@@ -1385,7 +1192,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
 
         save_data_to_cassandraV2(
             data_chunk=[result],
-            building_id=request_data.building_id,
+            building_id=request_data.building_id, #type:ignore
             metadata={
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,
