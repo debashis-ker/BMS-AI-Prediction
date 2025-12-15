@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -249,6 +250,44 @@ def fetch_all_ahu_dataV2(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
+def fetch_adjustment_history(
+    building_id: str,
+    site: str,
+    equipment_id: str,
+    url: str = API_URL
+) -> pd.DataFrame:
+    """Fetches adjustment history for a specific equipment."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"historical_data_opt_{cleaned_id}"
+    
+    query = (
+        f"select * from {location_table_name} "
+        f"where site = '{site}' "
+        f"and equipment_id = '{equipment_id}' "
+        f"and system_type = '{FIXED_SYSTEM_TYPE}' "
+        f"allow filtering;"
+    )
+
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        else:
+            raise ValueError(f"API response format unexpected: {raw_api_response}")
+
+        df = pd.DataFrame(data_list)
+        return df
+    
+    except Exception as e:
+        log.error(f"Failed to fetch adjustment history: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch adjustment history: {str(e)}")
+
 def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
     if feature not in anamoly_model: #type:ignore
         raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
@@ -1646,3 +1685,52 @@ async def get_optimization_results():
     except Exception as e:
         log.error(f"Error reading optimization results: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
+    
+
+class AdjustmentHistoryResponse(BaseModel):
+    building_id: str = Field(..., description="Building ID")
+    site: str = Field(..., description="Site name")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field(..., description="Equipment ID for which adjustments are fetched")
+    adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
+
+@router.get("/adjustment_history", response_model=AdjustmentHistoryResponse)
+async def get_adjustment_history(
+    building_id: str,
+    site: str,
+    system_type :str,
+    equipment_id: str,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    limit: Optional[int] = 100  
+):
+    """
+    Fetches adjustment history for a given equipment within an optional date range.
+    
+    Args:
+        equipment_id: Equipment ID to filter adjustments
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
+        limit: Maximum number of records to return (default 100)
+    Returns:
+
+        JSON containing adjustment history records
+    """
+    try:
+        adjustments = fetch_adjustment_hisoryData(
+            equipment_id=equipment_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit
+        )
+        
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={equipment_id}")
+        
+        return AdjustmentHistoryResponse(
+            equipment_id=equipment_id,
+            adjustments=adjustments
+        )
+        
+    except Exception as e:
+        log.error(f"Error fetching adjustment history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")

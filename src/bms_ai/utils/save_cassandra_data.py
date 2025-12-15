@@ -226,6 +226,48 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         if cluster:
             cluster.shutdown()
 
+def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str) -> List[Dict]:
+    """
+    Fetches adjustment history data for a given building and equipment from an external API.
+    """
+    ADJUSTMENT_API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
+
+    Query_BASE_CQL = f"""
+    Select * from {KEYSPACE_NAME}."{{table_name}}"  
+    where site='{site}' and system_type='{system_type}' and equipment_id='{equipment_id}'
+    ALLOW FILTERING;"""
+
+    try:
+        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        session = cluster.connect(KEYSPACE_NAME)
+        
+        history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
+        query_cql = Query_BASE_CQL.format(table_name=history_table)
+        
+        rows = session.execute(query_cql)
+        
+        result = []
+        for row in rows:
+            record = {
+                'datapoint': row.datapoint,
+                'timestamp': row.timestamp.isoformat() if row.timestamp else None,
+                'value': row.value,
+                'anomaly_flag': row.anomaly_flag,
+                'site': row.site,
+                'equipment_id': row.equipment_id,
+                'system_type': row.system_type
+            }
+            result.append(record)
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cassandra query error: {e}")
+    finally:
+        if cluster:
+            cluster.shutdown()
+
+
+
 
 @app.post("/store_anamolies", response_model=IngestionResponse)
 def store_anamolies():

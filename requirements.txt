@@ -6,5 +6,7 @@ prophet==1.2.0
 mlflow >= 2.9.0
 python-dotenv
 openai >= 1.0.0
-
+cassandra-driver
+tensorflow==2.20
+Sentinel    
 -e .
