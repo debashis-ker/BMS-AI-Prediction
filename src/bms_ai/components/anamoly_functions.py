@@ -89,11 +89,23 @@ def initialize_anomaly_detection_models(building_id: str,
 
     log.info("Starting anomaly model initialization...")
 
-    raw_data_list = fetch_and_find_data_points(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id,
-        search_tag_groups=search_tag_groups,
-        ticket=ticket, software_id = software_id, account_id = account_id, system_type=system_type, env=env) #type:ignore
+    try:
+        raw_data_list = fetch_and_find_data_points(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id,
+            search_tag_groups=search_tag_groups,
+            ticket=ticket, software_id = software_id, account_id = account_id, system_type=system_type, env=env) #type:ignore
+    except requests.exceptions.RequestException as req_err:
+        log.error(f"IKON API fetch failed during initialization: {req_err}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch datapoints from Ikon API: {req_err}")
+    except Exception as e:
+        log.error(f"Unexpected error during IKON API fetch: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error during external API call: {e}")
 
     json_record = wrap_data_list(raw_data_list)
+    
+    if not json_record.get('data'):
+        log.warning(f"No datapoints found for AHU: {equipment_id} in building: {building_id}.")
+        raise HTTPException(status_code=503, detail=f"No Datapoint found due to invalid IKON fetch datapoint API request.")
+    
     (
         ALL_QUERY_FEATURES,
         FEATURE_FALLBACKS,
@@ -120,6 +132,7 @@ def initialize_anomaly_detection_models(building_id: str,
 
     all_model_keys_to_load.update(KNOWN_MODEL_FILE_NAMES)
 
+    models_loaded_count = 0
     for model_key_in_file in all_model_keys_to_load:
         model_file = f"artifacts/generic_anamoly_models/{model_key_in_file}_model.joblib"
         master_key = CONSOLIDATION_MAP.get(model_key_in_file, REVERSE_FEATURE_MAP.get(model_key_in_file))
@@ -137,6 +150,7 @@ def initialize_anomaly_detection_models(building_id: str,
 
             MASTER_ANAMOLY_MODELS[master_key].update(feature_models)
             log.info(f"Loaded '{model_key_in_file}' models (Assets: {len(feature_models)}) under MASTER KEY: '{master_key}'.")
+            models_loaded_count += 1
 
         except FileNotFoundError:
             log.warning(f"Model file not found for {model_key_in_file}. Skipping.")
@@ -144,28 +158,37 @@ def initialize_anomaly_detection_models(building_id: str,
             log.error(f"FATAL: Error loading model {model_key_in_file}. Skipping: {e}")
 
     log.info("Anomaly model initialization complete.")
+    
+    if not MASTER_ANAMOLY_MODELS:
+         raise HTTPException(status_code=503, detail="No anomaly detection models could be loaded. Service is unavailable.")
+         
     global anamoly_model 
     anamoly_model = MASTER_ANAMOLY_MODELS
 
 def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
     """Runs the loaded model prediction pipeline on raw data for a specific asset and feature."""
     if feature not in anamoly_model: #type:ignore
-        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
+        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for master feature '{feature}' is unavailable. Please check service initialization.")
 
     try:
         model_package = anamoly_model[feature].get(asset_code) #type:ignore
-        if model_package is None: raise KeyError("Model not found for specific asset.")
+        if model_package is None: 
+            log.warning(f"[{asset_code}/{feature}] No specific model found for this asset. Returning empty list.")
+            return []
+
         model_features = model_package.get('feature_cols', [feature]) 
     except KeyError as e:
-        log.warning(f"[{asset_code}/{feature}] Model package not found for key: {e}. Returning empty list.")
+        log.warning(f"[{asset_code}/{feature}] Model package key error: {e}. Returning empty list.")
         return [] 
     
     try:
         df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
-        if df_wide.empty: return []
+        if df_wide.empty: 
+            log.info(f"[{asset_code}/{feature}] Data pipeline returned empty DataFrame.")
+            return []
     except Exception as e:
         log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
-        return [] 
+        raise HTTPException(status_code=500, detail=f"Internal data pipeline failure for asset {asset_code}/{feature}: {e}")
         
     data_column = model_features[0] 
     cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
@@ -182,7 +205,7 @@ def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: 
         predictions = model_package['model'].predict(X_scaled)
     except Exception as e:
         log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
-        return []
+        raise HTTPException(status_code=500, detail=f"Model prediction failed for asset {asset_code}/{feature}: {e}")
 
     X_df['Anomaly_Flag'] = predictions
     
@@ -272,15 +295,25 @@ def anamoly_evaluation(building_id: str,
     system_type: Optional[str] = None,
     env: Optional[str] = "prod"):
 
-    initialize_anomaly_detection_models(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tag_groups=search_tags, ticket=ticket_id,software_id=software_id,account_id=account_id,system_type=system_type,env=env) #type:ignore
+    try:
+        initialize_anomaly_detection_models(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tag_groups=search_tags, ticket=ticket_id,software_id=software_id,account_id=account_id,system_type=system_type,env=env) #type:ignore
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"FATAL: Unhandled error during anomaly model initialization: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to initialize anomaly models: {e}")
     
     if not building_id:
         building_id = DEFAULT_BUILDING_ID
-
-    all_data_records = fetch_all_ahu_data(building_id=building_id)
+        
+    try:
+        all_data_records = fetch_all_ahu_data(building_id=building_id)
+    except Exception as e:
+        log.error(f"Cassandra data fetch failed for building {building_id}: {e}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch historical data from Cassandra: {e}")
     
     if not all_data_records:
-        return {"data": {"all_anomalies_by_asset": {}}, "message": "No data found for AHU systems."}
+        return {"data": {"all_anomalies_by_asset": {}}, "message": "No AHU data found for the building."}
         
     grouped_data_by_asset: Dict[str, List[Dict]] = defaultdict(list)
     for record in all_data_records:
@@ -292,6 +325,10 @@ def anamoly_evaluation(building_id: str,
             grouped_data_by_asset[asset_code_key].append(record)
 
     log.info(f"[A2] Total grouped assets: {len(grouped_data_by_asset)}")
+
+    if not grouped_data_by_asset:
+        log.warning("No assets could be grouped because 'site' or 'equipment_name' was missing from data records.")
+        raise HTTPException(status_code=400, detail="Historical data is incomplete (missing site/equipment_name metadata).")
 
     reconciled_results = create_safety_checker_json(grouped_data_by_asset)
     total_anomalous_assets = 0
@@ -305,7 +342,7 @@ def anamoly_evaluation(building_id: str,
             
             datapoint_name = feature
             if feature in FEATURE_FALLBACKS:
-                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
+                 datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
             
@@ -373,43 +410,39 @@ def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> 
             
             datapoint_name = feature
             if feature in FEATURE_FALLBACKS:
-                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
+                 datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
             
             if feature_raw_data:
-                latest_record = max(feature_raw_data, key=lambda x: x.get(STANDARD_DATE_COLUMN, ''))
-                data_value = latest_record.get('monitoring_data', 'NaN')
-                
-                try:
-                    float_value = float(data_value)
-                    
-                    record = {
-                        "data_received_on": latest_record.get(STANDARD_DATE_COLUMN).replace(' UTC', '.000000') if latest_record.get(STANDARD_DATE_COLUMN) else "", #type:ignore
-                        "Anomaly_Flag": "1",
-                        datapoint_name: str(float_value)
-                    }
-                    logical_feature_key = CONSOLIDATION_MAP.get(datapoint_name, datapoint_name) 
-                    asset_historical_data[logical_feature_key] = [record]
-                except (ValueError, TypeError):
-                    pass 
-                
+                 latest_record = max(feature_raw_data, key=lambda x: x.get(STANDARD_DATE_COLUMN, ''))
+                 data_value = latest_record.get('monitoring_data', 'NaN')
+                 
+                 try:
+                     float_value = float(data_value)
+                     
+                     record = {
+                         "data_received_on": latest_record.get(STANDARD_DATE_COLUMN).replace(' UTC', '.000000') if latest_record.get(STANDARD_DATE_COLUMN) else "", #type:ignore
+                         "Anomaly_Flag": "1",
+                         datapoint_name: str(float_value)
+                     }
+                     logical_feature_key = CONSOLIDATION_MAP.get(datapoint_name, datapoint_name) 
+                     asset_historical_data[logical_feature_key] = [record]
+                 except (ValueError, TypeError):
+                     pass 
+                 
         if asset_historical_data:
-            safety_checker_results[asset_code_key] = {
-                "data": asset_historical_data,
-                "site": site,
-                "equipment_id": equipment_id,
-                "system_type": FIXED_SYSTEM_TYPE
-            }
-            
+             safety_checker_results[asset_code_key] = {
+                 "data": asset_historical_data,
+                 "site": site,
+                 "equipment_id": equipment_id,
+                 "system_type": FIXED_SYSTEM_TYPE
+             }
+             
     log.info(f"[SafetyChecker] Created baseline for {len(safety_checker_results)} assets.")
     return safety_checker_results
 
 def process_asset_anomalies_for_storage(asset_details: Dict[str, Any], asset_code: str) -> List[Dict]:
-    """
-    Takes the structured anomaly result for a single asset (from anamoly_evaluation)
-    and flattens it into a list of reading dictionaries suitable for save_data_to_cassandra.
-    """
     all_readings = []
     
     asset_metadata = {
@@ -430,7 +463,7 @@ def process_asset_anomalies_for_storage(asset_details: Dict[str, Any], asset_cod
             data_value = reading.get(feature_name)
             
             if data_value is None:
-                log.warning(f"Value missing for {asset_code}/{feature_name} in reading.")
+                log.warning(f"Value missing for {asset_code}/{feature_name} in reading. Skipping record.")
                 continue
 
             flat_record = {
@@ -452,8 +485,11 @@ def store_data(data_chunk: List[Dict], building_id: str, metadata: dict, session
     equipment_id_value = metadata["equipment_id"]
     system_type_value = metadata["system_type"]
 
-    history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
-    anamoly_table = f"{building_id.replace('-', '').lower()}_{ANAMOLY_TABLE_SUFFIX}"
+    if not KEYSPACE_NAME:
+         raise HTTPException(status_code=500, detail="Cassandra keyspace is not configured (KEYSPACE_NAME environment variable missing).")
+
+    history_table = f"{HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+    anamoly_table = f"{ANAMOLY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
     
     CREATE_BASE_CQL = """
     CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
@@ -485,19 +521,20 @@ def store_data(data_chunk: List[Dict], building_id: str, metadata: dict, session
             timestamp_str = reading.get('data_received_on_str')
             
             if timestamp_str and timestamp_str.count('.') > 1 and 'T' in timestamp_str:
-                try:
-                    first_dot_pos = timestamp_str.find('.')
-                    second_dot_pos = timestamp_str.find('.', first_dot_pos + 1)
-                    if second_dot_pos != -1:
-                        timestamp_str = timestamp_str[:second_dot_pos]
-                except Exception:
-                    pass
+                 try:
+                      first_dot_pos = timestamp_str.find('.')
+                      second_dot_pos = timestamp_str.find('.', first_dot_pos + 1)
+                      if second_dot_pos != -1:
+                           timestamp_str = timestamp_str[:second_dot_pos]
+                 except Exception:
+                      pass
 
             try:
                 timestamp_dt = parser.parse(timestamp_str) if timestamp_str else None
                 if timestamp_dt and (timestamp_dt.tzinfo is None or timestamp_dt.tzinfo.utcoffset(timestamp_dt) is None):
                     timestamp_dt = timestamp_dt.replace(tzinfo=CASSANDRA_DEFAULT_TZ)
             except Exception as e:
+                log.warning(f"Failed to parse timestamp '{timestamp_str}': {e}. Skipping record.")
                 timestamp_dt = None
             
             if timestamp_dt is None: continue 
@@ -507,12 +544,14 @@ def store_data(data_chunk: List[Dict], building_id: str, metadata: dict, session
             
             value_to_insert = str(reading.get('data_value')) if reading.get('data_value') is not None else None
             if value_to_insert is None: 
+                log.warning(f"Value to insert is None for {datapoint} at {timestamp_str}. Skipping record.")
                 continue 
             
             anomaly_flag_value = reading.get('Anomaly_Flag')
             try:
                 anomaly_flag = int(anomaly_flag_value) if anomaly_flag_value is not None else 0
             except ValueError:
+                log.warning(f"Could not parse anomaly flag '{anomaly_flag_value}'. Defaulting to 0.")
                 anomaly_flag = 0 
             
             data_tuple = (datapoint, timestamp_dt, value_to_insert, anomaly_flag, 
@@ -524,7 +563,8 @@ def store_data(data_chunk: List[Dict], building_id: str, metadata: dict, session
             session.execute(anamoly_stmt, data_tuple)
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
+        log.error(f"Cassandra operation failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Cassandra insert error: {e}")
             
     return rows_inserted
 
@@ -587,6 +627,9 @@ def save_data_to_cassandra(
             for i in range(0, len(all_readings), CASSANDRA_CHUNK_SIZE):
                 chunk = all_readings[i:i + CASSANDRA_CHUNK_SIZE]
                 
+                if session is None:
+                     raise HTTPException(status_code=503, detail="Cassandra session is not initialized or available.")
+
                 inserted_count = store_data(chunk, building_id, asset_metadata, session)
                 total_records_inserted += inserted_count
         
@@ -600,12 +643,14 @@ def save_data_to_cassandra(
             "message":f"Batch ingestion completed successfully. Processed {total_assets_processed} assets."
         }
     
+    except HTTPException:
+        raise
     except requests.exceptions.RequestException as req_err:
         log.error(f"External API fetch failed: {req_err}")
-        raise HTTPException(status_code=500, detail=f"External API fetch failed: {req_err}")
+        raise HTTPException(status_code=503, detail=f"External API fetch failed: {req_err}")
     except ValueError as val_err:
         log.error(f"Data processing error: {val_err}")
-        raise HTTPException(status_code=500, detail=f"Data processing error: {val_err}")
+        raise HTTPException(status_code=400, detail=f"Data processing error: {val_err}")
     except Exception as e:
         log.error(f"An unexpected error occurred during batch execution: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during batch execution: {e}")
@@ -615,22 +660,22 @@ def format_cassandra_output(data_records: List[Dict], limit: Optional[int]) -> D
     historical_data: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     
     for record in data_records:
-        datapoint = record.pop('datapoint') 
-        
-        record_output = {
-            "timestamp": record['timestamp'],
-            "Anamoly_Flag": str(record['anomaly_flag']),
-            datapoint: record['value'] 
-        }
-        
-        historical_data[datapoint].append(record_output)
+         datapoint = record.pop('datapoint') 
+         
+         record_output = {
+             "timestamp": record['timestamp'],
+             "Anamoly_Flag": str(record['anomaly_flag']),
+             datapoint: record['value'] 
+         }
+         
+         historical_data[datapoint].append(record_output)
 
     final_historical_data = {}
     if limit is not None:
-        for feature, records in historical_data.items():
-            final_historical_data[feature] = records[:limit]
+         for feature, records in historical_data.items():
+             final_historical_data[feature] = records[:limit]
     else:
-        final_historical_data = dict(historical_data)
+         final_historical_data = dict(historical_data)
 
     return {
         "data": {
@@ -639,22 +684,67 @@ def format_cassandra_output(data_records: List[Dict], limit: Optional[int]) -> D
     }
 
 def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session: Session) -> List[Dict]:
-    """Constructs and executes a CQL query against the specified Cassandra table."""
-    building_id = params['building_id']
+    """
+    Constructs and executes a CQL query against the specified Cassandra table.
+    Dynamically fetches feature list if none is provided, formats timestamp, 
+    and returns results ordered by timestamp.
+    """
+    features_to_query = None
+
+    building_id = params.get('building_id')
+    if not building_id:
+        raise HTTPException(status_code=400, detail="Missing required parameter: 'building_id'.")
+        
     limit = params.get('limit', 1000)
     
+    if not KEYSPACE_NAME:
+         raise HTTPException(status_code=500, detail="Cassandra keyspace is not configured (KEYSPACE_NAME environment variable missing).")
+
     cleaned_building_id = building_id.replace("-", "").lower()
-    table_name = f'"{cleaned_building_id}_{table_suffix}"'
+    table_name = f'"{table_suffix}_{cleaned_building_id}"'
 
     where_clauses = []
-    features = params.get('feature')
-    if features:
-        if isinstance(features, list):
-            if features:
-                feature_list_str = ", ".join([f"'{f}'" for f in features])
-                where_clauses.append(f"datapoint IN ({feature_list_str})")
+    features_to_query = params.get('feature')
+    
+    if not features_to_query:
+        log.info("Feature list missing in request. Attempting dynamic feature list generation...")
+        
+        ticket = params.get('ticket')
+        account_id = params.get('account_id')
+        software_id = params.get('software_id')
+        search_tag_groups = params.get('search_tag_groups')
+        
+        if ticket and account_id and software_id and search_tag_groups:
+            try:
+                raw_data_list = fetch_and_find_data_points(
+                    building_id=params.get('building_id', DEFAULT_BUILDING_ID),
+                    equipment_id=params.get('equipment_id', ""),
+                    system_type=params.get('system_type', FIXED_SYSTEM_TYPE),
+                    floor_id=params.get('floor_id',""),
+                    ticket=ticket,
+                    account_id=account_id,
+                    software_id=software_id,
+                    search_tag_groups=search_tag_groups
+                )
+                json_record = wrap_data_list(raw_data_list)
+                (features_to_query, _, _) = build_dynamic_features(json_record)
+                log.debug(f"Dynamic fetch yielded features: {features_to_query}")
+
+            except Exception as e:
+                log.error(f"Dynamic feature fetch failed: {e}. Falling back to querying with available filters.")
+                features_to_query = [] 
         else:
-            where_clauses.append(f"datapoint = '{features}'")
+            log.warning("IKON API parameters missing from DataQueryRequest for dynamic lookup. Proceeding without feature filter.")
+            features_to_query = []
+
+    if features_to_query:
+         if isinstance(features_to_query, list):
+              if features_to_query:
+                   feature_list_str = ", ".join([f"'{f}'" for f in features_to_query])
+                   where_clauses.append(f"datapoint IN ({feature_list_str})")
+         else:
+              where_clauses.append(f"datapoint = '{features_to_query}'")
+
     if params.get('site'): where_clauses.append(f"site = '{params['site']}'")
     if params.get('equipment_id'): where_clauses.append(f"equipment_id = '{params['equipment_id']}'")
     if params.get('system_type'): where_clauses.append(f"system_type = '{params['system_type']}'")
@@ -673,18 +763,34 @@ def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session
     results_list = []
     
     try:
+        if session is None:
+             raise HTTPException(status_code=503, detail="Cassandra session is not initialized or available.")
+             
         statement = SimpleStatement(cql_query, consistency_level=ConsistencyLevel.LOCAL_QUORUM)
         rows = session.execute(statement, timeout=30.0) 
         
         for row in rows:
+            timestamp_dt = row.timestamp
+            formatted_timestamp = None
+            
+            if timestamp_dt is not None:
+                milliseconds = timestamp_dt.strftime('%f')[:4]
+                
+                base_time_str = timestamp_dt.strftime('%Y-%m-%d %H:%M:%S')
+                
+                formatted_timestamp = f"{base_time_str}.{milliseconds}0+00:00"
+            
             results_list.append({
                 "datapoint": row.datapoint,
-                "timestamp": row.timestamp.isoformat(),
+                "timestamp": formatted_timestamp, 
                 "value": row.value,
                 "anomaly_flag": row.anomaly_flag
             })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cassandra query failed for table {table_name}: {e}")
             
+    except Exception as e:
+        log.error(f"Cassandra query failed for table {table_name} with query: {cql_query}. Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Cassandra query failed for table {table_name}: {e}")
+    
+    results_list.sort(key=lambda x: x['timestamp'])
+    
     return results_list

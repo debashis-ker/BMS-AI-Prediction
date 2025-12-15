@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore')
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
 
-EMISSION_FACTOR = os.getenv("EMISSION_FACTOR")
+EMISSION_FACTOR = 0.4041
 
 damper_forecast_model = None
 fan_forecast_model = None
@@ -573,15 +573,9 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
         df_emissions = df_emissions.reset_index(drop=True)
         df_emissions.rename(columns={'diff': 'Energy_Range_kWh'}, inplace=True)
         
-        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR #type:ignore
+        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR
         
         df_filtered = df_emissions.copy()
-
-        if equipment_id:
-            df_filtered = df_filtered[df_filtered['equipment_id'] == equipment_id]
-            
-        if zone:
-            df_filtered = df_filtered[df_filtered['site'] == zone]
             
         if df_filtered.empty:
             return {
@@ -590,16 +584,20 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
                 "breakdown_by_equipment_and_zone": []
             }
 
-        specific_emission_kg = df_filtered['carbon_emission_kg'].sum()
-        specific_energy_kwh = df_filtered['Energy_Range_kWh'].sum()
-        
+        mdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU03")]
+        smdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU06")]
+        mdb_carbon_emission_kg = mdb_filtered["carbon_emission_kg"].sum()
+        mdb_energy_kwh = mdb_filtered["Energy_Range_kWh"].sum()
+        smdb_carbon_emission_kg = smdb_filtered["carbon_emission_kg"].sum()
+        smdb_energy_kwh = smdb_filtered["Energy_Range_kWh"].sum()
+
         df_breakdown = df_filtered.copy()
         
         df_breakdown.rename(columns={'Energy_Range_kWh': 'energy_range_kwh'}, inplace=True)
         
         final_minimal_report = {
-            "carbon_emission_kg": round(specific_emission_kg, 2),
-            "energy_consumed_kwh": round(specific_energy_kwh, 2),
+            "carbon_emission_kg": round((mdb_carbon_emission_kg + smdb_carbon_emission_kg),2),
+            "energy_consumed_kwh": round((mdb_energy_kwh + smdb_energy_kwh),2),
             "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'energy_range_kwh', 'carbon_emission_kg']].round(2).to_dict('records')
         }
         
@@ -617,6 +615,7 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
             status_code=500,
             detail=f"Critical processing error: {e}"
         )
+
 
 try:
     STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
@@ -678,8 +677,6 @@ def carbon_emission_evaluation_static(
     
     equipment_id = request_data.equipment_id
     zone = request_data.zone
-    
-    log.info(f"Static Report Request initiated for Equipment: {equipment_id}, Zone: {zone}")
     
     emission_report_dict = get_emission_report_from_json(
         equipment_id, 

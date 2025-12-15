@@ -25,6 +25,11 @@ class DataQueryRequest(BaseModel):
     limit: Optional[int] = Field(1000, description="Maximum number of rows to return.")
     start_date: Optional[str] = Field(None, description="Start timestamp for range filtering.")
     end_date: Optional[str] = Field(None, description="End timestamp for range filtering.")
+    floor_id: Optional[str] = Field(None, description="Building ID (optional)")
+    search_tag_groups: Optional[List[List[str]]] = Field(None, description="Search Tags for datapoint fetching")
+    ticket: Optional[str] = Field(None, description="Ticket ID for Ikon API lookup (required if feature is None).")
+    account_id: Optional[str] = Field(None, description="Account ID for Ikon API lookup (required if feature is None).")
+    software_id: Optional[str] = Field(None, description="Software ID for Ikon API lookup (required if feature is None).")
 
 class DatapointFetchingRequest(BaseModel):
     ticket: str = Field(..., description="Ticket ID for datapoint fetching")

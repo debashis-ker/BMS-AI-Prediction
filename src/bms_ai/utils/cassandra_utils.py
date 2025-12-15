@@ -40,8 +40,6 @@ def fetch_data(url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server
     }
     
     try:
-        print(f"Sending POST request to {url} with query body: {API_PAYLOAD}")
-        
         response = requests.post(url, json=API_PAYLOAD) 
         
         response.raise_for_status()
