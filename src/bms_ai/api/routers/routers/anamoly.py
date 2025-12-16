@@ -36,7 +36,7 @@ class DatapointFetchingRequest(BaseModel):
     floor_id: Optional[str] = Field(None, description="Building ID (optional)")
     account_id: str = Field(..., description="Account ID  for datapoint fetching")
     software_id: str = Field(..., description="Software ID for datapoint fetching")
-    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    building_id: Optional[str] = Field("36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID (optional)")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID for datapoint fetching")
     search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
@@ -96,6 +96,9 @@ def store_anamolies_endpoint(request: DatapointFetchingRequest, session: Session
     software_id = request.software_id
     account_id = request.account_id
     system_type = request.system_type
+
+
+    log.debug(f"Parameters received - Building ID: {building_id}, Floor ID: {floor_id}, Equipment ID: {equipment_id}, Ticket ID: {ticket_id}, Software ID: {software_id}, Account ID: {account_id}, System Type: {system_type}, Search Tags: {search_tags}")
 
     if not building_id:
         building_id = DEFAULT_BUILDING_ID
