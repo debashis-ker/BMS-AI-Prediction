@@ -150,8 +150,6 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
     
     for feature in features:
         file_path = BASE_REPORT_DIR / f"{feature}.json" 
-
-        print(file_path)
         
         if not file_path.exists():
             log.warning(f"Static anomaly file NOT FOUND for feature '{feature}'. Checked path: {file_path.resolve()}. Skipping.")
@@ -167,10 +165,10 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
                  log.warning(f"File {feature}.json is empty or missing required columns. Skipping.")
                  continue
                  
-            df['Anomaly_Flag'] = pd.to_numeric(df['Anomaly_Flag'], errors='coerce').fillna(1).astype(int)
+            df['Anamoly_Flag'] = pd.to_numeric(df['Anomaly_Flag'], errors='coerce').fillna(1).astype(int)
             df['date'] = pd.to_datetime(df['data_received_on'], errors='coerce')
             
-            total_anomalies = df[df['Anomaly_Flag'] == -1].shape[0]
+            total_anomalies = df[df['Anamoly_Flag'] == -1].shape[0]
             
             if feature not in df.columns:
                  log.warning(f"Raw data column '{feature}' not found in {feature}.json. Skipping.")
@@ -213,7 +211,7 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
                  log.warning(f"Raw data column '{feature}' missing in DataFrame for report. Skipping.")
                  continue
 
-            df_report = df[['date', 'Anomaly_Flag', feature]].copy()
+            df_report = df[['date', 'Anamoly_Flag', feature]].copy()
             
             if not df_report['date'].isna().all():
                 max_timestamp = df_report['date'].max()
@@ -223,12 +221,12 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
             
             df_report.rename(columns={
                 'date': 'timestamp', 
-                'Anomaly_Flag': 'Anomaly_Flag'
+                'Anamoly_Flag': 'Anamoly_Flag'
             }, inplace=True)
             
             df_report['timestamp'] = df_report['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f') + '+00:00'
             
-            df_report['Anomaly_Flag'] = df_report['Anomaly_Flag'].astype(str)
+            df_report['Anamoly_Flag'] = df_report['Anamoly_Flag'].astype(str)
             df_report[feature] = df_report[feature].astype(str)
             
             integrated_data_by_feature[feature] = df_report.to_dict('records')
