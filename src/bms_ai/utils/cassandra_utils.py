@@ -3,6 +3,22 @@ from typing import Optional, List, Dict, Any
 import json
 from src.bms_ai.logger_config import setup_logger
 from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+FIXED_SYSTEM_TYPE = "AHU"
+DEFAULT_BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
+ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
+FEATURE_FALLBACKS = {
+    'TSu': ['TempSu'],
+    'Co2RA': ['Co2Avg'],
+    'HuAvg1': ['HuR1', 'HuRt']
+}
+QUERY_FEATURES = set(ALL_AVAILABLE_FEATURES)
+for fallbacks in FEATURE_FALLBACKS.values():
+    QUERY_FEATURES.update(fallbacks)
 
 log = setup_logger(__name__)
 
@@ -18,14 +34,12 @@ def get_metadata(raw_data: List[Dict[str, Any]]) -> Dict[str, str]:
         "asset_code": first_record.get("asset_code", ""),
     }
 
-def fetch_data(url: str = "https://ikoncloud.keross.com/bms-express-server/data") -> Dict[str, Any] | List[Dict]:
+def fetch_data(url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data") -> Dict[str, Any] | List[Dict]:
     API_PAYLOAD = {
         "query": "select * from datapoint_live_monitoring_values36c27828d0b44f1e8a94d962d342e7c2 where site = 'OS01' and system_type = 'AHU' and equipment_id = 'Ahu17' and datapoint IN ('TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1') allow filtering;",
     }
     
     try:
-        print(f"Sending POST request to {url} with query body: {API_PAYLOAD}")
-        
         response = requests.post(url, json=API_PAYLOAD) 
         
         response.raise_for_status()
@@ -39,7 +53,7 @@ def fetch_data(url: str = "https://ikoncloud.keross.com/bms-express-server/data"
         log.error(f"Data validation error: {val_err}")
         raise HTTPException(status_code=500, detail=str(val_err))
 
-def fetch_data_with_query(query: str, url: str = "https://ikoncloud.keross.com/bms-express-server/data", wrap_result: bool = True) -> Dict[str, Any] | List[Dict]:
+def fetch_data_with_query(query: str, url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data", wrap_result: bool = True) -> Dict[str, Any] | List[Dict]:
     API_PAYLOAD = {"query": query}
     
     try:
@@ -74,12 +88,51 @@ def fetch_data_with_query(query: str, url: str = "https://ikoncloud.keross.com/b
         log.error(f"An unexpected error occurred during fetching: {e}")
         raise HTTPException(status_code=500, detail=f"API Request failed: {str(e)}")
         
+def fetch_all_ahu_data(
+    building_id: str = DEFAULT_BUILDING_ID,
+    url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data"
+) -> List[Dict]:
+    """Fetches ALL historical data for AHUs in a single API call."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"datapoint_live_monitoring_values{cleaned_id}"
+    
+    datapoint_list = ', '.join([f"'{f}'" for f in QUERY_FEATURES])
+    
+    query = (
+        f"select * from {location_table_name} "
+        f"where system_type = '{FIXED_SYSTEM_TYPE}' "
+        f"and datapoint IN ({datapoint_list}) "
+        f"allow filtering;"
+    )
+
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        data_list = []
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        
+        if not isinstance(data_list, list):
+            raise ValueError("API response data list format is invalid.")
+            
+        log.info(f"[A1] Total raw records fetched: {len(data_list)}")
+        return data_list
+    
+    except Exception as e:
+        log.error(f"Failed to fetch batch data from API: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
+    
 def fetch_data_from_metadata(
         
     metadata: Dict[str, str], 
     table_name: str = "datapoint_live_monitoring_values",
     building_id: str = "36c27828d0b44f1e8a94d962d342e7c2", 
-    url: str = "https://ikoncloud.keross.com/bms-express-server/data",
+    url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
     wrap_result: Optional[bool] = True
 ) -> Dict[str, Any] | List[Dict]:
     

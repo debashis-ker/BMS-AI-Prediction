@@ -1,0 +1,33 @@
+# version: '3.8'
+
+# services:
+#   cassandra_db:
+#     image: cassandra:latest
+#     container_name: cassandra_db
+#     ports:
+#       - "9042:9042"
+#     volumes:
+#       - cassandra_data:/var/lib/cassandra
+#     environment:
+#       - CASSANDRA_START_RPC=true
+#       - CASSANDRA_CLUSTER_NAME=MyTestCluster
+
+# volumes:
+#   cassandra_data:
+
+services:
+  bms_prediction:
+    image: cassandra:5.0
+    container_name: bms_prediction
+    # Remove restart: unless-stopped if you don't want it to restart automatically
+    ports:
+      - "9042:9042"
+    volumes:
+      - bms_prediction_volume:/var/lib/cassandra
+    environment:
+      # CASSANDRA_START_RPC is generally true by default now, but keeping it for clarity
+      - CASSANDRA_START_RPC=true
+      - CASSANDRA_CLUSTER_NAME=bms_prediction
+
+volumes:
+  bms_prediction_volume:
