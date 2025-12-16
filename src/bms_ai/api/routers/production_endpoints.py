@@ -161,11 +161,11 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
                 
             df = pd.DataFrame(raw_list)
             
-            if df.empty or 'Anomaly_Flag' not in df.columns or 'data_received_on' not in df.columns:
+            if df.empty or 'Anamoly_Flag' not in df.columns or 'data_received_on' not in df.columns:
                  log.warning(f"File {feature}.json is empty or missing required columns. Skipping.")
                  continue
                  
-            df['Anamoly_Flag'] = pd.to_numeric(df['Anomaly_Flag'], errors='coerce').fillna(1).astype(int)
+            df['Anamoly_Flag'] = pd.to_numeric(df['Anamoly_Flag'], errors='coerce').fillna(1).astype(int)
             df['date'] = pd.to_datetime(df['data_received_on'], errors='coerce')
             
             total_anomalies = df[df['Anamoly_Flag'] == -1].shape[0]
