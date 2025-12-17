@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -16,6 +17,7 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
+from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData
 
 import requests
 import pandas as pd
@@ -139,6 +141,203 @@ def fetch_all_ahu_dataV2(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
+def fetch_adjustment_history(
+    building_id: str,
+    site: str,
+    equipment_id: str,
+    url: str = API_URL
+) -> pd.DataFrame:
+    """Fetches adjustment history for a specific equipment."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"historical_data_opt_{cleaned_id}"
+    
+    query = (
+        f"select * from {location_table_name} "
+        f"where site = '{site}' "
+        f"and equipment_id = '{equipment_id}' "
+        f"and system_type = '{FIXED_SYSTEM_TYPE}' "
+        f"allow filtering;"
+    )
+
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        else:
+            raise ValueError(f"API response format unexpected: {raw_api_response}")
+
+        df = pd.DataFrame(data_list)
+        return df
+    
+    except Exception as e:
+        log.error(f"Failed to fetch adjustment history: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch adjustment history: {str(e)}")
+
+def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
+    if feature not in anamoly_model: #type:ignore
+        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
+
+    try:
+        model_package = anamoly_model[feature].get(asset_code) #type:ignore
+        
+        if model_package is None:
+             raise KeyError("Model not found for specific asset.")
+
+        model_features = model_package.get('feature_cols', [feature]) 
+        log.info(f"[{asset_code}/{feature}] [B1] Model FOUND. Features needed: {model_features}")
+        
+    except KeyError as e:
+        log.warning(f"[{asset_code}/{feature}] Model package not found for key: {e}. Returning empty list.")
+        return [] 
+    
+    try:
+        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
+            
+        if df_wide.empty:
+            return []
+            
+    except Exception as e:
+        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
+        return [] 
+            
+    data_column = model_features[0] 
+    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
+    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
+    
+    if X_df.empty:
+        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
+        return []
+            
+    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
+    log.info(f"[{asset_code}/{feature}] [B3] Rows sent to IF model: {len(X_for_model)}. Input cols: {X_for_model.columns.tolist()}")
+
+    try:
+        X_scaled = model_package['scaler'].transform(X_for_model)
+        predictions = model_package['model'].predict(X_scaled)
+    except Exception as e:
+        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
+        return []
+
+    X_df['Anomaly_Flag'] = predictions
+    log.info(f"[{asset_code}/{feature}] [C1] Raw IF anomalies: {(predictions == -1).sum()}")
+    
+    # 5. Post-processing Overrides (Ceiling Layer)
+    
+    # Co2RA Ceiling Check (UPDATED LOGIC from training pipeline)
+    if feature == 'Co2RA' and data_column in X_df.columns:
+        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
+        
+        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
+        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
+        
+        if condition_high.any():
+            override_count_to_anomaly = (condition_high & (X_df['Anomaly_Flag'] == 1)).sum()
+            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_anomaly} normal points as -1 (Anomaly) because value > {CO2RA_CEILING_THRESHOLD}.")
+            X_df.loc[condition_high, 'Anomaly_Flag'] = -1
+        
+        if condition_low.any():
+            override_count_to_normal = (condition_low & (X_df['Anomaly_Flag'] == -1)).sum()
+            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_normal} anomaly points as 1 (Normal) because value < {CO2RA_CEILING_THRESHOLD}.")
+            X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
+
+
+    # FbVFD Normal Range Override (Unchanged)
+    if feature == 'FbVFD' and data_column in X_df.columns:
+        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
+        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
+        if normal_fbvfd_condition.any():
+            override_count = (normal_fbvfd_condition & (X_df['Anomaly_Flag'] == -1)).sum()
+            if override_count > 0:
+                log.warning(f"[{asset_code}/{feature}] FbVFD override: Reverted {override_count} anomalies to normal (1) because value is 0-{FBVFD_NORMAL_MAX}.")
+            X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
+    
+    # 6. Final Formatting
+    
+    # FIX: Keep ALL rows (Normal and Anomaly) as requested.
+    final_df = X_df.copy() 
+    
+    if final_df.empty:
+        log.info(f"[{asset_code}/{feature}] Final report size: 0. No data points processed.")
+        return []
+    
+    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
+
+    report_list = []
+    for _, row in final_df.iterrows():
+        record = {
+            "data_received_on": row['data_received_on_str'],
+            "Anomaly_Flag": str(int(row['Anomaly_Flag']))
+        }
+        # FIX: Key the value by the actual data column name (data_column), removing the redundant primary name.
+        data_column = model_features[0] 
+        record[data_column] = str(float(row[data_column])) 
+        
+        report_list.append(record)
+
+    log.info(f"[{asset_code}/{feature}] [C2] Final report list size: {len(report_list)}")
+    return report_list
+
+def anamoly_data_pipeline(
+    records: List[Dict[str, Any]], 
+    asset_code: str, 
+    model_package: Dict[str, Any],
+    feature_name: str
+) -> pd.DataFrame:
+    """ Processes long-format records into a wide-format DataFrame, adds temporal, and handles encoding."""
+    
+    if not records:
+        log.warning(f"[{asset_code}/{feature_name}] Pipeline received zero records.")
+        return pd.DataFrame()
+        
+    df = pd.DataFrame(records)
+    
+    df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
+    df = df.dropna(subset=[STANDARD_DATE_COLUMN])
+    
+    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
+        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
+        
+    if 'monitoring_data' in df.columns:
+        mapping = {'inactive': 0.0, 'active': 1.0}
+        df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
+        df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
+    
+    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
+    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
+    
+    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
+    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
+    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
+    
+    if 'asset_code' in result_df.columns:
+        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
+
+    label_encoders = model_package.get('label_encoders', {})
+    
+    for cat_col in ['site', 'equipment_id', 'weekday_name']:
+        if cat_col in result_df.columns and cat_col in label_encoders:
+            le: LabelEncoder = label_encoders[cat_col]
+            def transform_with_fallback(value):
+                try:
+                    return le.transform([value])[0] #type:ignore
+                except ValueError:
+                    return -1
+                except TypeError:
+                    return -1
+            
+            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
+        else:
+             result_df[cat_col + '_encoded'] = -1 
+
+    log.info(f"[{asset_code}/{feature_name}] [B2] Wide DF rows after pivot: {len(result_df)}")
+    return result_df
+
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
@@ -161,11 +360,11 @@ def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizRespon
                 
             df = pd.DataFrame(raw_list)
             
-            if df.empty or 'Anomaly_Flag' not in df.columns or 'data_received_on' not in df.columns:
+            if df.empty or 'Anamoly_Flag' not in df.columns or 'data_received_on' not in df.columns:
                  log.warning(f"File {feature}.json is empty or missing required columns. Skipping.")
                  continue
                  
-            df['Anamoly_Flag'] = pd.to_numeric(df['Anomaly_Flag'], errors='coerce').fillna(1).astype(int)
+            df['Anamoly_Flag'] = pd.to_numeric(df['Anamoly_Flag'], errors='coerce').fillna(1).astype(int)
             df['date'] = pd.to_datetime(df['data_received_on'], errors='coerce')
             
             total_anomalies = df[df['Anamoly_Flag'] == -1].shape[0]
@@ -877,6 +1076,7 @@ class GenericTrainRequestV2(BaseModel):
     #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
     #data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field(..., description="Building ID where the equipment is located")
@@ -971,6 +1171,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     Returns:
         Training results including selected features, metrics, and artifact paths
     """
+    #print(f"Request Data: {request_data.dict()}")
     matches_tags = []
     matches_tags = matches_tags + request_data.target_variable_tag
     print(f"Target variable tags: {matches_tags}")
@@ -988,7 +1189,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod"
+            env="prod",
+            ticket_type=request_data.ticket_type
         )
     
     target_variable = ""
@@ -1070,6 +1272,7 @@ class GenericOptimizeRequest(BaseModel):
 class GenericOptimizeRequestV2(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: Optional[str] = Field(None, description="Building ID (optional)")
@@ -1157,7 +1360,8 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod")
+            env="prod",
+            ticket_type=request_data.ticket_type)
     
     target_variable = ""
     print(f"Fetched data points: {results}")
@@ -1240,3 +1444,53 @@ async def get_optimization_results():
     except Exception as e:
         log.error(f"Error reading optimization results: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
+    
+
+class AdjustmentHistoryRequest(BaseModel):
+    building_id: str = Field(..., description="Building ID")
+    site: str = Field(..., description="Site name")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field(..., description="Equipment ID for which adjustments are fetched")
+    time_period: str = Field(..., description="Time period for the adjustment history in milliseconds")
+    #adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
+    limit: Optional[int] = Field(100, description="Maximum number of records to return")
+
+@router.get("/optimization_history", response_model=OptimizationResultsResponse)
+async def get_adjustment_history(request: AdjustmentHistoryRequest):
+    """
+    Fetches adjustment history for a given equipment within an optional date range.
+    
+    Args:
+        equipment_id: Equipment ID to filter adjustments
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
+        limit: Maximum number of records to return (default 100)
+    Returns:
+
+        JSON containing adjustment history records
+    """
+    try:
+
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(milliseconds=int(request.time_period))
+
+        adjustments = fetch_adjustment_hisoryData(
+            building_id=request.building_id,
+            site=request.site,
+            system_type=request.system_type,
+            equipment_id=request.equipment_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=request.limit
+        )
+        
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
+        
+        return OptimizationResultsResponse(
+            optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            results=adjustments
+        )
+        
+    except Exception as e:
+        log.error(f"Error fetching adjustment history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
