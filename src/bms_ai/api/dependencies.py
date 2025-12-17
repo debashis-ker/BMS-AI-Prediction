@@ -7,6 +7,7 @@ import time
 import threading
 import os
 from dotenv import load_dotenv
+from cassandra.auth import PlainTextAuthProvider
 
 # Load environment variables
 load_dotenv()
@@ -61,10 +62,19 @@ def get_cassandra_session() -> Session:
     
     Connection parameters are loaded from .env file
     """
+    auth_provider = None
+    CASSANDRA_HOST = "localhost"
+    CASSANDRA_PORT = 9042
+    KEYSPACE_NAME = 'user_keyspace'
     # Load connection parameters from environment variables
-    CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', 'localhost').split(',')
-    CASSANDRA_PORT = int(os.getenv('CASSANDRA_PORT', '9042'))
-    KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
+    if os.getenv("ENVIRONMENT") == "production":
+        auth_provider = PlainTextAuthProvider(
+            username=os.getenv('CASSANDRA_USERNAME', 'CASSANDRA_USERNAME'),
+            password=os.getenv('CASSANDRA_PASSWORD', 'CASSANDRA_PASSWORD')
+        )
+        CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', '192.168.2.32').split(',')
+        CASSANDRA_PORT = int(os.getenv('CASSANDRA_PORT', '9042'))
+        KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
     
     with CASS_SESSION_LOCK:
         current_time = time.time()
@@ -78,6 +88,8 @@ def get_cassandra_session() -> Session:
         log.info(f"[Cassandra] Creating new session to {CASSANDRA_HOST}:{CASSANDRA_PORT}")
         try:
             cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+            if os.getenv("ENVIRONMENT") == "production" and auth_provider is not None:
+                cluster.auth_provider = auth_provider
             session = cluster.connect(KEYSPACE_NAME)
             
             CASS_SESSION_DATA['cluster'] = cluster
