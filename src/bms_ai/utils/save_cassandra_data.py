@@ -1,10 +1,14 @@
 import requests
 import time
 from cassandra.cluster import Cluster
+from cassandra.auth import PlainTextAuthProvider
 from dateutil import parser
 from typing import Iterator, List, Dict, Any, Tuple
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from src.bms_ai.logger_config import setup_logger
+
+log = setup_logger(__name__)
 
 CASSANDRA_HOST = ['127.0.0.1']
 CASSANDRA_PORT = 9042
@@ -194,7 +198,12 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     """
     
     try:
+        username = 'admin'
+        password = 'admin'
+        auth_provider = PlainTextAuthProvider(username=username, password=password)
         cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        if auth_provider:
+            cluster.auth_provider = auth_provider
         session = cluster.connect(KEYSPACE_NAME)
         
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
@@ -226,34 +235,52 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         if cluster:
             cluster.shutdown()
 
-def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str) -> List[Dict]:
+def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str, start_date: str, end_date: str, limit: int) -> List[Dict]:
     """
     Fetches adjustment history data for a given building and equipment from an external API.
     """
     ADJUSTMENT_API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
+    Optimization_HISTORY_TABLE_SUFFIX = "historical_data_opt"
+    Optimization_SETPOINT_TABLE_SUFFIX = "setpoint_data_opt"
 
     Query_BASE_CQL = f"""
     Select * from {KEYSPACE_NAME}."{{table_name}}"  
-    where site='{site}' and system_type='{system_type}' and equipment_id='{equipment_id}'
+    where site='{site}' and system_type='{system_type}' and equipment_id='{equipment_id}' and timestamp >= '{start_date}' and timestamp <= '{end_date}' 
+    LIMIT {limit}
     ALLOW FILTERING;"""
 
     try:
+        username = 'admin'
+        password = 'admin'
+        auth_provider = PlainTextAuthProvider(username=username, password=password)
         cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        if auth_provider:
+            cluster.auth_provider = auth_provider
+
         session = cluster.connect(KEYSPACE_NAME)
         
-        history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
+        #history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
+        history_table = f"{Optimization_HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+        setpoint_table = f"{Optimization_SETPOINT_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
         query_cql = Query_BASE_CQL.format(table_name=history_table)
+        log.info(f"Executing Cassandra query: {query_cql}")
+        print(query_cql)
         
         rows = session.execute(query_cql)
+        log.info(f"Number of rows fetched: {rows.current_rows}")
         
         result = []
         for row in rows:
             record = {
-                'datapoint': row.datapoint,
+                'best_setpoints': row.best_setpoints,
                 'timestamp': row.timestamp.isoformat() if row.timestamp else None,
-                'value': row.value,
-                'anomaly_flag': row.anomaly_flag,
-                'site': row.site,
+                'best_target_value': row.best_target_value,
+                'optimization_direction': row.optimization_direction,
+                'selected_features_used': row.selected_features_used,
+                'total_combinations_tested': row.total_combinations_tested,
+                'optimization_method': row.optimization_method,
+                'optimization_time_seconds': row.optimization_time_seconds,
+                "site": row.site,
                 'equipment_id': row.equipment_id,
                 'system_type': row.system_type
             }

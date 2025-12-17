@@ -15,6 +15,7 @@ class FetchDataPointsRequest(BaseModel):
     equipment_id: str = Field(..., description="Equipment ID (can be empty string)")
     search_tag_groups: List[List[str]] = Field(..., description="Array of Haystack tag arrays to search")
     ticket: str = Field(..., description="Authentication ticket")
+    ticket_type: Optional[str] = Field(None, description="Type of ticket (e.g., 'jobUser')")
     software_id: str = Field(..., description="Software ID")
     account_id: str = Field(..., description="Account ID")
     system_type: Optional[str] = Field(None, description="Optional system type (e.g., 'FCU', 'AHU')")
@@ -48,7 +49,8 @@ def fetch_data_points_endpoint(req: FetchDataPointsRequest) -> FetchDataPointsRe
             software_id=req.software_id,
             account_id=req.account_id,
             system_type=req.system_type,
-            env="prod"
+            env="prod",
+            ticket_type=req.ticket_type
         )
         
         log.info(f"Successfully fetched {len(results)} data points")

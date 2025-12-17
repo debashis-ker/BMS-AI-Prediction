@@ -13,7 +13,8 @@ def get_my_instances_v2(ticket: str, process_name: str, software_id: str, accoun
                          mongo_where_clause: Optional[str] = None,
                          projections: Optional[List[str]] = ["Data"], 
                          all_instances: bool = False,
-                         env : Optional[str] = "dev") -> Optional[Dict]:
+                         env : Optional[str] = "dev",
+                         ticket_type: Optional[str] = None) -> Optional[Dict]:
     """
     
     Args:
@@ -71,8 +72,15 @@ def get_my_instances_v2(ticket: str, process_name: str, software_id: str, accoun
     }
 
     headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
     }
+
+    #print("ticket_type:", ticket_type)
+
+    if ticket_type == "jobUser":
+        headers["User-Agent"] = "IKON Job Server"
+    
+    #print(f"headers: {headers}")
     
     log.debug(f"Request arguments: {data}")
     
@@ -108,7 +116,8 @@ def get_building_hierarchy_data(
     ticket: str,
     software_id: str,
     account_id: str,
-    env: Optional[str] = "dev"
+    env: Optional[str] = "dev",
+    ticket_type: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Fetches and merges building hierarchy data from the BMS Building Data Hierarchy process.
@@ -133,7 +142,8 @@ def get_building_hierarchy_data(
             account_id=account_id,
             predefined_filters={"taskName": "Building Hierarchy Task"},
             process_variable_filters={"buildingId": building_id},
-            env=env
+            env=env,
+            ticket_type=ticket_type
         )
         
         log.debug(f"Building hierarchy data raw: {building_hierarchy_data_raw}")
@@ -402,7 +412,8 @@ def fetch_and_find_data_points(
     software_id: str,
     account_id: str,
     system_type: Optional[str] = None,
-    env: Optional[str] = "dev"
+    env: Optional[str] = "dev",
+    ticket_type: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Wrapper function to fetch hierarchy data and find data points.
@@ -431,7 +442,8 @@ def fetch_and_find_data_points(
             predefined_filters={'taskName': 'Building Association'},
             #process_variable_filters=process_variable_filter,
             #process_variable_filters=None,
-            env=env
+            env=env,
+            ticket_type=ticket_type
         )
         
         log.debug(f"Building association data: {building_associated_data}")
@@ -473,7 +485,8 @@ def fetch_and_find_data_points(
             ticket=ticket,
             software_id=software_id,
             account_id=account_id,
-            env=env
+            env=env,
+            ticket_type=ticket_type
         )
         
         hierarchy_data = tree_data.get('hierarchyData') if tree_data else None

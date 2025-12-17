@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -19,6 +19,7 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
+from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData
 
 import requests
 import pandas as pd
@@ -1322,6 +1323,7 @@ class GenericTrainRequestV2(BaseModel):
     #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
     #data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field(..., description="Building ID where the equipment is located")
@@ -1416,6 +1418,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     Returns:
         Training results including selected features, metrics, and artifact paths
     """
+    #print(f"Request Data: {request_data.dict()}")
     matches_tags = []
     matches_tags = matches_tags + request_data.target_variable_tag
     print(f"Target variable tags: {matches_tags}")
@@ -1433,7 +1436,8 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod"
+            env="prod",
+            ticket_type=request_data.ticket_type
         )
     
     target_variable = ""
@@ -1515,6 +1519,7 @@ class GenericOptimizeRequest(BaseModel):
 class GenericOptimizeRequestV2(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: Optional[str] = Field(None, description="Building ID (optional)")
@@ -1602,7 +1607,8 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod")
+            env="prod",
+            ticket_type=request_data.ticket_type)
     
     target_variable = ""
     print(f"Fetched data points: {results}")
@@ -1687,23 +1693,17 @@ async def get_optimization_results():
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
     
 
-class AdjustmentHistoryResponse(BaseModel):
+class AdjustmentHistoryRequest(BaseModel):
     building_id: str = Field(..., description="Building ID")
     site: str = Field(..., description="Site name")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field(..., description="Equipment ID for which adjustments are fetched")
-    adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
+    time_period: str = Field(..., description="Time period for the adjustment history in milliseconds")
+    #adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
+    limit: Optional[int] = Field(100, description="Maximum number of records to return")
 
-@router.get("/adjustment_history", response_model=AdjustmentHistoryResponse)
-async def get_adjustment_history(
-    building_id: str,
-    site: str,
-    system_type :str,
-    equipment_id: str,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
-    limit: Optional[int] = 100  
-):
+@router.get("/optimization_history", response_model=OptimizationResultsResponse)
+async def get_adjustment_history(request: AdjustmentHistoryRequest):
     """
     Fetches adjustment history for a given equipment within an optional date range.
     
@@ -1717,18 +1717,25 @@ async def get_adjustment_history(
         JSON containing adjustment history records
     """
     try:
+
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(milliseconds=int(request.time_period))
+
         adjustments = fetch_adjustment_hisoryData(
-            equipment_id=equipment_id,
+            building_id=request.building_id,
+            site=request.site,
+            system_type=request.system_type,
+            equipment_id=request.equipment_id,
             start_date=start_date,
             end_date=end_date,
-            limit=limit
+            limit=request.limit
         )
         
-        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={equipment_id}")
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
         
-        return AdjustmentHistoryResponse(
-            equipment_id=equipment_id,
-            adjustments=adjustments
+        return OptimizationResultsResponse(
+            optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            results=adjustments
         )
         
     except Exception as e:
