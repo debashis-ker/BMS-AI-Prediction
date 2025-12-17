@@ -1,13 +1,11 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Tuple
-from collections import defaultdict
+from typing import Optional, List, Dict, Any
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
-from src.bms_ai.utils.cassandra_utils import fetch_data_from_metadata, get_metadata, fetch_data
+from src.bms_ai.api.routers.routers import anamoly
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
@@ -28,14 +26,19 @@ import warnings
 import math
 import time
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 log = setup_logger(__name__)
 
 warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
+router.include_router(anamoly.router)
+
+EMISSION_FACTOR = 0.4041
 
 damper_forecast_model = None
 fan_forecast_model = None
@@ -69,79 +72,6 @@ class PredictionResponse(BaseModel):
     failure_threshold: float = Field(..., description="Threshold used for prediction.")
     resampled_predicted_data: List[ResampledData] = Field(..., description="Resampled 15-day average prediction data.")
 
-FIXED_SYSTEM_TYPE = "AHU"
-DEFAULT_BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
-
-class AnamolyPredictionRequest(BaseModel):
-    feature: str = Field(..., description="Feature on which Anomaly should be detected (e.g., TSu).")
-    site: str = Field(..., description="Site/Zone of the equipment.")
-    equipment_id: str = Field(..., description="Equipment ID for which anomaly detection is requested.")
-    system_type: str = Field(FIXED_SYSTEM_TYPE, description="System type of the equipment (defaults to AHU).")
-    building_id: Optional[str] = Field(DEFAULT_BUILDING_ID, description="Optional building ID for filtering.")
-
-API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
-ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
-STANDARD_DATE_COLUMN = "data_received_on"
-CO2RA_CEILING_THRESHOLD = 850.0
-FBVFD_NORMAL_MAX = 1.0 
-BASE_MODEL_PATH = "artifacts/generic_anamoly_models/"
-EMISSION_FACTOR = 0.4041
-
-FEATURE_FALLBACKS = {
-    'TSu': ['TempSu'],
-    'Co2RA': ['Co2Avg'],
-    'HuAvg1': ['HuR1', 'HuRt']
-}
-
-QUERY_FEATURES = set(ALL_AVAILABLE_FEATURES)
-for fallbacks in FEATURE_FALLBACKS.values():
-    QUERY_FEATURES.update(fallbacks)
-
-CONSOLIDATION_MAP = {}
-for master_feat, fallbacks in FEATURE_FALLBACKS.items():
-    CONSOLIDATION_MAP[master_feat] = master_feat
-    for fb in fallbacks:
-        CONSOLIDATION_MAP[fb] = master_feat
-
-for feat in ALL_AVAILABLE_FEATURES:
-    if feat not in CONSOLIDATION_MAP:
-        CONSOLIDATION_MAP[feat] = feat
-        
-MASTER_ANAMOLY_MODELS: Dict[str, Dict[str, Any]] = {} 
-
-log.info("Starting model loading and consolidation...")
-
-all_model_keys_to_load = set(ALL_AVAILABLE_FEATURES)
-for fallbacks in FEATURE_FALLBACKS.values():
-    all_model_keys_to_load.update(fallbacks)
-
-for model_key_in_file in all_model_keys_to_load:
-    model_file = f"{BASE_MODEL_PATH}{model_key_in_file}_model.joblib"
-    master_key = CONSOLIDATION_MAP.get(model_key_in_file) 
-    
-    if master_key is None:
-        continue
-
-    try:
-        feature_models = joblib.load(model_file)
-        if not feature_models:
-             log.warning(f"[SKIP] Model file '{model_key_in_file}' loaded but contains NO asset models (empty dictionary).")
-             continue 
-
-        if master_key not in MASTER_ANAMOLY_MODELS:
-            MASTER_ANAMOLY_MODELS[master_key] = {}
-        
-        MASTER_ANAMOLY_MODELS[master_key].update(feature_models)
-        
-        log.info(f"Loaded '{model_key_in_file}' models (Assets: {len(feature_models)}) and consolidated under MASTER KEY: '{master_key}'.")
-        
-    except FileNotFoundError:
-        log.warning(f"Model file not found for {model_key_in_file}. Skipping.")
-    except Exception as e:
-        log.error(f"FATAL: Error loading model {model_key_in_file}. Skipping: {e}")
-        
-anamoly_model = MASTER_ANAMOLY_MODELS
-
 class AnomalyVizRequest(BaseModel):
     chart_type: str = Field('pie', description="Type of visualization data requested: 'pie' or 'line'.")
 
@@ -166,56 +96,16 @@ class StaticEmissionResponse(BaseModel):
 class EmissionResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="The final structured emission report.")
 
-def fetch_all_ahu_data(
-    building_id: str = DEFAULT_BUILDING_ID,
-    url: str = API_URL
-) -> List[Dict]:
-    """Fetches ALL historical data for AHUs in a single API call."""
-    cleaned_id = building_id.replace("-", "").lower()
-    location_table_name = f"datapoint_live_monitoring_values{cleaned_id}"
-    
-    datapoint_list = ', '.join([f"'{f}'" for f in QUERY_FEATURES])
-    
-    query = (
-        f"select * from {location_table_name} "
-        f"where system_type = '{FIXED_SYSTEM_TYPE}' "
-        f"and datapoint IN ({datapoint_list}) "
-        f"allow filtering;"
-    )
-
-    API_PAYLOAD = {"query": query}
-    try:
-        response = requests.post(url, json=API_PAYLOAD, timeout=60)
-        response.raise_for_status()
-        raw_api_response = response.json()
-        
-        if isinstance(raw_api_response, list):
-            data_list = raw_api_response
-        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
-            data_list = raw_api_response.get('queryResponse')
-        else:
-            raise ValueError(f"API response format unexpected: {raw_api_response}")
-
-        if not isinstance(data_list, list):
-            raise ValueError(f"'queryResponse' key found but its value is not a list, or the top-level object was empty.")
-        
-        return data_list
-    
-    except Exception as e:
-        log.error(f"Failed to fetch batch data: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
-    
 def fetch_all_ahu_dataV2(
-        building_id: str = DEFAULT_BUILDING_ID,
-        url: str = API_URL,
+        building_id: str,
+        url: str = "",
         site: str = "",
-        system_type: str = FIXED_SYSTEM_TYPE,
+        system_type: str = "",
         equipment_id: Optional[str] = None
     ) -> List[Dict]:
     """Fetches ALL historical data for AHUs in a single API call."""
     cleaned_id = building_id.replace("-", "").lower()
     location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
-    datapoint_list = ', '.join([f"'{f}'" for f in ALL_AVAILABLE_FEATURES])
     previous_week_day_in_UTC = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
     log.debug(f"Fetching data since: {previous_week_day_in_UTC}")
     query = (
@@ -451,7 +341,7 @@ def anamoly_data_pipeline(
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
-    features = ALL_AVAILABLE_FEATURES 
+    features = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1'] 
     
     BASE_REPORT_DIR = Path(r"src/bms_ai/utils/ahu1_stored_anamoly")
     
@@ -778,7 +668,7 @@ def calculate_aggregate_emissions(df_input: pd.DataFrame) -> pd.DataFrame:
         
         emission_summary = emission_summary[emission_summary['Energy_Range_kWh'] > 0].copy()
         
-        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR
+        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR #type:ignore
         
         return emission_summary
 
@@ -885,12 +775,6 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
         df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR
         
         df_filtered = df_emissions.copy()
-
-        if equipment_id:
-            df_filtered = df_filtered[df_filtered['equipment_id'] == equipment_id]
-            
-        if zone:
-            df_filtered = df_filtered[df_filtered['site'] == zone]
             
         if df_filtered.empty:
             return {
@@ -899,16 +783,20 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
                 "breakdown_by_equipment_and_zone": []
             }
 
-        specific_emission_kg = df_filtered['carbon_emission_kg'].sum()
-        specific_energy_kwh = df_filtered['Energy_Range_kWh'].sum()
-        
+        mdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU03")]
+        smdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU06")]
+        mdb_carbon_emission_kg = mdb_filtered["carbon_emission_kg"].sum()
+        mdb_energy_kwh = mdb_filtered["Energy_Range_kWh"].sum()
+        smdb_carbon_emission_kg = smdb_filtered["carbon_emission_kg"].sum()
+        smdb_energy_kwh = smdb_filtered["Energy_Range_kWh"].sum()
+
         df_breakdown = df_filtered.copy()
         
         df_breakdown.rename(columns={'Energy_Range_kWh': 'energy_range_kwh'}, inplace=True)
         
         final_minimal_report = {
-            "carbon_emission_kg": round(specific_emission_kg, 2),
-            "energy_consumed_kwh": round(specific_energy_kwh, 2),
+            "carbon_emission_kg": round((mdb_carbon_emission_kg + smdb_carbon_emission_kg),2),
+            "energy_consumed_kwh": round((mdb_energy_kwh + smdb_energy_kwh),2),
             "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'energy_range_kwh', 'carbon_emission_kg']].round(2).to_dict('records')
         }
         
@@ -926,6 +814,7 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
             status_code=500,
             detail=f"Critical processing error: {e}"
         )
+
 
 try:
     STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
@@ -988,8 +877,6 @@ def carbon_emission_evaluation_static(
     equipment_id = request_data.equipment_id
     zone = request_data.zone
     
-    log.info(f"Static Report Request initiated for Equipment: {equipment_id}, Zone: {zone}")
-    
     emission_report_dict = get_emission_report_from_json(
         equipment_id, 
         zone
@@ -1020,140 +907,6 @@ def fan_speed_health_prediction(
     end = time.time()
     log.info(f"VOX AHU1 Fan Speed End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
-
-
-@router.post('/anomaly_detection_all_ahu')
-def anomaly_detection_all_ahu() -> Dict[str, Any]:
-    start_time = time.time()
-    all_asset_results: Dict[str, Any] = {}
-    
-    all_data_records = fetch_all_ahu_data(DEFAULT_BUILDING_ID)
-    
-    if not all_data_records:
-        return {"data": {"historical_data": {}}, "message": "No data found for AHU systems."}
-        
-    grouped_data_by_asset: Dict[str, List[Dict]] = defaultdict(list)
-    for record in all_data_records:
-        site = record.get('site')
-        equipment_name = record.get('equipment_name')
-        
-        if site and equipment_name:
-            asset_code_key = f"{site}_{equipment_name}" 
-            record['asset_code'] = asset_code_key 
-            grouped_data_by_asset[asset_code_key].append(record)
-
-    log.info(f"[A2] Total grouped assets: {len(grouped_data_by_asset)}")
-    
-    for asset_code_key, asset_records in grouped_data_by_asset.items():
-        
-        try:
-            site, equipment_id = asset_code_key.split('_', 1) 
-        except ValueError:
-            site = "Unknown"; equipment_id = asset_code_key
-
-        asset_historical_data: Dict[str, List[Dict[str, Any]]] = {}
-        
-        for feature in ALL_AVAILABLE_FEATURES:
-            
-            datapoint_name = None
-            if feature in FEATURE_FALLBACKS:
-                for fallback_name in FEATURE_FALLBACKS[feature]:
-                    if any(r.get('datapoint') == fallback_name for r in asset_records):
-                        datapoint_name = fallback_name
-                        break
-            if datapoint_name is None:
-                datapoint_name = feature
-            
-            feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
-            log.debug(f"Records for {asset_code_key}/{feature} (using data col: {datapoint_name}): {len(feature_raw_data)}")
-            
-            if not feature_raw_data:
-                continue
-
-            try:
-                feature_results = anomaly_detection(feature_raw_data, asset_code_key, feature)
-
-                if feature_results:
-                    asset_historical_data[datapoint_name] = feature_results
-                            
-            except HTTPException:
-                raise
-            except Exception as e:
-                log.error(f"Prediction logic failed for {asset_code_key}/{feature}: {e}")
-                continue
-        
-        if asset_historical_data:
-            all_asset_results[asset_code_key] = {
-                "data": {
-                    "historical_data": asset_historical_data
-                },
-                "site": site,
-                "equipment_id": equipment_id,
-                "system_type": FIXED_SYSTEM_TYPE
-            }
-    
-    final_output = {
-        "data": {
-            "all_anomalies_by_asset": all_asset_results
-        },
-        "total_assets_processed": len(grouped_data_by_asset),
-        "anomalous_assets_count": len(all_asset_results)
-    }
-    
-    log.info(f"Anomaly detection completed in {time.time() - start_time:.2f} seconds.")
-    return final_output
-
-@router.post('/anomaly_detection_single_asset')
-def anomaly_detection_single_asset(request: AnamolyPredictionRequest) -> Dict[str, Any]:
-    start_time = time.time()
-    asset_code = f"{request.site}_{request.equipment_id}"
-    feature = request.feature
-    
-    datapoint_name = feature
-    if feature in FEATURE_FALLBACKS:
-        all_data_records = fetch_all_ahu_data(request.building_id or DEFAULT_BUILDING_ID)
-        
-        found_datapoint = next((
-            r.get('datapoint')
-            for r in all_data_records
-            if r.get('site') == request.site
-            and r.get('equipment_name') == request.equipment_id
-            and r.get('datapoint') in FEATURE_FALLBACKS[feature]
-        ), feature)
-
-        datapoint_name = found_datapoint
-
-    all_data_records = fetch_all_ahu_data(request.building_id or DEFAULT_BUILDING_ID)
-    
-    feature_raw_data = [
-        r for r in all_data_records 
-        if r.get('site') == request.site 
-        and r.get('equipment_name') == request.equipment_id
-        and r.get('datapoint') == datapoint_name 
-    ]
-    
-    if not feature_raw_data:
-        return {"data": {"historical_data": {datapoint_name: []}}, "message": f"No data found for {asset_code}/{datapoint_name}."}
-
-    try:
-        feature_results = anomaly_detection(feature_raw_data, asset_code, feature)
-
-        log.info(f"Single asset prediction for {asset_code}/{feature} completed in {time.time() - start_time:.2f} seconds.")
-
-        return {
-            "data": {
-                "historical_data": {datapoint_name: feature_results}
-            },
-            "site": request.site,
-            "equipment_id": request.equipment_id,
-            "system_type": request.system_type
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Single asset prediction failed for {asset_code}/{feature}: {e}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed due to internal error: {e}")
 
 @router.post('/anomaly_chart_data', response_model=AnomalyVizResponse)
 def anomaly_chart_data(
@@ -1376,7 +1129,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
     
     try:
         result = train_generic(
-            data_path=request_data.data_path,
+            data_path=request_data.data_path, #type:ignore
             equipment_id=request_data.equipment_id,
             target_column=request_data.target_variable,  
             test_size=request_data.test_size,
@@ -1384,7 +1137,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
             cv_folds=request_data.cv_folds,
             n_iter=request_data.n_iter,
             setpoints=request_data.setpoints
-        )
+        ) #type:ignore
         
         end = time.time()
         log.info(f"Generic model training completed in {end - start:.2f} seconds")
@@ -1544,7 +1297,7 @@ class GenericOptimizeResponse(BaseModel):
 
 
 @router.post('/generic_optimize', response_model=GenericOptimizeResponse)
-def generic_optimize_endpoint(request_data: GenericOptimizeRequest):
+def generic_optimize_endpoint(request_data: GenericOptimizeRequest): #type:ignore
     """
     Optimize AHU setpoints to minimize or maximize any specified target variable.
     
@@ -1599,7 +1352,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
         Best setpoints and optimized target value
     """
 
-    results = fetch_and_find_data_points( building_id=request_data.building_id,
+    results = fetch_and_find_data_points( building_id=request_data.building_id, #type:ignore
             equipment_id=request_data.equipment_id,
             floor_id=None,
             search_tag_groups=request_data.target_variable_tag,
@@ -1640,7 +1393,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
 
         save_data_to_cassandraV2(
             data_chunk=[result],
-            building_id=request_data.building_id,
+            building_id=request_data.building_id, #type:ignore
             metadata={
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,

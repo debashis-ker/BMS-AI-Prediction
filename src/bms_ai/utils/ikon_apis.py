@@ -40,7 +40,7 @@ def get_my_instances_v2(ticket: str, process_name: str, software_id: str, accoun
         ikon_base_url = os.getenv("IKON_BASE_URL")
         
     if not software_id:
-        software_id = os.getenv("SOFTWARE_ID")
+        software_id = os.getenv("SOFTWARE_ID") #type:ignore
     
     if not ikon_base_url:
         log.error("IKON_BASE_URL is not set in environment variables.")
