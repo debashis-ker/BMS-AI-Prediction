@@ -1,6 +1,6 @@
 import requests
 import time
-from cassandra.cluster import Cluster
+from cassandra.cluster import Cluster,Session
 from cassandra.auth import PlainTextAuthProvider
 from dateutil import parser
 from typing import Iterator, List, Dict, Any, Tuple
@@ -160,7 +160,7 @@ def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: d
     return rows_inserted
 
 
-def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict) -> int:
+def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int:
     """Saves data chunk to Cassandra. Returns the number of rows inserted."""
     cluster = None
     rows_inserted = 0
@@ -198,13 +198,13 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     """
     
     try:
-        username = 'admin'
-        password = 'admin'
-        auth_provider = PlainTextAuthProvider(username=username, password=password)
-        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
-        if auth_provider:
-            cluster.auth_provider = auth_provider
-        session = cluster.connect(KEYSPACE_NAME)
+        # username = 'admin'
+        # password = 'admin'
+        # auth_provider = PlainTextAuthProvider(username=username, password=password)
+        # cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        # if auth_provider:
+        #     cluster.auth_provider = auth_provider
+        # session = cluster.connect(KEYSPACE_NAME)
         
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=setpoint_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
@@ -235,7 +235,7 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         if cluster:
             cluster.shutdown()
 
-def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str, start_date: str, end_date: str, limit: int) -> List[Dict]:
+def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str, start_date: str, end_date: str, limit: int, session: Session) -> List[Dict]:
     """
     Fetches adjustment history data for a given building and equipment from an external API.
     """
@@ -250,14 +250,14 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
     ALLOW FILTERING;"""
 
     try:
-        username = 'admin'
-        password = 'admin'
-        auth_provider = PlainTextAuthProvider(username=username, password=password)
-        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
-        if auth_provider:
-            cluster.auth_provider = auth_provider
+        # username = 'admin'
+        # password = 'admin'
+        # auth_provider = PlainTextAuthProvider(username=username, password=password)
+        # cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        # if auth_provider:
+        #     cluster.auth_provider = auth_provider
 
-        session = cluster.connect(KEYSPACE_NAME)
+        # session = cluster.connect(KEYSPACE_NAME)
         
         #history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
         history_table = f"{Optimization_HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"

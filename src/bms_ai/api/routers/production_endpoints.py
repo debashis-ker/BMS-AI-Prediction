@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+from cassandra.cluster import Session
+from bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
@@ -1337,7 +1339,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest): #type:ignor
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/generic_optimizeV2', response_model=GenericOptimizeResponse)
-def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
+def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Session = Depends(get_cassandra_session)):
     """
     Optimize AHU setpoints to minimize or maximize any specified target variable.
     
@@ -1398,7 +1400,8 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,
                 "system_type": request_data.system_type
-            }
+            },
+            session=session
         )
         
         return GenericOptimizeResponse(**result)
@@ -1456,7 +1459,7 @@ class AdjustmentHistoryRequest(BaseModel):
     limit: Optional[int] = Field(100, description="Maximum number of records to return")
 
 @router.get("/optimization_history", response_model=OptimizationResultsResponse)
-async def get_adjustment_history(request: AdjustmentHistoryRequest):
+async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Session = Depends(get_cassandra_session)):
     """
     Fetches adjustment history for a given equipment within an optional date range.
     
