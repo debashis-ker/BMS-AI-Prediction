@@ -36,7 +36,7 @@ class DatapointFetchingRequest(BaseModel):
     floor_id: Optional[str] = Field(None, description="Building ID (optional)")
     account_id: str = Field(..., description="Account ID  for datapoint fetching")
     software_id: str = Field(..., description="Software ID for datapoint fetching")
-    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    building_id: Optional[str] = Field("36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID (optional)")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID for datapoint fetching")
     search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
