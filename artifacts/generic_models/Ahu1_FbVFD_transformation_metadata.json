@@ -11,11 +11,10 @@
     "HuSu",
     "TempSp1",
     "TrAvg",
-    "HuR1",
-    "HuAvg1",
     "TempSp2",
-    "HuR2",
-    "SpMinVFD"
+    "HuAvg1",
+    "Co2RA",
+    "HuR2"
   ],
   "categorical_cols_at_training": [
     "CmdVFD",
@@ -38,11 +37,12 @@
     "StaVFDSf",
     "TempSp1",
     "TrAvg",
-    "HuR1",
-    "HuAvg1",
+    "week_number",
     "TempSp2",
-    "HuR2",
-    "SpMinVFD"
+    "HuAvg1",
+    "month",
+    "Co2RA",
+    "HuR2"
   ],
   "label_encoder_columns": [
     "CmdVFD",
