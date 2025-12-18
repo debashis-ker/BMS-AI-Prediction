@@ -30,6 +30,19 @@ ANAMOLY_TTL_SECONDS = 2592000
 STANDARD_DATE_COLUMN = "data_received_on"
 CO2RA_CEILING_THRESHOLD = 850.0
 FBVFD_NORMAL_MAX = 1.0
+# Unit_Mapping
+# UNIT_MAPPING = {
+#     'TSu' : "celsius",
+#     'Co2RA' : "ppm",
+#     'FbFAD' : "%",
+#     'FbVFD' : "hertz",
+#     'HuAvg1' : "%",
+#     'TempSu' : "celsius",
+#     'Co2Avg' : "ppm",
+#     'HuR1' : "%",
+#     'HuRt' : "%"
+# }
+
 MASTER_LOGICAL_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
 KNOWN_MODEL_FILE_NAMES = ['TempSu', 'Co2Avg', 'HuR1', 'HuRt']
 DEFAULT_METADATA = {"equipment_id": "", "system_type": "AHU", "site": ""}
@@ -79,7 +92,8 @@ def initialize_anomaly_detection_models(building_id: str,
     software_id: str,
     account_id: str,
     system_type: Optional[str] = None,
-    env: Optional[str] = "prod"):
+    env: Optional[str] = "prod",
+    ticket_type: Optional[str] = None):
     """
     Fetches datapoint mapping from Ikon, builds feature consolidation maps,
     and loads all required anomaly detection models into global state.
@@ -92,7 +106,7 @@ def initialize_anomaly_detection_models(building_id: str,
     try:
         raw_data_list = fetch_and_find_data_points(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id,
             search_tag_groups=search_tag_groups,
-            ticket=ticket, software_id = software_id, account_id = account_id, system_type=system_type, env=env) #type:ignore
+            ticket=ticket, software_id = software_id, account_id = account_id, system_type=system_type, env=env, ticket_type=ticket_type) #type:ignore
     except requests.exceptions.RequestException as req_err:
         log.error(f"IKON API fetch failed during initialization: {req_err}")
         raise HTTPException(status_code=503, detail=f"Failed to fetch datapoints from Ikon API: {req_err}")
@@ -293,10 +307,14 @@ def anamoly_evaluation(building_id: str,
     software_id: str,
     account_id: str,
     system_type: Optional[str] = None,
-    env: Optional[str] = "prod"):
+    env: Optional[str] = "prod",
+    ticket_type: Optional[str] = None):
 
     try:
-        initialize_anomaly_detection_models(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tag_groups=search_tags, ticket=ticket_id,software_id=software_id,account_id=account_id,system_type=system_type,env=env) #type:ignore
+        initialize_anomaly_detection_models(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, 
+                                            search_tag_groups=search_tags, ticket=ticket_id,
+                                            software_id=software_id,account_id=account_id,system_type=system_type,env=env, 
+                                            ticket_type=ticket_type) #type:ignore
     except HTTPException:
         raise
     except Exception as e:
@@ -578,7 +596,8 @@ def save_data_to_cassandra(
     software_id: str,
     account_id: str,
     system_type: Optional[str] = None,
-    env: Optional[str] = "prod", 
+    env: Optional[str] = "prod",
+    ticket_type: Optional[str] = None
     ):
 
     start_time = time.time()
@@ -598,7 +617,8 @@ def save_data_to_cassandra(
             ticket_id=ticket_id,
             software_id=software_id,
             account_id=account_id,
-            system_type=system_type
+            system_type=system_type,
+            ticket_type=ticket_type
         )
         
         all_assets_results = result_json.get('data', {}).get('all_anomalies_by_asset', {})
@@ -677,10 +697,17 @@ def format_cassandra_output(data_records: List[Dict], limit: Optional[int]) -> D
     else:
          final_historical_data = dict(historical_data)
 
+    # Unit_Mapping
+    # active_units = {
+    #     feature: UNIT_MAPPING.get(feature, "unknown") 
+    #     for feature in final_historical_data.keys()
+    # }
+
     return {
         "data": {
-            "historical_data": final_historical_data
+            "historical_data": final_historical_data,
         }
+        # "units": active_units # Unit_Mapping
     }
 
 def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session: Session) -> List[Dict]:
@@ -713,6 +740,7 @@ def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session
         account_id = params.get('account_id')
         software_id = params.get('software_id')
         search_tag_groups = params.get('search_tag_groups')
+        ticket_type = params.get('ticket_type')
         
         if ticket and account_id and software_id and search_tag_groups:
             try:
@@ -724,7 +752,8 @@ def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session
                     ticket=ticket,
                     account_id=account_id,
                     software_id=software_id,
-                    search_tag_groups=search_tag_groups
+                    search_tag_groups=search_tag_groups,
+                    ticket_type=ticket_type
                 )
                 json_record = wrap_data_list(raw_data_list)
                 (features_to_query, _, _) = build_dynamic_features(json_record)

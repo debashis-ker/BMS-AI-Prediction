@@ -30,6 +30,7 @@ class DataQueryRequest(BaseModel):
     ticket: Optional[str] = Field(None, description="Ticket ID for Ikon API lookup (required if feature is None).")
     account_id: Optional[str] = Field(None, description="Account ID for Ikon API lookup (required if feature is None).")
     software_id: Optional[str] = Field(None, description="Software ID for Ikon API lookup (required if feature is None).")
+    ticket_type : Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
 
 class DatapointFetchingRequest(BaseModel):
     ticket: str = Field(..., description="Ticket ID for datapoint fetching")
@@ -40,6 +41,7 @@ class DatapointFetchingRequest(BaseModel):
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID for datapoint fetching")
     search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
+    ticket_type : Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
 
 def common_response_handler(request: DataQueryRequest, table_suffix: str, session: Session) -> Dict[str, Any]:
     """Handles query execution and response formatting for both historical and anomaly fetch endpoints."""
@@ -72,11 +74,12 @@ def anomaly_detection_all_ahu(request: DatapointFetchingRequest) -> Dict[str, An
     software_id = request.software_id
     account_id = request.account_id
     system_type = request.system_type
+    ticket_type = request.ticket_type
 
     if not building_id:
         building_id = DEFAULT_BUILDING_ID
 
-    result = anamoly_evaluation(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type) 
+    result = anamoly_evaluation(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type,ticket_type=ticket_type) 
     log.info(f"Anomaly detection completed in {time.time() - start_time:.2f} seconds.")
     return result
     
@@ -96,6 +99,7 @@ def store_anamolies_endpoint(request: DatapointFetchingRequest, session: Session
     software_id = request.software_id
     account_id = request.account_id
     system_type = request.system_type
+    ticket_type = request.ticket_type
 
 
     log.debug(f"Parameters received - Building ID: {building_id}, Floor ID: {floor_id}, Equipment ID: {equipment_id}, Ticket ID: {ticket_id}, Software ID: {software_id}, Account ID: {account_id}, System Type: {system_type}, Search Tags: {search_tags}")
@@ -103,7 +107,7 @@ def store_anamolies_endpoint(request: DatapointFetchingRequest, session: Session
     if not building_id:
         building_id = DEFAULT_BUILDING_ID
 
-    result = save_data_to_cassandra(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type,session=session) 
+    result = save_data_to_cassandra(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tags=search_tags, ticket_id=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type,session=session,ticket_type=ticket_type) 
     log.info(f"Anomaly detection completed in {time.time() - start_time:.2f} seconds.")
     return result
     

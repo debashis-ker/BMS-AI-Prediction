@@ -159,7 +159,7 @@ def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[
     return rows_inserted'''
 
 
-def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int:
+def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int: #type:ignore
     """Saves data chunk to Cassandra. Returns the number of rows inserted."""
     cluster = None
     rows_inserted = 0
@@ -214,14 +214,14 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         data_tuple = ()
         data_tuple = (
             str(data_chunk[0].get('best_setpoints')),
-            parser.parse(data_chunk[0].get('timestamp')),
+            parser.parse(data_chunk[0].get('timestamp')),#type:ignore
             str(data_chunk[0].get('best_target_value')),
             str(data_chunk[0].get('optimization_direction')),
             str(data_chunk[0].get('selected_features_used')),
-            int(data_chunk[0].get('total_combinations_tested')),
+            int(data_chunk[0].get('total_combinations_tested')),#type:ignore
             site_value,
             str(data_chunk[0].get('optimization_method')),
-            int(data_chunk[0].get('optimization_time_seconds')),
+            int(data_chunk[0].get('optimization_time_seconds')),#type:ignore
             equipment_id_value,
             system_type_value
         )
@@ -291,45 +291,3 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
     """  finally:
             if cluster:
                 cluster.shutdown() """
-
-
-
-
-@app.post("/store_anamolies", response_model=IngestionResponse)
-def store_anamolies():
-    """
-    Triggers the full batch process: fetches anomaly detection results from the 
-    external API and inserts them into Cassandra's historical and anomaly tables.
-    """
-    start_time = time.time()
-    total_assets_processed = 0
-    total_records_inserted = 0
-    
-    try:
-        api_iterator = fetch_data_in_chunks(API_URL, CHUNK_SIZE)
-        
-        for building_id, api_metadata, api_chunks in api_iterator:
-            total_assets_processed += 1
-            
-            print(f"Processing Asset {total_assets_processed}: {api_metadata['site']}/{api_metadata['equipment_id']}")
-            
-            for i, chunk in enumerate(api_chunks):
-                inserted_count = save_data_to_cassandra(chunk, building_id, api_metadata)
-                total_records_inserted += inserted_count
-                
-        duration = time.time() - start_time
-        
-        return {
-            "status": "SUCCESS",
-            "total_assets_processed": total_assets_processed,
-            "total_records_inserted": total_records_inserted,
-            "duration_seconds": round(duration, 3),
-            "message": "Batch ingestion completed successfully."
-        }
-        
-    except requests.exceptions.RequestException as req_err:
-        raise HTTPException(status_code=500, detail=f"External API fetch failed: {req_err}")
-    except ValueError as val_err:
-        raise HTTPException(status_code=500, detail=f"Data processing error: {val_err}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during batch execution: {e}")

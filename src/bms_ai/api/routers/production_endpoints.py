@@ -51,14 +51,14 @@ try:
     log.info("AHU1 Damper Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Damper forecast model: {e}")
-    print(f"Error loading Damper forecast model: {e}")
+    log.debug(f"Error loading Damper forecast model: {e}")
 
 try:
     fan_forecast_model = joblib.load("artifacts/production_models/ahu1_fan_speed_model.joblib")
     log.info("Ahu1 Fan Speed Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Fan Speed forecast model: {e}")
-    print(f"Error loading Fan Speed forecast model: {e}")
+    log.debug(f"Error loading Fan Speed forecast model: {e}")
 
 class PredictionRequest(BaseModel):
     periods: int = Field(3, description="Number of future time periods to predict.")
@@ -143,166 +143,6 @@ def fetch_all_ahu_dataV2(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
-
-def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
-    if feature not in anamoly_model: #type:ignore
-        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for {feature} is unavailable.")
-
-    try:
-        model_package = anamoly_model[feature].get(asset_code) #type:ignore
-        
-        if model_package is None:
-             raise KeyError("Model not found for specific asset.")
-
-        model_features = model_package.get('feature_cols', [feature]) 
-        log.info(f"[{asset_code}/{feature}] [B1] Model FOUND. Features needed: {model_features}")
-        
-    except KeyError as e:
-        log.warning(f"[{asset_code}/{feature}] Model package not found for key: {e}. Returning empty list.")
-        return [] 
-    
-    try:
-        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
-            
-        if df_wide.empty:
-            return []
-            
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
-        return [] 
-            
-    data_column = model_features[0] 
-    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
-    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
-    
-    if X_df.empty:
-        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
-        return []
-            
-    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
-    log.info(f"[{asset_code}/{feature}] [B3] Rows sent to IF model: {len(X_for_model)}. Input cols: {X_for_model.columns.tolist()}")
-
-    try:
-        X_scaled = model_package['scaler'].transform(X_for_model)
-        predictions = model_package['model'].predict(X_scaled)
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
-        return []
-
-    X_df['Anomaly_Flag'] = predictions
-    log.info(f"[{asset_code}/{feature}] [C1] Raw IF anomalies: {(predictions == -1).sum()}")
-    
-    # 5. Post-processing Overrides (Ceiling Layer)
-    
-    # Co2RA Ceiling Check (UPDATED LOGIC from training pipeline)
-    if feature == 'Co2RA' and data_column in X_df.columns:
-        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        
-        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
-        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
-        
-        if condition_high.any():
-            override_count_to_anomaly = (condition_high & (X_df['Anomaly_Flag'] == 1)).sum()
-            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_anomaly} normal points as -1 (Anomaly) because value > {CO2RA_CEILING_THRESHOLD}.")
-            X_df.loc[condition_high, 'Anomaly_Flag'] = -1
-        
-        if condition_low.any():
-            override_count_to_normal = (condition_low & (X_df['Anomaly_Flag'] == -1)).sum()
-            log.warning(f"[{asset_code}/{feature}] Co2RA override: Flagged {override_count_to_normal} anomaly points as 1 (Normal) because value < {CO2RA_CEILING_THRESHOLD}.")
-            X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
-
-
-    # FbVFD Normal Range Override (Unchanged)
-    if feature == 'FbVFD' and data_column in X_df.columns:
-        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
-        if normal_fbvfd_condition.any():
-            override_count = (normal_fbvfd_condition & (X_df['Anomaly_Flag'] == -1)).sum()
-            if override_count > 0:
-                log.warning(f"[{asset_code}/{feature}] FbVFD override: Reverted {override_count} anomalies to normal (1) because value is 0-{FBVFD_NORMAL_MAX}.")
-            X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
-    
-    # 6. Final Formatting
-    
-    # FIX: Keep ALL rows (Normal and Anomaly) as requested.
-    final_df = X_df.copy() 
-    
-    if final_df.empty:
-        log.info(f"[{asset_code}/{feature}] Final report size: 0. No data points processed.")
-        return []
-    
-    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
-
-    report_list = []
-    for _, row in final_df.iterrows():
-        record = {
-            "data_received_on": row['data_received_on_str'],
-            "Anomaly_Flag": str(int(row['Anomaly_Flag']))
-        }
-        # FIX: Key the value by the actual data column name (data_column), removing the redundant primary name.
-        data_column = model_features[0] 
-        record[data_column] = str(float(row[data_column])) 
-        
-        report_list.append(record)
-
-    log.info(f"[{asset_code}/{feature}] [C2] Final report list size: {len(report_list)}")
-    return report_list
-
-def anamoly_data_pipeline(
-    records: List[Dict[str, Any]], 
-    asset_code: str, 
-    model_package: Dict[str, Any],
-    feature_name: str
-) -> pd.DataFrame:
-    """ Processes long-format records into a wide-format DataFrame, adds temporal, and handles encoding."""
-    
-    if not records:
-        log.warning(f"[{asset_code}/{feature_name}] Pipeline received zero records.")
-        return pd.DataFrame()
-        
-    df = pd.DataFrame(records)
-    
-    df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
-    df = df.dropna(subset=[STANDARD_DATE_COLUMN])
-    
-    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
-        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
-        
-    if 'monitoring_data' in df.columns:
-        mapping = {'inactive': 0.0, 'active': 1.0}
-        df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
-        df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
-    
-    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
-    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
-    
-    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
-    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
-    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
-    
-    if 'asset_code' in result_df.columns:
-        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
-
-    label_encoders = model_package.get('label_encoders', {})
-    
-    for cat_col in ['site', 'equipment_id', 'weekday_name']:
-        if cat_col in result_df.columns and cat_col in label_encoders:
-            le: LabelEncoder = label_encoders[cat_col]
-            def transform_with_fallback(value):
-                try:
-                    return le.transform([value])[0] #type:ignore
-                except ValueError:
-                    return -1
-                except TypeError:
-                    return -1
-            
-            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
-        else:
-             result_df[cat_col + '_encoded'] = -1 
-
-    log.info(f"[{asset_code}/{feature_name}] [B2] Wide DF rows after pivot: {len(result_df)}")
-    return result_df
-
 def anamoly_detection_chart(request_data: AnomalyVizRequest) -> AnomalyVizResponse:
     chart_type = request_data.chart_type.lower()
     
@@ -784,7 +624,7 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
 try:
     STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
 except Exception as e:
-    print(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
+    log.debug(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
     STATIC_PEAK_DATA = pd.DataFrame()
 
 @router.get("/get_peak_demand", response_model=Dict[str, Dict[str, Any]])
@@ -952,7 +792,7 @@ def damper_train_endpoint(request_data: DamperTrainRequest):
     """
     start = time.time()
     log.info(f"Damper training request: {request_data.dict()}")
-    print(f"Damper training request: {request_data.dict()}")
+    log.debug(f"Damper training request: {request_data.dict()}")
     try:
         result = damper_train(
             data_path=request_data.data_path,
@@ -1090,7 +930,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
     """
     start = time.time()
     log.info(f"Generic training request: {request_data.dict()}")
-    print(f"Generic training request: {request_data.dict()}")
+    log.debug(f"Generic training request: {request_data.dict()}")
     
     try:
         result = train_generic(
@@ -1136,13 +976,13 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     Returns:
         Training results including selected features, metrics, and artifact paths
     """
-    #print(f"Request Data: {request_data.dict()}")
+    #log.debug(f"Request Data: {request_data.dict()}")
     matches_tags = []
     matches_tags = matches_tags + request_data.target_variable_tag
-    #print(f"Target variable tags: {matches_tags}")
+    #log.debug(f"Target variable tags: {matches_tags}")
     if request_data.setpoints != None:
         matches_tags = matches_tags + request_data.setpoints
-        #print(f"Setpoint tags: {matches_tags}")
+        #log.debug(f"Setpoint tags: {matches_tags}")
 
     results = fetch_and_find_data_points(
             building_id=request_data.building_id,
@@ -1161,22 +1001,22 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     target_variable = ""
     setpoints = []
 
-    print(f"Fetched data points: {results}")
+    # log.debug(f"Fetched data points: {results}")
 
 
     if len(results) > 0:
         #target_variable = results[0].get("dataPointName")
         try:
             target_variable = results[0]["dataPointName"]
-            print(f"Using target variable: {target_variable}")
+            log.debug(f"Using target variable: {target_variable}")
             if len(results) > 1:
-                print("Additional fetched data points (likely setpoints):")
+                log.debug("Additional fetched data points (likely setpoints):")
                 for res in results[1:]:
-                    print(f"- {res.get('dataPointName')}")
+                    log.debug(f"- {res.get('dataPointName')}")
                     setpoints.append(res.get('dataPointName'))
         except KeyError:
-            print("Data point name not found in results.")
-            print(f"Results content: {results[0]}")
+            log.debug("Data point name not found in results.")
+            log.debug(f"Results content: {results[0]}")
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
     else:
         raise HTTPException(status_code=404, detail="No data points found for the specified target variable tags.")
@@ -1194,7 +1034,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     
     start = time.time()
     log.info(f"Generic training request: {request_data.dict()}")
-    print(f"Generic training request: {request_data.dict()}")
+    log.debug(f"Generic training request: {request_data.dict()}")
     log.info(f"Using target variable: {target_variable}")
     log.info(f"Using setpoints: {setpoints}")
     
@@ -1329,14 +1169,14 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
             ticket_type=request_data.ticket_type)
     
     target_variable = ""
-    print(f"Fetched data points: {results}")
+    log.debug(f"Fetched data points: {results}")
     if len(results) > 0:
         try:
             target_variable = results[0]["dataPointName"]
-            print(f"Using target variable: {target_variable}")
+            log.debug(f"Using target variable: {target_variable}")
         except KeyError:
-            print("Data point name not found in results.")
-            print(f"Results content: {results[0]}")
+            log.debug("Data point name not found in results.")
+            log.debug(f"Results content: {results[0]}")
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
     start = time.time()
     log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={target_variable}, method={request_data.optimization_method}, direction={request_data.direction}")
@@ -1445,9 +1285,9 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
             site=request.site,
             system_type=request.system_type,
             equipment_id=request.equipment_id,
-            start_date=start_date,
-            end_date=end_date,
-            limit=request.limit,
+            start_date=start_date, #type:ignore
+            end_date=end_date, #type:ignore
+            limit=request.limit, #type:ignore
             session=session
         )
         
