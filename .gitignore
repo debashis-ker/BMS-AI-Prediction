@@ -227,3 +227,11 @@ resources/
 
 
 catboost_info/
+
+#artifacts/
+artifacts/generic_anamoly_models/*
+artifacts/generic_models/*
+artifacts/production_models/*
+artifacts/*.csv
+artifacts*.pkl
+artifacts*.joblib
