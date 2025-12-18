@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from cassandra.cluster import Session
-from bms_ai.api.dependencies import get_cassandra_session
+from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
@@ -100,7 +100,7 @@ class EmissionResponse(BaseModel):
 
 def fetch_all_ahu_dataV2(
         building_id: str,
-        url: str = "",
+        url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
         site: str = "",
         system_type: str = "",
         equipment_id: Optional[str] = None
@@ -143,43 +143,6 @@ def fetch_all_ahu_dataV2(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
-def fetch_adjustment_history(
-    building_id: str,
-    site: str,
-    equipment_id: str,
-    url: str = API_URL
-) -> pd.DataFrame:
-    """Fetches adjustment history for a specific equipment."""
-    cleaned_id = building_id.replace("-", "").lower()
-    location_table_name = f"historical_data_opt_{cleaned_id}"
-    
-    query = (
-        f"select * from {location_table_name} "
-        f"where site = '{site}' "
-        f"and equipment_id = '{equipment_id}' "
-        f"and system_type = '{FIXED_SYSTEM_TYPE}' "
-        f"allow filtering;"
-    )
-
-    API_PAYLOAD = {"query": query}
-    try:
-        response = requests.post(url, json=API_PAYLOAD, timeout=60)
-        response.raise_for_status()
-        raw_api_response = response.json()
-        
-        if isinstance(raw_api_response, list):
-            data_list = raw_api_response
-        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
-            data_list = raw_api_response.get('queryResponse', [])
-        else:
-            raise ValueError(f"API response format unexpected: {raw_api_response}")
-
-        df = pd.DataFrame(data_list)
-        return df
-    
-    except Exception as e:
-        log.error(f"Failed to fetch adjustment history: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch adjustment history: {str(e)}")
 
 def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
     if feature not in anamoly_model: #type:ignore
@@ -1176,10 +1139,10 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     #print(f"Request Data: {request_data.dict()}")
     matches_tags = []
     matches_tags = matches_tags + request_data.target_variable_tag
-    print(f"Target variable tags: {matches_tags}")
+    #print(f"Target variable tags: {matches_tags}")
     if request_data.setpoints != None:
         matches_tags = matches_tags + request_data.setpoints
-        print(f"Setpoint tags: {matches_tags}")
+        #print(f"Setpoint tags: {matches_tags}")
 
     results = fetch_and_find_data_points(
             building_id=request_data.building_id,
@@ -1484,7 +1447,8 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
             equipment_id=request.equipment_id,
             start_date=start_date,
             end_date=end_date,
-            limit=request.limit
+            limit=request.limit,
+            session=session
         )
         
         log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")

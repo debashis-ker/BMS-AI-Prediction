@@ -88,9 +88,8 @@ def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[
         
         yield building_id, asset_metadata, chunk_iterator
 
-def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict) -> int:
-    """Saves data chunk to Cassandra. Returns the number of rows inserted."""
-    cluster = None
+''' def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict) -> int:
+    #cluster = None
     rows_inserted = 0
     
     site_value = metadata["site"]
@@ -157,7 +156,7 @@ def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: d
         if cluster:
             cluster.shutdown()
             
-    return rows_inserted
+    return rows_inserted'''
 
 
 def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int:
@@ -231,9 +230,9 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         session.execute(anamoly_stmt, data_tuple)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
-    finally:
+    """  finally:
         if cluster:
-            cluster.shutdown()
+            cluster.shutdown() """
 
 def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str, start_date: str, end_date: str, limit: int, session: Session) -> List[Dict]:
     """
@@ -289,9 +288,9 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cassandra query error: {e}")
-    finally:
-        if cluster:
-            cluster.shutdown()
+    """  finally:
+            if cluster:
+                cluster.shutdown() """
 
 
 
