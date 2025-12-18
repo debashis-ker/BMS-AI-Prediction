@@ -80,7 +80,7 @@ def get_cassandra_session() -> Session:
             log.warning("[Cassandra] Production mode but no credentials found, connecting without authentication")
         
         CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', '192.168.2.32').split(',')
-        CASSANDRA_PORT = int(os.getenv('CASSANDRA_PORT', '9042'))
+        CASSANDRA_PORT = os.getenv('CASSANDRA_PORT', '9042')
         KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
     else:
         log.debug("[Cassandra] Using development mode (no authentication)")
