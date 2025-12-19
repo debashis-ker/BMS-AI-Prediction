@@ -102,7 +102,7 @@ def store_anamolies_endpoint(request: DatapointFetchingRequest, session: Session
     ticket_type = request.ticket_type
 
 
-    log.debug(f"Parameters received - Building ID: {building_id}, Floor ID: {floor_id}, Equipment ID: {equipment_id}, Ticket ID: {ticket_id}, Software ID: {software_id}, Account ID: {account_id}, System Type: {system_type}, Search Tags: {search_tags}")
+    log.debug(f"Parameters received - Building ID: {building_id}, Floor ID: {floor_id}, Equipment ID: {equipment_id}, Ticket ID: {ticket_id}, Software ID: {software_id}, Account ID: {account_id}, System Type: {system_type}, Search Tags: {search_tags}, Ticket Type: {ticket_type}")
 
     if not building_id:
         building_id = DEFAULT_BUILDING_ID

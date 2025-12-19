@@ -1064,7 +1064,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             equipment_id=request_data.equipment_id
         )
     
-    log.debug(f"Data fetched for training: {data}")
+    #log.debug(f"Data fetched for training: {data}")
     
 
     
@@ -1111,12 +1111,11 @@ class GenericOptimizeRequest(BaseModel):
     direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
 
 class GenericOptimizeRequestV2(BaseModel):
-    current_conditions: Dict[str, Any] = Field(..., description="Current system state")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
     ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
-    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    building_id: str = Field(..., description="Building ID for querying live data")
     site: str = Field(..., description="Site name where the equipment is located")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
@@ -1181,9 +1180,9 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest): #type:ignor
 def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Session = Depends(get_cassandra_session)):
     """
     Optimize AHU setpoints to minimize or maximize any specified target variable.
+    Fetches live data from IKON API and uses it as current conditions.
     
     Args:
-        current_conditions: Current system state with all required features
         target_variable: Target variable to optimize
         search_space: Optional setpoint ranges (defaults provided if not specified)
         optimization_method: 'grid' or 'random'
@@ -1193,7 +1192,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
         Best setpoints and optimized target value
     """
 
-    results = fetch_and_find_data_points( building_id=request_data.building_id, #type:ignore
+    results = fetch_and_find_data_points( building_id=request_data.building_id,
             equipment_id=request_data.equipment_id,
             floor_id=None,
             search_tag_groups=request_data.target_variable_tag,
@@ -1214,12 +1213,44 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
             log.debug("Data point name not found in results.")
             log.debug(f"Results content: {results[0]}")
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
+    
+    try:
+        building_id_clean = request_data.building_id.replace("-", "")
+        query = f"select * from datapoint_live_monitoring_values{building_id_clean} where system_type='{request_data.system_type}' and equipment_id = '{request_data.equipment_id}' allow filtering;"
+        
+        log.info(f"Fetching live data from IKON API with query: {query}")
+        ikon_url = "https://ikoncloud.keross.com/bms-express-server/data"
+        response = requests.post(ikon_url, json={"query": query}, timeout=30)
+        response.raise_for_status()
+        
+        live_data = response.json()
+        log.debug(f"Received {len(live_data)} data points from IKON API")
+        
+        current_conditions = {}
+        if live_data and len(live_data) > 0:
+            current_conditions["timestamp"] = live_data[0].get("data_received_on", "")
+            
+            for record in live_data:
+                datapoint = record.get("datapoint")
+                monitoring_data = record.get("monitoring_data")
+                if datapoint and monitoring_data != "null":
+                    current_conditions[datapoint] = monitoring_data
+        
+        log.info(f"Transformed live data to current_conditions with {len(current_conditions)} fields")
+        
+    except requests.exceptions.RequestException as e:
+        log.error(f"Failed to fetch live data from IKON API: {e}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch live data: {str(e)}")
+    except Exception as e:
+        log.error(f"Error processing live data: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing live data: {str(e)}")
+    
     start = time.time()
     log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={target_variable}, method={request_data.optimization_method}, direction={request_data.direction}")
     
     try:
         result = optimize_generic(
-            current_conditions=request_data.current_conditions,
+            current_conditions=current_conditions,
             equipment_id=request_data.equipment_id,
             target_column=target_variable,  
             search_space=request_data.search_space,
@@ -1234,7 +1265,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
 
         save_data_to_cassandraV2(
             data_chunk=[result],
-            building_id=request_data.building_id, #type:ignore
+            building_id=request_data.building_id,
             metadata={
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,
