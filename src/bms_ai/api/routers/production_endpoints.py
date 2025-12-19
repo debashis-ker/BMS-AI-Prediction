@@ -8,6 +8,7 @@ from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
 from src.bms_ai.api.routers.routers import anamoly
+from src.bms_ai.components import anamoly_model_training
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
@@ -20,6 +21,8 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
 from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData
+from cassandra.cluster import Session
+from src.bms_ai.components.anamoly_functions import dynamic_anomaly_detection_chart
 
 import requests
 import pandas as pd
@@ -39,6 +42,7 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
+router.include_router(anamoly_model_training.router)
 
 EMISSION_FACTOR = 0.4041
 
@@ -97,6 +101,21 @@ class StaticEmissionResponse(BaseModel):
 
 class EmissionResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="The final structured emission report.")
+
+class AnamolyChartRequest(BaseModel):
+    ticket: str = Field("", description="Ticket ID for datapoint fetching")
+    floor_id: Optional[str] = Field(None, description="Building ID (optional)")
+    account_id: str = Field("", description="Account ID for datapoint fetching")
+    software_id: str = Field("", description="Software ID for datapoint fetching")
+    building_id: Optional[str] = Field("36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID (optional)")
+    system_type: str = Field("", description="System type (e.g., 'AHU', 'RTU')")
+    site: str = Field("", description="site (e.g., 'OS01', 'OS02')")
+    equipment_id: str = Field("", description="Equipment ID for datapoint fetching")
+    search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
+    ticket_type: Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
+    start_date: Optional[str] = Field(None, description="ISO format: YYYY-MM-DD HH:MM:SS")
+    end_date: Optional[str] = Field(None, description="ISO format: YYYY-MM-DD HH:MM:SS")
+    chart_type: str = Field("pie", description="Type of chart: 'pie' or 'line'")
 
 def fetch_all_ahu_dataV2(
         building_id: str,
@@ -713,17 +732,34 @@ def fan_speed_health_prediction(
     log.info(f"VOX AHU1 Fan Speed End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
 
+@router.post("/anomaly_distribution", response_model=AnomalyVizResponse)
+def get_anomaly_detection_chart(
+    request_data: AnamolyChartRequest, 
+    session: Session = Depends(get_cassandra_session)
+):
+    ticket = request_data.ticket
+    floor_id = request_data.floor_id
+    account_id = request_data.account_id
+    software_id = request_data.software_id
+    building_id = request_data.building_id
+    system_type = request_data.system_type
+    site = request_data.site
+    equipment_id = request_data.equipment_id
+    search_tag_groups = request_data.search_tag_groups
+    ticket_type = request_data.ticket_type
+    start_date = request_data.start_date
+    end_date = request_data.end_date
+    chart_type = request_data.chart_type
+
+    result = dynamic_anomaly_detection_chart(ticket=ticket, floor_id=floor_id, account_id=account_id, software_id=software_id, building_id=building_id, system_type=system_type, site=site, equipment_id=equipment_id, search_tag_groups = search_tag_groups, ticket_type=ticket_type, start_date=start_date, end_date=end_date, chart_type=chart_type, session=session) #type:ignore
+
+    return AnomalyVizResponse(chart_type=result["chart_type"], data=result["data"])
+
 @router.post('/anomaly_chart_data', response_model=AnomalyVizResponse)
 def anomaly_chart_data(
     request_data: AnomalyVizRequest
 ):
-    """
-    Runs anomaly detection on multiple assets/features and aggregates the results 
-    for visualization (Pie chart for totals, Line chart for time series).
-    """
     start = time.time()
-    log.info(f"Visualization data request initiated for chart_type: {request_data.chart_type}") 
-    
     result = anamoly_detection_chart(request_data)
     end = time.time()
     log.info(f"Visualization data generation completed in {end - start:.2f} seconds.") 
