@@ -1258,13 +1258,31 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
             n_iterations=request_data.n_iterations or 1000,
             direction=request_data.direction or "minimize"
         )
+
+        
+        required_result = dict()
+        try:
+            required_result["timestamp"] = result["timestamp"]
+            required_result["actual_value"] = current_conditions.get(target_variable, None)
+            required_result["predicted_value"] = result['best_target_value']
+            required_result["difference_actual_and_pred"] = None
+            if required_result["actual_value"] is not None:
+                required_result["difference_actual_and_pred"] = abs(float(required_result["actual_value"]) - float(required_result["predicted_value"]))
+            required_result["optimized_setpoints"] = result['best_setpoints']    
+            required_result["current_setpoints"] = {k: v for k, v in current_conditions.items() if k in result['best_setpoints']}
+            
+        except KeyError as e:
+            log.error(f"Key error while preparing result for Cassandra: {e}")
+
+        log.debug(f"Result to be saved to Cassandra: {required_result}")
+
     
         end = time.time()
         log.info(f"Generic optimization completed in {end - start:.2f} seconds")
         log.info(f"Best setpoints: {result['best_setpoints']}, Best {target_variable}: {result['best_target_value']:.4f}")
 
         save_data_to_cassandraV2(
-            data_chunk=[result],
+            data_chunk=[required_result],
             building_id=request_data.building_id,
             metadata={
                 "site": request_data.site,
@@ -1358,10 +1376,16 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
             session=session
         )
         
+        differences = [float(r['difference_actual_and_pred']) for r in adjustments if r.get('difference_actual_and_pred') is not None]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+
+        
         log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
         
         return OptimizationResultsResponse(
-            optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            #optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            optimized_percentage=round(avg_difference, 2)*10,
             results=adjustments
         )
         

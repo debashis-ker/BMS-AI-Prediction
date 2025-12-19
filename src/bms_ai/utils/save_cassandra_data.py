@@ -1,5 +1,8 @@
 import requests
 import time
+import ast
+import re
+import json
 from cassandra.cluster import Cluster,Session
 from cassandra.auth import PlainTextAuthProvider
 from dateutil import parser
@@ -106,15 +109,13 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     
     CREATE_BASE_CQL = """
     CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
-        best_setpoints text, 
         timestamp timestamp, 
-        best_target_value text, 
-        optimization_direction text, 
-        selected_features_used text, 
-        total_combinations_tested int, 
+        actual_value text, 
+        predicted_value text, 
+        difference_actual_and_pred text, 
+        current_setpoints text, 
+        optimized_setpoints text, 
         site text,
-        optimization_method text,
-        optimization_time_seconds int,
         equipment_id text, 
         system_type text,
         PRIMARY KEY ((site, system_type, equipment_id), timestamp)) 
@@ -123,8 +124,8 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     
     INSERT_BASE_CQL = f"""
     INSERT INTO {KEYSPACE_NAME}."{{table_name}}" 
-    (best_setpoints, timestamp, best_target_value, optimization_direction, selected_features_used, total_combinations_tested, site, optimization_method, optimization_time_seconds, equipment_id, system_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (timestamp, actual_value, predicted_value, difference_actual_and_pred, current_setpoints, optimized_setpoints, site, equipment_id, system_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     
     try:
@@ -144,15 +145,13 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
 
         data_tuple = ()
         data_tuple = (
-            str(data_chunk[0].get('best_setpoints')),
             parser.parse(data_chunk[0].get('timestamp')),#type:ignore
-            str(data_chunk[0].get('best_target_value')),
-            str(data_chunk[0].get('optimization_direction')),
-            str(data_chunk[0].get('selected_features_used')),
-            int(data_chunk[0].get('total_combinations_tested')),#type:ignore
+            str(data_chunk[0].get('actual_value')),
+            str(data_chunk[0].get('predicted_value')),
+            str(data_chunk[0].get('difference_actual_and_pred')),
+            str(data_chunk[0].get('current_setpoints')),
+            str(data_chunk[0].get('optimized_setpoints')),#type:ignore
             site_value,
-            str(data_chunk[0].get('optimization_method')),
-            int(data_chunk[0].get('optimization_time_seconds')),#type:ignore
             equipment_id_value,
             system_type_value
         )
@@ -202,18 +201,40 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
         result = []
         for row in rows:
             record = {
-                'best_setpoints': row.best_setpoints,
                 'timestamp': row.timestamp.isoformat() if row.timestamp else None,
-                'best_target_value': row.best_target_value,
-                'optimization_direction': row.optimization_direction,
-                'selected_features_used': row.selected_features_used,
-                'total_combinations_tested': row.total_combinations_tested,
-                'optimization_method': row.optimization_method,
-                'optimization_time_seconds': row.optimization_time_seconds,
+                'actual_value': row.actual_value,
+                'predicted_value': row.predicted_value,
+                'difference_actual_and_pred': row.difference_actual_and_pred,
+                'current_setpoints': row.current_setpoints,
+                'optimized_setpoints': row.optimized_setpoints,
                 "site": row.site,
                 'equipment_id': row.equipment_id,
                 'system_type': row.system_type
             }
+            # Converting string representations of dictionaries back to actual dictionaries
+            try:
+                """ s1_fixed = record['optimized_setpoints'].replace("np.float64", "float")
+                s2_fixed = record['current_setpoints'].replace("np.float64", "float")
+
+                record['optimized_setpoints']= ast.literal_eval(s1_fixed)
+                record["current_setpoints"] = ast.literal_eval(s2_fixed) """
+                optimized_str = re.sub(r'np\.float64\(([\d.+-eE]+)\)', r'\1', record['optimized_setpoints'])
+                current_str = re.sub(r'np\.float64\(([\d.+-eE]+)\)', r'\1', record['current_setpoints'])
+
+                # Also handle any other numpy types
+                optimized_str = re.sub(r'np\.\w+\(([\d.+-eE]+)\)', r'\1', optimized_str)
+                current_str = re.sub(r'np\.\w+\(([\d.+-eE]+)\)', r'\1', current_str)
+
+                # Replace single quotes with double quotes for JSON parsing
+                optimized_str = optimized_str.replace("'", '"')
+                current_str = current_str.replace("'", '"')
+
+                record['optimized_setpoints'] = json.loads(optimized_str)
+                record["current_setpoints"] = json.loads(current_str)
+            except Exception as e:
+                log.error(f"Error parsing setpoints: {e}")
+
+            log.debug(f"Fetched record: {record}")
             result.append(record)
         
         return result
