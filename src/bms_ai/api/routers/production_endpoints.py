@@ -8,7 +8,7 @@ from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
 from src.bms_ai.api.routers.routers import anamoly
-from src.bms_ai.components import anamoly_model_training
+# from src.bms_ai.components import anamoly_model_training
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
