@@ -827,10 +827,6 @@ def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session
     
     return results_list
 
-from dateutil import parser
-from cassandra.query import SimpleStatement, ConsistencyLevel
-import pandas as pd
-
 def dynamic_anomaly_detection_chart(
     building_id: str,
     floor_id: Optional[str],
