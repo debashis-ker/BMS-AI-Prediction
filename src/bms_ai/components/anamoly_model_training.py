@@ -341,13 +341,13 @@ def training_pipeline(
             raw_metadata_list=raw_ikon_list
         )
 
-        previous_time_duration = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
-        current_time_duration = pd.Timestamp.now(tz='UTC').strftime('%Y-%m-%d %H:%M:%S.%f%z')
+        # previous_time_duration = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
+        # current_time_duration = pd.Timestamp.now(tz='UTC').strftime('%Y-%m-%d %H:%M:%S.%f%z')
 
         return {
             "status": "Success",
             "building_id": building_id,
-            "details": f"Model Saving triggered on data between {previous_time_duration} to {current_time_duration} in background tasks.",
+            # "details": f"Model Saving triggered on data between {previous_time_duration} to {current_time_duration} in background tasks.",
         }
     except Exception as e:
         log.error(f"Training endpoint execution failed: {e}")
