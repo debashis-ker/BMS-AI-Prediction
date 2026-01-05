@@ -128,6 +128,7 @@ def model_training(df, available_features, label_encoders, raw_metadata_list):
             'OS01_Ahu3': 0.03,
             'OS02_Ahu15': 0.05,
             'OS02_Ahu16': 0.02,
+            'OS02_Ahu4': 0.03,
             'OS02_Ahu5': 0.05,
             'OS04_Ahu13': 0.02,
             'OS04_Ahu6': 0.05,
@@ -156,7 +157,8 @@ def model_training(df, available_features, label_encoders, raw_metadata_list):
             'OS05_Ahu12': 0.04,
             'OS05_Ahu9': 0.04,
             'OS01_Ahu1': 0.04,
-            'OS01_Ahu2': 0.04
+            'OS01_Ahu2': 0.04,
+            'OS02_AhuMkp1' : 0.04
         },
         'damper': {
             'OS01_Ahu1': 0.02,
@@ -182,6 +184,9 @@ def model_training(df, available_features, label_encoders, raw_metadata_list):
             'OS01_Ahu17': 0.02,
             'OS01_Ahu2': 0.02,
             'OS01_Ahu3': 0.02,
+            'OS04_FAHU': 0.03,
+            'OS01_FAHU2': 0.03,
+            'OS02_AhuMkp1' : 0.04,
             'OS02_Ahu14': 0.02,
             'OS02_Ahu15': 0.02,
             'OS02_Ahu16': 0.02,
@@ -213,7 +218,11 @@ def model_training(df, available_features, label_encoders, raw_metadata_list):
             'OS05_Ahu12': 0.04,
             'OS05_Ahu9': 0.04,
             'OS01_Ahu17': 0.04,
-            'OS02_AHU14': 0.04
+            'OS02_AHU14': 0.04,
+            'OS01_FAHU2' : 0.04,
+            'OS04_FAHU' : 0.04,
+            'OS02_AhuMkp1' : 0.04,
+            'OS01_AhuMkp2' : 0.04
         }
     }
 
