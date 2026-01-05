@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from datetime import datetime, timedelta
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+from cassandra.cluster import Session
+from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
 from src.bms_ai.api.routers.routers import anamoly
+from src.bms_ai.components import anamoly_model_training
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
@@ -16,6 +20,9 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
+from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData 
+from cassandra.cluster import Session
+from src.bms_ai.components.anamoly_functions import dynamic_anomaly_detection_chart
 
 import requests
 import pandas as pd
@@ -47,14 +54,14 @@ try:
     log.info("AHU1 Damper Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Damper forecast model: {e}")
-    print(f"Error loading Damper forecast model: {e}")
+    log.debug(f"Error loading Damper forecast model: {e}")
 
 try:
     fan_forecast_model = joblib.load("artifacts/production_models/ahu1_fan_speed_model.joblib")
     log.info("Ahu1 Fan Speed Model loaded successfully.")
 except Exception as e:
     log.error(f"Error loading Fan Speed forecast model: {e}")
-    print(f"Error loading Fan Speed forecast model: {e}")
+    log.debug(f"Error loading Fan Speed forecast model: {e}")
 
 class PredictionRequest(BaseModel):
     periods: int = Field(3, description="Number of future time periods to predict.")
@@ -94,9 +101,24 @@ class StaticEmissionResponse(BaseModel):
 class EmissionResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="The final structured emission report.")
 
+class AnamolyChartRequest(BaseModel):
+    ticket: str = Field("", description="Ticket ID for datapoint fetching")
+    floor_id: Optional[str] = Field(None, description="Building ID (optional)")
+    account_id: str = Field("", description="Account ID for datapoint fetching")
+    software_id: str = Field("", description="Software ID for datapoint fetching")
+    building_id: Optional[str] = Field("36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID (optional)")
+    system_type: str = Field("", description="System type (e.g., 'AHU', 'RTU')")
+    site: str = Field("", description="site (e.g., 'OS01', 'OS02')")
+    equipment_id: str = Field("", description="Equipment ID for datapoint fetching")
+    search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
+    ticket_type: Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
+    start_date: Optional[str] = Field(None, description="ISO format: YYYY-MM-DD HH:MM:SS")
+    end_date: Optional[str] = Field(None, description="ISO format: YYYY-MM-DD HH:MM:SS")
+    chart_type: str = Field("pie", description="Type of chart: 'pie' or 'line'")
+
 def fetch_all_ahu_dataV2(
         building_id: str,
-        url: str = "",
+        url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
         site: str = "",
         system_type: str = "",
         equipment_id: Optional[str] = None
@@ -620,7 +642,7 @@ def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Opti
 try:
     STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
 except Exception as e:
-    print(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
+    log.debug(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
     STATIC_PEAK_DATA = pd.DataFrame()
 
 @router.get("/get_peak_demand", response_model=Dict[str, Dict[str, Any]])
@@ -709,17 +731,34 @@ def fan_speed_health_prediction(
     log.info(f"VOX AHU1 Fan Speed End of Life Prediction completed in {end - start:.2f} seconds") 
     return result
 
+@router.post("/anomaly_distribution", response_model=AnomalyVizResponse)
+def get_anomaly_detection_chart(
+    request_data: AnamolyChartRequest, 
+    session: Session = Depends(get_cassandra_session)
+):
+    ticket = request_data.ticket
+    floor_id = request_data.floor_id
+    account_id = request_data.account_id
+    software_id = request_data.software_id
+    building_id = request_data.building_id
+    system_type = request_data.system_type
+    site = request_data.site
+    equipment_id = request_data.equipment_id
+    search_tag_groups = request_data.search_tag_groups
+    ticket_type = request_data.ticket_type
+    start_date = request_data.start_date
+    end_date = request_data.end_date
+    chart_type = request_data.chart_type
+
+    result = dynamic_anomaly_detection_chart(ticket=ticket, floor_id=floor_id, account_id=account_id, software_id=software_id, building_id=building_id, system_type=system_type, site=site, equipment_id=equipment_id, search_tag_groups = search_tag_groups, ticket_type=ticket_type, start_date=start_date, end_date=end_date, chart_type=chart_type, session=session) #type:ignore
+
+    return AnomalyVizResponse(chart_type=result["chart_type"], data=result["data"])
+
 @router.post('/anomaly_chart_data', response_model=AnomalyVizResponse)
 def anomaly_chart_data(
     request_data: AnomalyVizRequest
 ):
-    """
-    Runs anomaly detection on multiple assets/features and aggregates the results 
-    for visualization (Pie chart for totals, Line chart for time series).
-    """
     start = time.time()
-    log.info(f"Visualization data request initiated for chart_type: {request_data.chart_type}") 
-    
     result = anamoly_detection_chart(request_data)
     end = time.time()
     log.info(f"Visualization data generation completed in {end - start:.2f} seconds.") 
@@ -788,7 +827,7 @@ def damper_train_endpoint(request_data: DamperTrainRequest):
     """
     start = time.time()
     log.info(f"Damper training request: {request_data.dict()}")
-    print(f"Damper training request: {request_data.dict()}")
+    log.debug(f"Damper training request: {request_data.dict()}")
     try:
         result = damper_train(
             data_path=request_data.data_path,
@@ -877,6 +916,7 @@ class GenericTrainRequestV2(BaseModel):
     #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
     #data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field(..., description="Building ID where the equipment is located")
@@ -925,7 +965,7 @@ def generic_train_endpoint(request_data: GenericTrainRequest):
     """
     start = time.time()
     log.info(f"Generic training request: {request_data.dict()}")
-    print(f"Generic training request: {request_data.dict()}")
+    log.debug(f"Generic training request: {request_data.dict()}")
     
     try:
         result = train_generic(
@@ -971,12 +1011,13 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     Returns:
         Training results including selected features, metrics, and artifact paths
     """
+    #log.debug(f"Request Data: {request_data.dict()}")
     matches_tags = []
     matches_tags = matches_tags + request_data.target_variable_tag
-    print(f"Target variable tags: {matches_tags}")
+    #log.debug(f"Target variable tags: {matches_tags}")
     if request_data.setpoints != None:
         matches_tags = matches_tags + request_data.setpoints
-        print(f"Setpoint tags: {matches_tags}")
+        #log.debug(f"Setpoint tags: {matches_tags}")
 
     results = fetch_and_find_data_points(
             building_id=request_data.building_id,
@@ -988,28 +1029,29 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod"
+            env="prod",
+            ticket_type=request_data.ticket_type 
         )
     
     target_variable = ""
     setpoints = []
 
-    print(f"Fetched data points: {results}")
+    # log.debug(f"Fetched data points: {results}")
 
 
     if len(results) > 0:
         #target_variable = results[0].get("dataPointName")
         try:
             target_variable = results[0]["dataPointName"]
-            print(f"Using target variable: {target_variable}")
+            log.debug(f"Using target variable: {target_variable}")
             if len(results) > 1:
-                print("Additional fetched data points (likely setpoints):")
+                log.debug("Additional fetched data points (likely setpoints):")
                 for res in results[1:]:
-                    print(f"- {res.get('dataPointName')}")
+                    log.debug(f"- {res.get('dataPointName')}")
                     setpoints.append(res.get('dataPointName'))
         except KeyError:
-            print("Data point name not found in results.")
-            print(f"Results content: {results[0]}")
+            log.debug("Data point name not found in results.")
+            log.debug(f"Results content: {results[0]}")
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
     else:
         raise HTTPException(status_code=404, detail="No data points found for the specified target variable tags.")
@@ -1021,13 +1063,13 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             equipment_id=request_data.equipment_id
         )
     
-    log.debug(f"Data fetched for training: {data}")
+    #log.debug(f"Data fetched for training: {data}")
     
 
     
     start = time.time()
     log.info(f"Generic training request: {request_data.dict()}")
-    print(f"Generic training request: {request_data.dict()}")
+    log.debug(f"Generic training request: {request_data.dict()}")
     log.info(f"Using target variable: {target_variable}")
     log.info(f"Using setpoints: {setpoints}")
     
@@ -1068,11 +1110,11 @@ class GenericOptimizeRequest(BaseModel):
     direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
 
 class GenericOptimizeRequestV2(BaseModel):
-    current_conditions: Dict[str, Any] = Field(..., description="Current system state")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
+    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
-    building_id: Optional[str] = Field(None, description="Building ID (optional)")
+    building_id: str = Field(..., description="Building ID for querying live data")
     site: str = Field(..., description="Site name where the equipment is located")
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID (must match training)")
@@ -1134,12 +1176,12 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequest): #type:ignor
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/generic_optimizeV2', response_model=GenericOptimizeResponse)
-def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
+def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Session = Depends(get_cassandra_session)):
     """
     Optimize AHU setpoints to minimize or maximize any specified target variable.
+    Fetches live data from IKON API and uses it as current conditions.
     
     Args:
-        current_conditions: Current system state with all required features
         target_variable: Target variable to optimize
         search_space: Optional setpoint ranges (defaults provided if not specified)
         optimization_method: 'grid' or 'random'
@@ -1149,7 +1191,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
         Best setpoints and optimized target value
     """
 
-    results = fetch_and_find_data_points( building_id=request_data.building_id, #type:ignore
+    results = fetch_and_find_data_points( building_id=request_data.building_id,
             equipment_id=request_data.equipment_id,
             floor_id=None,
             search_tag_groups=request_data.target_variable_tag,
@@ -1157,24 +1199,57 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
             software_id=request_data.software_id,
             account_id=request_data.account_id,
             system_type=request_data.system_type,
-            env="prod")
+            env="prod",
+            ticket_type=request_data.ticket_type) 
     
     target_variable = ""
-    print(f"Fetched data points: {results}")
+    log.debug(f"Fetched data points: {results}")
     if len(results) > 0:
         try:
             target_variable = results[0]["dataPointName"]
-            print(f"Using target variable: {target_variable}")
+            log.debug(f"Using target variable: {target_variable}")
         except KeyError:
-            print("Data point name not found in results.")
-            print(f"Results content: {results[0]}")
+            log.debug("Data point name not found in results.")
+            log.debug(f"Results content: {results[0]}")
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
+    
+    try:
+        building_id_clean = request_data.building_id.replace("-", "")
+        query = f"select * from datapoint_live_monitoring_values{building_id_clean} where system_type='{request_data.system_type}' and equipment_id = '{request_data.equipment_id}' allow filtering;"
+        
+        log.info(f"Fetching live data from IKON API with query: {query}")
+        ikon_url = "https://ikoncloud.keross.com/bms-express-server/data"
+        response = requests.post(ikon_url, json={"query": query}, timeout=30)
+        response.raise_for_status()
+        
+        live_data = response.json()
+        log.debug(f"Received {len(live_data)} data points from IKON API")
+        
+        current_conditions = {}
+        if live_data and len(live_data) > 0:
+            current_conditions["timestamp"] = live_data[0].get("data_received_on", "")
+            
+            for record in live_data:
+                datapoint = record.get("datapoint")
+                monitoring_data = record.get("monitoring_data")
+                if datapoint and monitoring_data != "null":
+                    current_conditions[datapoint] = monitoring_data
+        
+        log.info(f"Transformed live data to current_conditions with {len(current_conditions)} fields")
+        
+    except requests.exceptions.RequestException as e:
+        log.error(f"Failed to fetch live data from IKON API: {e}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch live data: {str(e)}")
+    except Exception as e:
+        log.error(f"Error processing live data: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing live data: {str(e)}")
+    
     start = time.time()
     log.info(f"Generic optimization request: equipment={request_data.equipment_id}, target={target_variable}, method={request_data.optimization_method}, direction={request_data.direction}")
     
     try:
         result = optimize_generic(
-            current_conditions=request_data.current_conditions,
+            current_conditions=current_conditions,
             equipment_id=request_data.equipment_id,
             target_column=target_variable,  
             search_space=request_data.search_space,
@@ -1189,12 +1264,13 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2):
 
         save_data_to_cassandraV2(
             data_chunk=[result],
-            building_id=request_data.building_id, #type:ignore
+            building_id=request_data.building_id,
             metadata={
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,
                 "system_type": request_data.system_type
-            }
+            },
+            session=session 
         )
         
         return GenericOptimizeResponse(**result)
@@ -1240,3 +1316,54 @@ async def get_optimization_results():
     except Exception as e:
         log.error(f"Error reading optimization results: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
+    
+
+class AdjustmentHistoryRequest(BaseModel):
+    building_id: str = Field(..., description="Building ID")
+    site: str = Field(..., description="Site name")
+    system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
+    equipment_id: str = Field(..., description="Equipment ID for which adjustments are fetched")
+    time_period: str = Field(..., description="Time period for the adjustment history in milliseconds")
+    #adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
+    limit: Optional[int] = Field(100, description="Maximum number of records to return")
+
+@router.get("/optimization_history", response_model=OptimizationResultsResponse)
+async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Session = Depends(get_cassandra_session)):
+    """
+    Fetches adjustment history for a given equipment within an optional date range.
+    
+    Args:
+        equipment_id: Equipment ID to filter adjustments
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
+        limit: Maximum number of records to return (default 100)
+    Returns:
+
+        JSON containing adjustment history records
+    """
+    try:
+
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(milliseconds=int(request.time_period))
+
+        adjustments = fetch_adjustment_hisoryData(
+            building_id=request.building_id,
+            site=request.site,
+            system_type=request.system_type,
+            equipment_id=request.equipment_id,
+            start_date=start_date, #type:ignore
+            end_date=end_date, #type:ignore
+            limit=request.limit, #type:ignore
+            session=session
+        )
+        
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
+        
+        return OptimizationResultsResponse(
+            optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            results=adjustments
+        )
+        
+    except Exception as e:
+        log.error(f"Error fetching adjustment history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")

@@ -1,10 +1,17 @@
 import requests
 import time
-from cassandra.cluster import Cluster
+import ast
+import re
+import json
+from cassandra.cluster import Cluster,Session
+from cassandra.auth import PlainTextAuthProvider
 from dateutil import parser
 from typing import Iterator, List, Dict, Any, Tuple
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from src.bms_ai.logger_config import setup_logger
+
+log = setup_logger(__name__)
 
 CASSANDRA_HOST = ['127.0.0.1']
 CASSANDRA_PORT = 9042
@@ -84,79 +91,9 @@ def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[
         
         yield building_id, asset_metadata, chunk_iterator
 
-def save_data_to_cassandra(data_chunk: List[Dict], building_id: str, metadata: dict) -> int:
-    """Saves data chunk to Cassandra. Returns the number of rows inserted."""
-    cluster = None
-    rows_inserted = 0
-    
-    site_value = metadata["site"]
-    equipment_id_value = metadata["equipment_id"]
-    system_type_value = metadata["system_type"]
-
-    history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
-    anamoly_table = f"{building_id.replace('-', '').lower()}_{ANAMOLY_TABLE_SUFFIX}"
-    
-    CREATE_BASE_CQL = """
-    CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
-        datapoint text, 
-        timestamp timestamp, 
-        value text, 
-        anomaly_flag int, 
-        site text, 
-        equipment_id text, 
-        system_type text,
-        PRIMARY KEY ((site, system_type, equipment_id), datapoint, timestamp)) 
-        WITH CLUSTERING ORDER BY (datapoint ASC, timestamp ASC) {ttl_option};
-    """
-    
-    INSERT_BASE_CQL = f"""
-    INSERT INTO {KEYSPACE_NAME}."{{table_name}}" 
-    (datapoint, timestamp, value, anomaly_flag, site, equipment_id, system_type) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """
-    
-    try:
-        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
-        session = cluster.connect(KEYSPACE_NAME)
-        
-        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
-        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=anamoly_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
-        
-        history_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=history_table))
-        anamoly_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=anamoly_table))
-        
-        for reading in data_chunk:
-            timestamp_str = reading.get('timestamp')
-            timestamp_dt = parser.parse(timestamp_str) if timestamp_str else None
-            if timestamp_dt is None: continue 
-
-            datapoint = str(reading.get('feature_name'))
-            value = reading.get(datapoint) 
-            value_to_insert = str(value) if value is not None else None
-            
-            anomaly_flag_value = reading.get('Anamoly_Flag')
-            try:
-                anomaly_flag = int(anomaly_flag_value) if anomaly_flag_value is not None else 0
-            except ValueError:
-                anomaly_flag = 0 
-            
-            data_tuple = (datapoint, timestamp_dt, value_to_insert, anomaly_flag, 
-                          site_value, equipment_id_value, system_type_value)
-            
-            session.execute(history_stmt, data_tuple)
-            session.execute(anamoly_stmt, data_tuple)
-            rows_inserted += 1
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
-    finally:
-        if cluster:
-            cluster.shutdown()
-            
-    return rows_inserted
 
 
-def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict) -> int:
+def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int: #type:ignore
     """Saves data chunk to Cassandra. Returns the number of rows inserted."""
     cluster = None
     rows_inserted = 0
@@ -172,15 +109,13 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     
     CREATE_BASE_CQL = """
     CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
-        best_setpoints text, 
         timestamp timestamp, 
-        best_target_value text, 
-        optimization_direction text, 
-        selected_features_used text, 
-        total_combinations_tested int, 
+        actual_value text, 
+        predicted_value text, 
+        difference_actual_and_pred text, 
+        current_setpoints text, 
+        optimized_setpoints text, 
         site text,
-        optimization_method text,
-        optimization_time_seconds int,
         equipment_id text, 
         system_type text,
         PRIMARY KEY ((site, system_type, equipment_id), timestamp)) 
@@ -189,13 +124,18 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
     
     INSERT_BASE_CQL = f"""
     INSERT INTO {KEYSPACE_NAME}."{{table_name}}" 
-    (best_setpoints, timestamp, best_target_value, optimization_direction, selected_features_used, total_combinations_tested, site, optimization_method, optimization_time_seconds, equipment_id, system_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (timestamp, actual_value, predicted_value, difference_actual_and_pred, current_setpoints, optimized_setpoints, site, equipment_id, system_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     
     try:
-        cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
-        session = cluster.connect(KEYSPACE_NAME)
+        # username = 'admin'
+        # password = 'admin'
+        # auth_provider = PlainTextAuthProvider(username=username, password=password)
+        # cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        # if auth_provider:
+        #     cluster.auth_provider = auth_provider
+        # session = cluster.connect(KEYSPACE_NAME)
         
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=setpoint_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
@@ -205,15 +145,13 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
 
         data_tuple = ()
         data_tuple = (
-            str(data_chunk[0].get('best_setpoints')),
-            parser.parse(data_chunk[0].get('timestamp')),
-            str(data_chunk[0].get('best_target_value')),
-            str(data_chunk[0].get('optimization_direction')),
-            str(data_chunk[0].get('selected_features_used')),
-            int(data_chunk[0].get('total_combinations_tested')),
+            parser.parse(data_chunk[0].get('timestamp')),#type:ignore
+            str(data_chunk[0].get('actual_value')),
+            str(data_chunk[0].get('predicted_value')),
+            str(data_chunk[0].get('difference_actual_and_pred')),
+            str(data_chunk[0].get('current_setpoints')),
+            str(data_chunk[0].get('optimized_setpoints')),#type:ignore
             site_value,
-            str(data_chunk[0].get('optimization_method')),
-            int(data_chunk[0].get('optimization_time_seconds')),
             equipment_id_value,
             system_type_value
         )
@@ -222,46 +160,86 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         session.execute(anamoly_stmt, data_tuple)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
-    finally:
+    """  finally:
         if cluster:
-            cluster.shutdown()
+            cluster.shutdown() """
 
+def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, equipment_id: str, start_date: str, end_date: str, limit: int, session: Session) -> List[Dict]:
+    """
+    Fetches adjustment history data for a given building and equipment from an external API.
+    """
+    ADJUSTMENT_API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
+    Optimization_HISTORY_TABLE_SUFFIX = "historical_data_opt"
+    Optimization_SETPOINT_TABLE_SUFFIX = "setpoint_data_opt"
 
-@app.post("/store_anamolies", response_model=IngestionResponse)
-def store_anamolies():
-    """
-    Triggers the full batch process: fetches anomaly detection results from the 
-    external API and inserts them into Cassandra's historical and anomaly tables.
-    """
-    start_time = time.time()
-    total_assets_processed = 0
-    total_records_inserted = 0
-    
+    Query_BASE_CQL = f"""
+    Select * from {KEYSPACE_NAME}."{{table_name}}"  
+    where site='{site}' and system_type='{system_type}' and equipment_id='{equipment_id}' and timestamp >= '{start_date}' and timestamp <= '{end_date}' 
+    LIMIT {limit}
+    ALLOW FILTERING;"""
+
     try:
-        api_iterator = fetch_data_in_chunks(API_URL, CHUNK_SIZE)
+        # username = 'admin'
+        # password = 'admin'
+        # auth_provider = PlainTextAuthProvider(username=username, password=password)
+        # cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+        # if auth_provider:
+        #     cluster.auth_provider = auth_provider
+
+        # session = cluster.connect(KEYSPACE_NAME)
         
-        for building_id, api_metadata, api_chunks in api_iterator:
-            total_assets_processed += 1
-            
-            print(f"Processing Asset {total_assets_processed}: {api_metadata['site']}/{api_metadata['equipment_id']}")
-            
-            for i, chunk in enumerate(api_chunks):
-                inserted_count = save_data_to_cassandra(chunk, building_id, api_metadata)
-                total_records_inserted += inserted_count
-                
-        duration = time.time() - start_time
+        #history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
+        history_table = f"{Optimization_HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+        setpoint_table = f"{Optimization_SETPOINT_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+        query_cql = Query_BASE_CQL.format(table_name=history_table)
+        log.info(f"Executing Cassandra query: {query_cql}")
+        print(query_cql)
         
-        return {
-            "status": "SUCCESS",
-            "total_assets_processed": total_assets_processed,
-            "total_records_inserted": total_records_inserted,
-            "duration_seconds": round(duration, 3),
-            "message": "Batch ingestion completed successfully."
-        }
+        rows = session.execute(query_cql)
+        log.info(f"Number of rows fetched: {rows.current_rows}")
         
-    except requests.exceptions.RequestException as req_err:
-        raise HTTPException(status_code=500, detail=f"External API fetch failed: {req_err}")
-    except ValueError as val_err:
-        raise HTTPException(status_code=500, detail=f"Data processing error: {val_err}")
+        result = []
+        for row in rows:
+            record = {
+                'timestamp': row.timestamp.isoformat() if row.timestamp else None,
+                'actual_value': row.actual_value,
+                'predicted_value': row.predicted_value,
+                'difference_actual_and_pred': row.difference_actual_and_pred,
+                'current_setpoints': row.current_setpoints,
+                'optimized_setpoints': row.optimized_setpoints,
+                "site": row.site,
+                'equipment_id': row.equipment_id,
+                'system_type': row.system_type
+            }
+            # Converting string representations of dictionaries back to actual dictionaries
+            try:
+                """ s1_fixed = record['optimized_setpoints'].replace("np.float64", "float")
+                s2_fixed = record['current_setpoints'].replace("np.float64", "float")
+
+                record['optimized_setpoints']= ast.literal_eval(s1_fixed)
+                record["current_setpoints"] = ast.literal_eval(s2_fixed) """
+                optimized_str = re.sub(r'np\.float64\(([\d.+-eE]+)\)', r'\1', record['optimized_setpoints'])
+                current_str = re.sub(r'np\.float64\(([\d.+-eE]+)\)', r'\1', record['current_setpoints'])
+
+                # Also handle any other numpy types
+                optimized_str = re.sub(r'np\.\w+\(([\d.+-eE]+)\)', r'\1', optimized_str)
+                current_str = re.sub(r'np\.\w+\(([\d.+-eE]+)\)', r'\1', current_str)
+
+                # Replace single quotes with double quotes for JSON parsing
+                optimized_str = optimized_str.replace("'", '"')
+                current_str = current_str.replace("'", '"')
+
+                record['optimized_setpoints'] = json.loads(optimized_str)
+                record["current_setpoints"] = json.loads(current_str)
+            except Exception as e:
+                log.error(f"Error parsing setpoints: {e}")
+
+            log.debug(f"Fetched record: {record}")
+            result.append(record)
+        
+        return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during batch execution: {e}")
+        raise HTTPException(status_code=500, detail=f"Cassandra query error: {e}")
+    """  finally:
+            if cluster:
+                cluster.shutdown() """
