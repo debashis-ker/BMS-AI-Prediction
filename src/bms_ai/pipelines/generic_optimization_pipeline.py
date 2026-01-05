@@ -4,6 +4,7 @@ Dynamic pipeline for training surrogate models and optimizing setpoints for any 
 Automatically selects best features using correlation and mutual information.
 """
 
+import json
 import sys
 import os
 import numpy as np
@@ -727,6 +728,23 @@ class GenericModelTrainer:
             
             log.info(f"\nBest Model: {best_model_name} (R2: {best_score:.4f})")
             
+            json_path = os.path.join(
+                'artifacts', 'generic_models', 
+                f'best_model_metrics.json'
+            )    
+
+            if( not os.path.exists(json_path)):
+                with open(json_path, 'w') as file:
+                    json.dump({}, file)
+            
+            with open(json_path, 'r') as file:
+                file_data = json.load(file)
+
+            file_data.update({self.equipment_id : {"accuracy_score" : all_results[best_model_name]['test_r2']}})
+
+            json.dump(file_data, open(json_path, 'w'), indent=2)
+            log.info(f"Best Model : {best_model_name} metrics saved.")  
+
             return {
                 'best_model_name': best_model_name,
                 'test_r2': best_score,
@@ -813,7 +831,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
         log.info("="*60)
         log.info("TRAINING COMPLETED SUCCESSFULLY")
         log.info("="*60)
-        
+
         feature_config = FeatureSelectionConfig()
         
         setpoints_used = setpoints or SETPOINT_NAMES
@@ -828,7 +846,8 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
             'model_path': trainer.config.model_path,
             'scaler_path': transformer.config.scaler_path,
             'correlation_plot': feature_config.correlation_plot_path,
-            'mi_plot': feature_config.mutual_info_plot_path
+            'mi_plot': feature_config.mutual_info_plot_path,
+            'best_model_metrics':metrics.get('best_model_metrics', {})
         }
         
     except Exception as e:

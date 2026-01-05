@@ -8,7 +8,7 @@ from src.bms_ai.logger_config import setup_logger
 from pathlib import Path
 import json
 from src.bms_ai.api.routers.routers import anamoly
-from src.bms_ai.components import anamoly_model_training
+# from src.bms_ai.components import anamoly_model_training
 from src.bms_ai.pipelines.damper_optimization_pipeline import (
     train as damper_train,
     optimize as damper_optimize
@@ -20,7 +20,7 @@ from src.bms_ai.pipelines.generic_optimization_pipeline import (
 
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
-from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData 
+from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData
 from cassandra.cluster import Session
 from src.bms_ai.components.anamoly_functions import dynamic_anomaly_detection_chart
 
@@ -42,6 +42,7 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
+# router.include_router(anamoly_model_training.router)
 
 EMISSION_FACTOR = 0.4041
 
@@ -1030,7 +1031,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             account_id=request_data.account_id,
             system_type=request_data.system_type,
             env="prod",
-            ticket_type=request_data.ticket_type 
+            ticket_type=request_data.ticket_type
         )
     
     target_variable = ""
@@ -1093,12 +1094,40 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
         log.info(f"Selected {len(result.get('selected_features', []))} features for {target_variable}")
         if result.get('setpoints'):
             log.info(f"Tracked {len(result['setpoints'])} setpoints: {result['setpoints']}")
-        
+   
         return GenericTrainResponse(**result)
         
     except Exception as e:
         log.error(f"Generic training failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class BestModelMetricsRequest(BaseModel):
+    equipment_id: Optional[str] = Field("", description="Optional filter for a specific equipment ID.")
+
+@router.post('/best_model_metrics')
+def best_model_metrics(
+    request_data: BestModelMetricsRequest
+) -> Dict[str, Any]:
+    
+    equipment_id = request_data.equipment_id
+    try:
+        best_model_metrics = pd.read_json('artifacts/generic_models/best_model_metrics.json', orient='index')
+    except Exception as e:
+        log.error(f"Best Model Metrics is Empty: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Best Model Metrics is Empty."
+        )
+
+    if equipment_id:
+        if best_model_metrics.empty:
+            return {}
+        else:
+            if equipment_id not in best_model_metrics.index:
+                raise HTTPException(
+                    status_code=404,detail="False")
+            return best_model_metrics.loc[[equipment_id]].to_dict(orient='index') #type: ignore
+    return best_model_metrics.to_dict(orient='index') #type: ignore
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
@@ -1200,7 +1229,7 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
             account_id=request_data.account_id,
             system_type=request_data.system_type,
             env="prod",
-            ticket_type=request_data.ticket_type) 
+            ticket_type=request_data.ticket_type)
     
     target_variable = ""
     log.debug(f"Fetched data points: {results}")
@@ -1257,20 +1286,38 @@ def generic_optimize_endpoint(request_data: GenericOptimizeRequestV2,session: Se
             n_iterations=request_data.n_iterations or 1000,
             direction=request_data.direction or "minimize"
         )
+
+        
+        required_result = dict()
+        try:
+            required_result["timestamp"] = result["timestamp"]
+            required_result["actual_value"] = current_conditions.get(target_variable, None)
+            required_result["predicted_value"] = result['best_target_value']
+            required_result["difference_actual_and_pred"] = None
+            if required_result["actual_value"] is not None:
+                required_result["difference_actual_and_pred"] = abs(float(required_result["actual_value"]) - float(required_result["predicted_value"]))
+            required_result["optimized_setpoints"] = result['best_setpoints']    
+            required_result["current_setpoints"] = {k: v for k, v in current_conditions.items() if k in result['best_setpoints']}
+            
+        except KeyError as e:
+            log.error(f"Key error while preparing result for Cassandra: {e}")
+
+        log.debug(f"Result to be saved to Cassandra: {required_result}")
+
     
         end = time.time()
         log.info(f"Generic optimization completed in {end - start:.2f} seconds")
         log.info(f"Best setpoints: {result['best_setpoints']}, Best {target_variable}: {result['best_target_value']:.4f}")
 
         save_data_to_cassandraV2(
-            data_chunk=[result],
+            data_chunk=[required_result],
             building_id=request_data.building_id,
             metadata={
                 "site": request_data.site,
                 "equipment_id": request_data.equipment_id,
                 "system_type": request_data.system_type
             },
-            session=session 
+            session=session
         )
         
         return GenericOptimizeResponse(**result)
@@ -1357,10 +1404,16 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
             session=session
         )
         
+        differences = [float(r['difference_actual_and_pred']) for r in adjustments if r.get('difference_actual_and_pred') is not None]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+
+        
         log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
         
         return OptimizationResultsResponse(
-            optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            #optimized_percentage=0.0,  # You might want to calculate this based on adjustments
+            optimized_percentage=round(avg_difference, 2)*10,
             results=adjustments
         )
         
