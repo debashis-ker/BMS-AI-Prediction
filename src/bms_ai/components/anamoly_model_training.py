@@ -288,7 +288,7 @@ def model_saving(raw_data, discovered_features, raw_metadata_list):
             master_model_package[feature][compound_key] = package 
 
     for feature, assets in master_model_package.items():
-        output_model_path = f"artifacts/test_anamoly_models/{feature}_model.joblib"
+        output_model_path = f"artifacts/generic_anamoly_models/{feature}_model.joblib"
         joblib.dump(assets, output_model_path)
 
 def training_pipeline(
