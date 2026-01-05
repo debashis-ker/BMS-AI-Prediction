@@ -42,7 +42,7 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
-router.include_router(anamoly_model_training.router)
+#router.include_router(anamoly_model_training.router)
 
 EMISSION_FACTOR = 0.4041
 

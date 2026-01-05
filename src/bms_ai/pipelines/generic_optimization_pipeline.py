@@ -1108,7 +1108,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 
                 if is_better(predicted_value, best_target):
                     best_target = predicted_value
-                    best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    #best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    best_setpoints = {k: test_conditions[k] for k in setpoints_used}
                 
                 if (i + 1) % 100 == 0:
                     log.info(f"Progress: {i + 1}/{n_iterations} iterations")
