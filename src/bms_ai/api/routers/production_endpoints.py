@@ -1104,7 +1104,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
 class BestModelMetricsRequest(BaseModel):
     equipment_id: Optional[str] = Field("", description="Optional filter for a specific equipment ID.")
 
-@router.post('/best_model_metrics')
+@router.post('/get_best_model_metrics')
 def best_model_metrics(
     request_data: BestModelMetricsRequest
 ) -> Dict[str, Any]:
