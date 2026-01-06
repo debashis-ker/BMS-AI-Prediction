@@ -40,8 +40,7 @@ from logger_config import setup_logger
 from exception import CustomException
 
 log = setup_logger(__name__)
-
-# SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
+#SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 
 
 @dataclass
@@ -62,13 +61,14 @@ class GenericFeatureSelector:
         self.target_column = target_column
         self.selected_features = []
         
-    def select_features(self, df: pd.DataFrame, n_features: int = 20) -> List[str]:
+    def select_features(self, df: pd.DataFrame, n_features: int = 20, setpoints: List[str] = None) -> List[str]:
         """
         Select top features based on correlation and mutual information.
         
         Args:
             df: DataFrame with features and target
             n_features: Total number of features to select (default: 20)
+            setpoints: List of setpoint names to exclude from feature selection
             
         Returns:
             List of selected feature names
@@ -127,8 +127,10 @@ class GenericFeatureSelector:
                     top_corr_features.append(feat)
             
             self.selected_features = top_mi_features + top_corr_features
-            
-            for setpoint in SETPOINT_NAMES:
+            if not setpoints:
+                setpoints = []
+                print("Setpoints list is empty, proceeding without setpoints.")
+            for setpoint in setpoints:
                 if setpoint in X.columns and setpoint not in self.selected_features:
                     self.selected_features.append(setpoint)
                     log.info(f"Added setpoint: {setpoint}")
@@ -136,7 +138,7 @@ class GenericFeatureSelector:
             log.info(f"Selected {len(self.selected_features)} features")
             log.info(f"Top 10 MI features: {top_mi_features}")
             log.info(f"Top 10 Correlation features: {top_corr_features}")
-            log.info(f"Setpoints included: {[s for s in SETPOINT_NAMES if s in self.selected_features]}")
+            log.info(f"Setpoints included: {[s for s in setpoints if s in self.selected_features]}")
             
             self._save_selected_features(target_corr, mi_series)
             
@@ -405,7 +407,7 @@ class GenericDataTransformation:
             # Step 1: Feature selection on training data only
             log.info("Starting automatic feature selection on training data...")
             feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
-            selected_features = feature_selector.select_features(df, n_features=n_features)
+            selected_features = feature_selector.select_features(df, n_features=n_features,setpoints=setpoints)
             self.selected_features = selected_features
             
             # Step 2: Ensure setpoints are included
