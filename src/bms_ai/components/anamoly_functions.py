@@ -9,7 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 from cassandra.cluster import Session, ConsistencyLevel
 from cassandra.query import SimpleStatement
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.utils.cassandra_utils import fetch_all_ahu_data
+from src.bms_ai.utils.cassandra_utils import fetch_all_ahu_data, fetch_mahu_data
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 import time
 import requests
@@ -30,37 +30,31 @@ ANAMOLY_TTL_SECONDS = 2592000
 STANDARD_DATE_COLUMN = "data_received_on"
 CO2RA_CEILING_THRESHOLD = 850.0
 FBVFD_NORMAL_MAX = 1.0
-CHART_AGGREGATION_MAP = {
-    'TSu': ['TSu', 'TempSu'],
-    'Co2RA': ['Co2RA', 'Co2Avg', 'RtCo2'],
-    'HuAvg1': ['HuAvg1', 'HuRt', 'HuR1'],
-    'FbFAD': ['FbFAD'],
-    'FbVFD': ['FbVFD']
-}
-# Unit_Mapping
-# UNIT_MAPPING = {
-#     'TSu' : "celsius",
-#     'Co2RA' : "ppm",
-#     'FbFAD' : "%",
-#     'FbVFD' : "hertz",
-#     'HuAvg1' : "%",
-#     'TempSu' : "celsius",
-#     'Co2Avg' : "ppm",
-#     'HuR1' : "%",
-#     'HuRt' : "%"
-# }
 
-MASTER_LOGICAL_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1', 'TempSu', 'Co2Avg', 'HuR1', 'HuRt']
-KNOWN_MODEL_FILE_NAMES = ['TempSu', 'Co2Avg', 'HuR1', 'HuRt']
+MASTER_LOGICAL_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
+KNOWN_MODEL_FILE_NAMES = ['TempSu', 'Co2Avg', 'HuR1', 'HuRt','FbVFDSf', 'FbVFDSf1', 'HumRt', 'HuSu']
 ALL_AVAILABLE_FEATURES = MASTER_LOGICAL_FEATURES
 DEFAULT_METADATA = {"equipment_id": "", "system_type": "AHU", "site": ""}
 
 PRIORITY_GROUPS = {
-    'humidity': ['HuAvg1', 'HuRt', 'HuR1'],
+    'humidity': ['HuAvg1', 'HumRt', 'HuSu', 'HuRt', 'HuR1'],
     'temperature': ['TSu', 'TempSu'],
-    'co2': ['Co2RA', 'Co2Avg']
+    'co2': ['Co2RA', 'Co2Avg'],
+    'vfd': ['FbVFD', 'FbVFDSf', 'FbVFDSf1']
 }
 
+CHART_AGGREGATION_MAP = {
+    'TSu': ['TSu', 'TempSu'],
+    'Co2RA': ['Co2RA', 'Co2Avg', 'RtCo2'],
+    'HuAvg1': ['HuAvg1', 'HuRt', 'HuR1', 'HumRt', 'HuSu'], 
+    'FbFAD': ['FbFAD'],
+    'FbVFD': ['FbVFD', 'FbVFDSf', 'FbVFDSf1']         
+}
+
+KNOWN_MODEL_FILE_NAMES = [
+    'TempSu', 'Co2Avg', 'HuR1', 'HuRt',
+    'FbVFDSf', 'FbVFDSf1', 'HumRt', 'HuSu'
+]
 def wrap_data_list(data_list: List[Dict]) -> Dict[str, Any]:
     """Wraps the list of datapoint records into the dictionary structure expected by build_dynamic_features."""
     return {"success": True, "data": data_list, "count": len(data_list)}
@@ -69,6 +63,12 @@ def build_dynamic_features(json_record: Dict[str, Any]) -> Tuple[List[str], Dict
     dynamic_fallbacks = defaultdict(list)
     consolidation_map = {}
     
+    GLOBAL_MAPPING = {
+        'HumRt': 'HuAvg1', 'HuSu': 'HuAvg1', 'HuRt': 'HuAvg1', 'HuR1': 'HuAvg1',
+        'FbVFDSf': 'FbVFD', 'FbVFDSf1': 'FbVFD',
+        'TempSu': 'TSu', 'Co2Avg': 'Co2RA'
+    }
+    
     for record in json_record.get('data', []):
         physical_name = record.get('dataPointName')
         tags = set(record.get('queryTags', []))
@@ -76,25 +76,13 @@ def build_dynamic_features(json_record: Dict[str, Any]) -> Tuple[List[str], Dict
             
         master_feature = None
 
-        if 'temp' in tags and 'supply' in tags:
-            master_feature = 'TSu'
-        elif physical_name == "TempSu": 
-            master_feature = 'TempSu'
-        elif physical_name == "TSu":
-            master_feature = 'TSu'
-
-        elif 'co2' in tags:
-            master_feature = 'Co2RA'
-
-        elif 'humidity' in tags and ('space' in tags or 'average' in tags or 'return' in tags):
-            master_feature = 'HuAvg1'
-
-        elif ('speed' in tags or 'vfd' in tags) and 'temp' not in tags:
-            master_feature = 'FbVFD'
+        if physical_name in GLOBAL_MAPPING:
+            master_feature = GLOBAL_MAPPING[physical_name]
+        elif 'temp' in tags and 'supply' in tags: master_feature = 'TSu'
+        elif 'co2' in tags: master_feature = 'Co2RA'
+        elif 'humidity' in tags: master_feature = 'HuAvg1'
+        elif ('speed' in tags or 'vfd' in tags): master_feature = 'FbVFD'
         
-        elif 'damper' in tags and 'outside' in tags:
-            master_feature = 'FbFAD'
-
         if master_feature is None and physical_name in MASTER_LOGICAL_FEATURES:
              master_feature = physical_name
 
@@ -326,13 +314,31 @@ def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_
 
 def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: str, search_tags: List[List[str]], ticket_id: str, software_id: str, account_id: str, system_type: Optional[str] = None, env: Optional[str] = "prod", ticket_type: Optional[str] = None):
     try:
-        initialize_anomaly_detection_models(building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, search_tag_groups=search_tags, ticket=ticket_id, software_id=software_id, account_id=account_id, system_type=system_type, env=env, ticket_type=ticket_type)
+        initialize_anomaly_detection_models(
+            building_id=building_id, floor_id=floor_id, equipment_id=equipment_id, 
+            search_tag_groups=search_tags, ticket=ticket_id, software_id=software_id, 
+            account_id=account_id, system_type=system_type, env=env, ticket_type=ticket_type
+        )
     except Exception as e:
         log.error(f"Initialization error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
     all_data_records = fetch_all_ahu_data(building_id=building_id or DEFAULT_BUILDING_ID)
-    if not all_data_records: return {"data": {"all_anomalies_by_asset": {}}}
+    
+    mahu_records = fetch_mahu_data(building_id=building_id or DEFAULT_BUILDING_ID, equipment_id="AhuMkp1")
+    if mahu_records:
+        for record in mahu_records:
+            record['site'] = "OS02"
+            record['equipment_name'] = "AhuMkp1"
+            record['system_type'] = "AHU"
+        
+        if not all_data_records:
+            all_data_records = mahu_records
+        else:
+            all_data_records.extend(mahu_records)
+
+    if not all_data_records: 
+        return {"data": {"all_anomalies_by_asset": {}}}
 
     grouped_data_by_asset = defaultdict(list)
     for record in all_data_records:
@@ -347,50 +353,58 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
     for asset_code_key, asset_records in grouped_data_by_asset.items():
         found_anomaly_for_asset = False
         current_asset_anomalies = {}
-        processed_physical_points = set()
+        processed_in_groups = set()
+        active_physicals = {} 
 
-        active_selections = {}
         for group, p_list in PRIORITY_GROUPS.items():
-            for feat in p_list:
-                target_physical = feat
-                if feat in FEATURE_FALLBACKS:
-                    target_physical = next((fb for fb in FEATURE_FALLBACKS[feat] 
-                                          if any(r.get('datapoint') == fb for r in asset_records)), feat)
+            for logical_feat in p_list:
+                target_phys = logical_feat
+                if logical_feat in FEATURE_FALLBACKS:
+                    target_phys = next((fb for fb in FEATURE_FALLBACKS[logical_feat] 
+                                      if any(r.get('datapoint') == fb for r in asset_records)), logical_feat)
                 
-                if any(r.get('datapoint') == target_physical for r in asset_records):
-                    active_selections[group] = feat
+                if any(r.get('datapoint') == target_phys for r in asset_records):
+                    active_physicals[group] = (target_phys, logical_feat)
+                    processed_in_groups.update(p_list) 
                     break
 
+        for group, (phys_point, model_key) in active_physicals.items():
+            feature_raw_data = [r for r in asset_records if r.get('datapoint') == phys_point]
+            final_model_key = model_key if model_key in anamoly_model else CONSOLIDATION_MAP.get(phys_point, model_key) #type:ignore
+            
+            if final_model_key in anamoly_model: #type:ignore
+                try:
+                    feature_results = anomaly_detection(feature_raw_data, asset_code_key, final_model_key) #type:ignore
+                    if feature_results:
+                        current_asset_anomalies[final_model_key] = feature_results
+                        if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
+                            found_anomaly_for_asset = True
+                except Exception as e:
+                    log.error(f"Error for {asset_code_key}/{phys_point}: {e}")
+
         for feature in ALL_AVAILABLE_FEATURES:
-            in_group = False
-            for group, p_list in PRIORITY_GROUPS.items():
-                if feature in p_list:
-                    in_group = True
-                    if feature != active_selections.get(group):
-                        continue
+            if feature in processed_in_groups: continue
 
             datapoint_to_pull = feature
             if feature in FEATURE_FALLBACKS:
                 datapoint_to_pull = next((fb for fb in FEATURE_FALLBACKS[feature] 
                                          if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
-            if datapoint_to_pull in processed_physical_points:
-                continue
+            if datapoint_to_pull in processed_in_groups: continue
 
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_to_pull]
-            if not feature_raw_data:
-                continue
+            if not feature_raw_data: continue
 
             model_key = feature
-            if model_key not in anamoly_model:
+            if model_key not in anamoly_model: #type:ignore
                 model_key = CONSOLIDATION_MAP.get(model_key, model_key)
-                if model_key not in anamoly_model: continue
+                if model_key not in anamoly_model: continue #type:ignore
 
             try:
                 feature_results = anomaly_detection(feature_raw_data, asset_code_key, model_key)
                 if feature_results:
                     current_asset_anomalies[datapoint_to_pull] = feature_results 
-                    processed_physical_points.add(datapoint_to_pull)
+                    processed_in_groups.add(datapoint_to_pull)
                     if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
                         found_anomaly_for_asset = True
             except Exception as e:
@@ -398,9 +412,12 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
 
         if asset_code_key in reconciled_results:
             reconciled_results[asset_code_key]['data'].update(current_asset_anomalies)
+            if asset_code_key == "OS02_AhuMkp1":
+                reconciled_results[asset_code_key]['system_type'] = "AHU"
         elif current_asset_anomalies:
             site, eq_id = asset_code_key.split('_', 1) 
-            reconciled_results[asset_code_key] = {"data": current_asset_anomalies, "site": site, "equipment_id": eq_id, "system_type": FIXED_SYSTEM_TYPE}
+            sType = "AHU" if asset_code_key == "OS02_AhuMkp1" else FIXED_SYSTEM_TYPE
+            reconciled_results[asset_code_key] = {"data": current_asset_anomalies, "site": site, "equipment_id": eq_id, "system_type": sType}
              
         if found_anomaly_for_asset: total_anomalous_assets += 1
     
@@ -412,11 +429,7 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
 
 def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> Dict[str, Any]:
     safety_checker_results: Dict[str, Any] = {}
-    priority_groups = {
-        'humidity': ['HuAvg1', 'HuRt', 'HuR1'],
-        'temperature': ['TSu', 'TempSu'],
-        'co2': ['Co2RA', 'Co2Avg']
-    }
+    priority_groups = PRIORITY_GROUPS
     
     for asset_code_key, asset_records in grouped_data_by_asset.items():
         site, equipment_id = asset_code_key.split('_', 1) 
@@ -756,7 +769,7 @@ def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session
                     account_id=account_id,
                     software_id=software_id,
                     search_tag_groups=search_tag_groups,
-                    ticket_type=ticket_type
+                    ticket_type=ticket_type # type: ignore
                 )
                 json_record = wrap_data_list(raw_data_list)
                 (features_to_query, _, _) = build_dynamic_features(json_record)
@@ -855,7 +868,7 @@ def dynamic_anomaly_detection_chart(
             software_id=software_id,
             account_id=account_id,
             system_type=system_type,
-            ticket_type=ticket_type
+            ticket_type=ticket_type # type: ignore
         )
         json_record = wrap_data_list(raw_api_points)
         all_phys_features, _, consolidation_map = build_dynamic_features(json_record)

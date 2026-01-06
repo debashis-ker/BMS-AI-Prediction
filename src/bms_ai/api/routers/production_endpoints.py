@@ -42,7 +42,7 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
-router.include_router(anamoly_model_training.router)
+# router.include_router(anamoly_model_training.router)
 
 EMISSION_FACTOR = 0.4041
 
@@ -1094,12 +1094,40 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
         log.info(f"Selected {len(result.get('selected_features', []))} features for {target_variable}")
         if result.get('setpoints'):
             log.info(f"Tracked {len(result['setpoints'])} setpoints: {result['setpoints']}")
-        
+   
         return GenericTrainResponse(**result)
         
     except Exception as e:
         log.error(f"Generic training failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class BestModelMetricsRequest(BaseModel):
+    equipment_id: Optional[str] = Field("", description="Optional filter for a specific equipment ID.")
+
+@router.post('/best_model_metrics')
+def best_model_metrics(
+    request_data: BestModelMetricsRequest
+) -> Dict[str, Any]:
+    
+    equipment_id = request_data.equipment_id
+    try:
+        best_model_metrics = pd.read_json('artifacts/generic_models/best_model_metrics.json', orient='index')
+    except Exception as e:
+        log.error(f"Best Model Metrics is Empty: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Best Model Metrics is Empty."
+        )
+
+    if equipment_id:
+        if best_model_metrics.empty:
+            return {}
+        else:
+            if equipment_id not in best_model_metrics.index:
+                raise HTTPException(
+                    status_code=404,detail="False")
+            return best_model_metrics.loc[[equipment_id]].to_dict(orient='index') #type: ignore
+    return best_model_metrics.to_dict(orient='index') #type: ignore
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")

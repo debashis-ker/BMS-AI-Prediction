@@ -1,20 +1,23 @@
 import requests
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 import json
 from src.bms_ai.logger_config import setup_logger
 from fastapi import HTTPException
 import os
 from dotenv import load_dotenv
+import pandas as pd
 
 load_dotenv()
 
 FIXED_SYSTEM_TYPE = "AHU"
 DEFAULT_BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
-ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1']
+ALL_AVAILABLE_FEATURES = ['TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1', 'TempSu', 'Co2Avg', 'HuR1', 'HuRt']
 FEATURE_FALLBACKS = {
-    'TSu': ['TempSu'],
-    'Co2RA': ['Co2Avg'],
-    'HuAvg1': ['HuR1', 'HuRt']
+    'TSu': ['TSu', 'TempSu'],
+    'Co2RA': ['Co2RA', 'Co2Avg', 'RtCo2'],
+    'HuAvg1': ['HuAvg1', 'HuRt', 'HuR1', 'HumRt', 'HuSu'], # Added HumRt, HuSu
+    'FbFAD': ['FbFAD'],
+    'FbVFD': ['FbVFD', 'FbVFDSf', 'FbVFDSf1'] # Added FbVFDSf, FbVFDSf1 
 }
 QUERY_FEATURES = set(ALL_AVAILABLE_FEATURES)
 for fallbacks in FEATURE_FALLBACKS.values():
@@ -87,10 +90,10 @@ def fetch_data_with_query(query: str, url: str = f"{os.getenv('IKON_BASE_URL_PRO
     except Exception as e:
         log.error(f"An unexpected error occurred during fetching: {e}")
         raise HTTPException(status_code=500, detail=f"API Request failed: {str(e)}")
-        
+   
 def fetch_all_ahu_data(
     building_id: str = DEFAULT_BUILDING_ID,
-    url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data"
+    url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
 ) -> List[Dict]:
     """Fetches ALL historical data for AHUs in a single API call."""
     cleaned_id = building_id.replace("-", "").lower()
@@ -127,35 +130,83 @@ def fetch_all_ahu_data(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
     
-def fetch_data_from_metadata(
-        
-    metadata: Dict[str, str], 
-    table_name: str = "datapoint_live_monitoring_values",
-    building_id: str = "36c27828d0b44f1e8a94d962d342e7c2", 
+def fetch_mahu_data(
+    building_id: str = DEFAULT_BUILDING_ID,
     url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
-    wrap_result: Optional[bool] = True
-) -> Dict[str, Any] | List[Dict]:
+    equipment_id: str = "AhuMkp1"
+) -> List[Dict]:
+    """Fetches ALL historical data for AHUs in a single API call."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"datapoint_live_monitoring_values{cleaned_id}"
     
-    site = metadata.get("site")
-    equipment_id = metadata.get("equipment_id")
-    system_type = metadata.get("system_type")
-    location_table_name = table_name + building_id.replace("-", "").lower()
+    datapoint_list = ', '.join([f"'{f}'" for f in QUERY_FEATURES])
+    
+    query = (
+        f"select * from {location_table_name} "
+        f"where equipment_id = '{equipment_id}' "
+        f"and datapoint IN ({datapoint_list}) "
+        f"allow filtering;"
+    )
 
-    if not all([site, equipment_id, system_type]):
-        missing_keys = [k for k, v in metadata.items() if not v]
-        error_msg = f"Missing required metadata keys: {', '.join(missing_keys)}"
-        log.error(error_msg)
-        raise ValueError(error_msg)
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        data_list = []
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        
+        if not isinstance(data_list, list):
+            raise ValueError("API response data list format is invalid.")
+            
+        log.info(f"[A1] Total raw records fetched: {len(data_list)}")
+        return data_list
+    
+    except Exception as e:
+        log.error(f"Failed to fetch batch data from API: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
+
+def fetch_all_ahu_historical_data(
+    building_id: str = DEFAULT_BUILDING_ID,
+    url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data"
+) -> List[Dict]:
+    """Fetches ALL historical data for AHUs in a single API call."""
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
+    
+    datapoint_list = ', '.join([f"'{f}'" for f in QUERY_FEATURES])
+    # previous_week_day_in_UTC = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
 
     query = (
         f"select * from {location_table_name} "
-        f"where site = '{site}' "
-        f"and system_type = '{system_type}' "
-        f"and equipment_id = '{equipment_id}' "
-        f"and datapoint IN ('TSu', 'Co2RA', 'FbFAD', 'FbVFD', 'HuAvg1')"
+        f"where system_type = '{FIXED_SYSTEM_TYPE}' "
+        f"and datapoint IN ({datapoint_list}) "
+        # f"and data_received_on >= '{previous_week_day_in_UTC}' " 
         f"allow filtering;"
     )
-    
-    log.info(f"Generated query: {query}")
 
-    return fetch_data_with_query(query=query, url=url, wrap_result=wrap_result if wrap_result is not None else True)
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        data_list = []
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        
+        if not isinstance(data_list, list):
+            raise ValueError("API response data list format is invalid.")
+            
+        log.info(f"[A1] Total raw records fetched: {len(data_list)}")
+        return data_list
+    
+    except Exception as e:
+        log.error(f"Failed to fetch batch data from API: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
