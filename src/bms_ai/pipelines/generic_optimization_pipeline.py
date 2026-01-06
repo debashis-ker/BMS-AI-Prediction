@@ -918,7 +918,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints, system_type=system_type)
+        pivoted_df, present_setpoints = transformer.transform_dataset(data, setpoints=setpoints)
         
         if target_column not in pivoted_df.columns:
             raise ValueError(f"Target column '{target_column}' not found in pivoted data")
