@@ -221,7 +221,6 @@ notebooks/data/
 notebooks/*.csv
 notebooks/*.ipynb
 notebooks/*.json
-notebooks/vox_ahu1_static_training.ipynb
 
 # local resources
 resources/
@@ -229,5 +228,10 @@ resources/
 
 catboost_info/
 
-
-artifacts/generic_models/
+#artifacts/
+artifacts/generic_anamoly_models/*
+artifacts/generic_models/*
+artifacts/production_models/*
+artifacts/*.csv
+artifacts*.pkl
+artifacts*.joblib

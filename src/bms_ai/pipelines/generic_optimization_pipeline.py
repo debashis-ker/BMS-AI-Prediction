@@ -26,6 +26,15 @@ import itertools
 import time
 from pathlib import Path
 
+try:
+    from skopt import gp_minimize
+    from skopt.space import Real
+    from skopt.utils import use_named_args
+    BAYESIAN_AVAILABLE = True
+except ImportError:
+    BAYESIAN_AVAILABLE = False
+    log.warning("scikit-optimize not installed. Bayesian optimization will not be available. Install with: pip install scikit-optimize")
+
 sys.path.append(str(Path(__file__).parent.parent))
 from logger_config import setup_logger
 from exception import CustomException
@@ -273,22 +282,24 @@ class GenericDataTransformation:
     #def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
     def transform_dataset(self, data: List[dict], system_type : str = "AHU", setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
-        Transform entire dataset from CSV with automatic feature selection.
+        Load and prepare dataset without scaling or feature selection.
+        
+        IMPORTANT: This method only loads, filters, pivots, and cleans data.
+        Feature selection and scaling must happen AFTER train/test split to avoid data leakage.
         
         Args:
-            data_path: Path to CSV file with raw BMS data
+            data: List of dictionaries with raw BMS data
             setpoints: Optional list of setpoint columns to include and track
             
         Returns:
-            Tuple of (X_processed, y, selected_features)
+            Tuple of (pivoted_df, setpoints_list) - unscaled data ready for splitting
         """
         try:
             log.info("="*60)
-            log.info("STARTING GENERIC DATA TRANSFORMATION")
+            log.info("STARTING DATA LOADING AND PREPARATION")
             log.info(f"Equipment: {self.equipment_id}, Target: {self.target_column}")
             log.info("="*60)
             
-            #log.info(f"Loading raw BMS data from {data_path}")
             df = pd.DataFrame(data)
             log.info(f"Raw data shape: {df.shape}")
             
@@ -359,22 +370,57 @@ class GenericDataTransformation:
             if pivoted_df.empty:
                 raise ValueError("No valid data remaining after preprocessing")
             
-            log.info("Starting automatic feature selection...")
-            feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
-            selected_features = feature_selector.select_features(pivoted_df, n_features=20)
-            self.selected_features = selected_features
-            
             setpoints = setpoints or SETPOINT_NAMES
             present_setpoints = [s for s in setpoints if s in pivoted_df.columns]
+            
+            log.info("Data preparation complete. Feature selection and scaling will occur after train/test split.")
+            log.info(f"Prepared data shape: {pivoted_df.shape}")
+            log.info(f"Present setpoints: {present_setpoints}")
+            
+            return pivoted_df, present_setpoints
+            
+        except Exception as e:
+            log.error(f"Error loading dataset: {e}")
+            raise CustomException(e, sys)
+    
+    def fit_transform_features(self, df: pd.DataFrame, setpoints: List[str], n_features: int = 20) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+        """
+        Fit feature selector and scaler on training data, then transform.
+        
+        This method should ONLY be called on training data to prevent data leakage.
+        Use transform_features() for test data.
+        
+        Args:
+            df: Pivoted dataframe (training data only)
+            setpoints: List of setpoint columns to include
+            n_features: Number of features to select
+            
+        Returns:
+            Tuple of (X_processed, y, selected_features)
+        """
+        try:
+            log.info("="*60)
+            log.info("FITTING FEATURE SELECTOR AND SCALER ON TRAINING DATA")
+            log.info("="*60)
+            
+            # Step 1: Feature selection on training data only
+            log.info("Starting automatic feature selection on training data...")
+            feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
+            selected_features = feature_selector.select_features(df, n_features=n_features)
+            self.selected_features = selected_features
+            
+            # Step 2: Ensure setpoints are included
+            present_setpoints = [s for s in setpoints if s in df.columns]
             for sp in present_setpoints:
                 if sp not in self.selected_features:
                     self.selected_features.append(sp)
                     log.info(f"Added setpoint to selected features: {sp}")
             
+            # Step 3: Calculate and save setpoint ranges
             setpoint_ranges = {}
             for sp in present_setpoints:
                 try:
-                    col_vals = pd.to_numeric(pivoted_df[sp].dropna(), errors='coerce')
+                    col_vals = pd.to_numeric(df[sp].dropna(), errors='coerce')
                     if col_vals.empty:
                         continue
                     min_val = float(col_vals.min())
@@ -398,8 +444,9 @@ class GenericDataTransformation:
                 setpoint_ranges=setpoint_ranges
             )
             
-            available_features = [f for f in self.selected_features if f in pivoted_df.columns]
-            missing_features = [f for f in self.selected_features if f not in pivoted_df.columns]
+            # Step 4: Extract X and y
+            available_features = [f for f in self.selected_features if f in df.columns]
+            missing_features = [f for f in self.selected_features if f not in df.columns]
             
             if missing_features:
                 log.warning(f"Some selected features not in data: {missing_features}")
@@ -407,18 +454,49 @@ class GenericDataTransformation:
             if not available_features:
                 raise ValueError("No selected features available in the data")
             
-            X = pivoted_df[available_features].copy()
-            y = pivoted_df[self.target_column].copy()
+            X = df[available_features].copy()
+            y = df[self.target_column].copy()
             
-            log.info(f"Final dataset shape: X={X.shape}, y={y.shape}")
-            log.info(f"Selected features: {available_features}")
+            log.info(f"Training data shape: X={X.shape}, y={y.shape}")
+            log.info(f"Selected {len(available_features)} features")
             
+            # Step 5: Fit and transform scaler on training data
             X_processed = self._preprocess_data(X, fit=True)
             
             return X_processed, y, available_features
             
         except Exception as e:
-            log.error(f"Error transforming dataset: {e}")
+            log.error(f"Error in fit_transform_features: {e}")
+            raise CustomException(e, sys)
+    
+    def transform_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Transform test data using already-fitted scaler and feature selector.
+        
+        Args:
+            df: Pivoted dataframe (test data)
+            
+        Returns:
+            X_processed: Scaled and transformed features
+        """
+        try:
+            log.info("Transforming test data using fitted transformers...")
+            
+            if not self.selected_features:
+                raise ValueError("No features selected. Call fit_transform_features first.")
+            
+            # Use only the features selected during training
+            available_features = [f for f in self.selected_features if f in df.columns]
+            X = df[available_features].copy()
+            
+            # Transform using fitted scaler (fit=False)
+            X_processed = self._preprocess_data(X, fit=False)
+            
+            log.info(f"Test data transformed. Shape: {X_processed.shape}")
+            return X_processed
+            
+        except Exception as e:
+            log.error(f"Error in transform_features: {e}")
             raise CustomException(e, sys)
     
     def _preprocess_data(self, df: pd.DataFrame, fit: bool = True) -> pd.DataFrame:
@@ -701,18 +779,26 @@ class GenericModelTrainer:
                     test_mse = mean_squared_error(y_test, y_test_pred)
                     test_mae = mean_absolute_error(y_test, y_test_pred)
                     
+                    # Calculate Adjusted R^2
+                    n = len(y_test)
+                    p = X_test.shape[1] 
+                    test_r2_adj = 1 - (1 - test_r2) * (n - 1) / (n - p - 1)
+                    
                     all_results[model_name] = {
                         'test_r2': test_r2,
+                        'test_r2_adjusted': test_r2_adj,
                         'test_rmse': test_rmse,
                         'test_mse': test_mse,
                         'test_mae': test_mae,
-                        'best_params': search.best_params_
+                        'best_params': search.best_params_,
+                        'n_features': p
                     }
                     
-                    log.info(f"  Test R2: {test_r2:.4f}, RMSE: {test_rmse:.4f}, MSE: {test_mse:.4f}, MAE: {test_mae:.4f}")
+                    log.info(f"  Test R²: {test_r2:.4f}, Adjusted R²: {test_r2_adj:.4f}, RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}")
+                    log.info(f"  Features used: {p}")
                     
-                    if test_r2 > best_score:
-                        best_score = test_r2
+                    if test_r2_adj > best_score:
+                        best_score = test_r2_adj
                         best_model = model
                         best_model_name = model_name
                         self.best_params = search.best_params_
@@ -727,7 +813,8 @@ class GenericModelTrainer:
             self.model = best_model
             self.best_model_name = best_model_name
             
-            log.info(f"\nBest Model: {best_model_name} (R2: {best_score:.4f})")
+            log.info(f"\nBest Model: {best_model_name} (Adjusted R²: {best_score:.4f})")
+            log.info(f"Standard R²: {all_results[best_model_name]['test_r2']:.4f}")
             
             json_path = os.path.join(
                 'artifacts', 'generic_models', 
@@ -807,8 +894,10 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
     """
     Main generic training function with automatic feature selection.
     
+    CRITICAL: Data is split BEFORE feature selection and scaling to prevent data leakage.
+    
     Args:
-        data_path: Path to CSV with raw BMS data
+        data: List of dictionaries with raw BMS data
         equipment_id: Equipment ID to filter
         target_column: Target variable to optimize
         test_size: Fraction for test split
@@ -831,10 +920,28 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
         transformer = GenericDataTransformation(equipment_id, target_column)
         X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints, system_type=system_type)
         
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42
+        if target_column not in pivoted_df.columns:
+            raise ValueError(f"Target column '{target_column}' not found in pivoted data")
+        
+        y = pivoted_df[target_column]
+        df_features = pivoted_df.drop(columns=[target_column])
+        
+        df_train, df_test, y_train, y_test = train_test_split(
+            df_features, y, test_size=test_size, random_state=42, shuffle=True
         )
+        log.info(f"Data split complete. Train: {df_train.shape}, Test: {df_test.shape}")
+        log.info("CRITICAL: Feature selection and scaling will now be fit on training data only.")
+        
+        X_train, y_train, selected_features = transformer.fit_transform_features(
+            pd.concat([df_train, y_train], axis=1), 
+            present_setpoints,
+            n_features=20
+        )
+        
+        X_test = transformer.transform_features(df_test)
+        
         log.info(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
+        log.info(f"No data leakage: Scaler and feature selector fitted on training data only.")
         
         transformer.save_transformers()
         
@@ -958,13 +1065,21 @@ def optimize_generic(current_conditions: Dict[str, Any],
     """
     Generic optimization function using fixed setpoints.
     
+    Supports three optimization methods:
+    - 'grid': Exhaustive search over all combinations (slow for many setpoints)
+    - 'random': Random sampling of setpoint combinations
+    - 'bayes': Bayesian optimization using Gaussian Process (RECOMMENDED - much faster)
+    
+    Bayesian optimization intelligently selects the next setpoints to test based on previous
+    results, requiring far fewer evaluations than grid search (typically 50-200 vs 8000+).
+    
     Args:
         current_conditions: Current system state with all features
         equipment_id: Equipment ID (must match training)
         target_column: Target variable to optimize (must match training)
         search_space: Optional setpoint ranges (defaults used if not provided)
-        optimization_method: Optimization method ('grid' or 'random')
-        n_iterations: Number of iterations for random search (ignored for grid search)
+        optimization_method: Optimization method ('grid', 'random', or 'bayes')
+        n_iterations: Number of iterations for random/bayes search (ignored for grid search)
         direction: 'minimize' or 'maximize' the target variable
         
     Returns:
@@ -1035,6 +1150,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
             features_metadata = json.load(f)
         
         selected_features = features_metadata['selected_features']
+        setpoints = features_metadata['setpoints']
+        setpoints_used = setpoints or SETPOINT_NAMES
         log.info(f"Loaded {len(selected_features)} selected features from training")
         log.info(f"Features: {selected_features}")
         
@@ -1055,7 +1172,87 @@ def optimize_generic(current_conditions: Dict[str, Any],
         log.info(f"Optimization direction: {direction}")
         log.info(f"Search space: {search_space}")
         
-        if optimization_method.lower() == 'grid':
+        if optimization_method.lower() == 'bayes':
+            if not BAYESIAN_AVAILABLE:
+                raise ImportError(
+                    "Bayesian optimization requires scikit-optimize. "
+                    "Install with: pip install scikit-optimize"
+                )
+            
+            log.info("Using Bayesian Optimization with Gaussian Process")
+            log.info(f"Maximum iterations: {n_iterations}")
+            
+            space = []
+            setpoint_order = []
+            for sp in SETPOINT_NAMES:
+                if sp in search_space:
+                    sp_values = search_space[sp]
+                    space.append(Real(min(sp_values), max(sp_values), name=sp))
+                    setpoint_order.append(sp)
+            
+            if not space:
+                raise ValueError("No valid setpoints found in search_space for Bayesian optimization")
+            
+            log.info(f"Optimizing setpoints: {setpoint_order}")
+            
+            @use_named_args(space)
+            def objective(**params):
+                test_conditions = current_conditions.copy()
+                for sp in setpoint_order:
+                    test_conditions[sp] = params[sp]
+                
+                input_df = pd.DataFrame([test_conditions])
+                
+                temporal_features = ['month', 'hour', 'week_number', 'is_weekend']
+                for feat in selected_features:
+                    if feat not in input_df.columns and feat not in temporal_features:
+                        input_df[feat] = 0
+                
+                try:
+                    input_df = transformer.transform_input(input_df, selected_features)
+                except ValueError as e:
+                    if 'Temporal features' in str(e) and 'timestamp' in str(e):
+                        raise ValueError(
+                            f"Temporal features are required for optimization. "
+                            f"Please provide either {temporal_features} in 'current_conditions' "
+                            f"or include a 'timestamp' field."
+                        ) from e
+                    raise
+                
+                input_df = input_df[selected_features]
+                predicted_value = trainer.model.predict(input_df)[0]
+                
+                if direction.lower() == 'minimize':
+                    return predicted_value
+                else:
+                    return -predicted_value
+            
+            log.info("Starting Bayesian optimization...")
+            # result = gp_minimize(
+            #     objective,
+            #     space,
+            #     n_calls=n_iterations,
+            #     random_state=42,
+            #     verbose=False,
+            #     n_initial_points=min(10, n_iterations // 2)  # Initial random exploration
+            # )
+            
+            result = gp_minimize(
+                objective,
+                space,
+                n_calls=n_iterations,
+                n_initial_points=10, 
+                acq_func="EI",       
+                random_state=42
+            )
+            
+            best_setpoints = {setpoint_order[i]: result.x[i] for i in range(len(setpoint_order))}
+            best_target = result.fun if direction.lower() == 'minimize' else -result.fun
+            total_tested = len(result.func_vals)
+            
+            log.info(f"Bayesian optimization completed with {total_tested} evaluations")
+            
+        elif optimization_method.lower() == 'grid':
             import itertools
             setpoint_combinations = list(itertools.product(
                 search_space.get('SpMinVFD', [80]),
@@ -1119,7 +1316,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
             total_tested = n_iterations
             for i in range(n_iterations):
                 test_conditions = current_conditions.copy()
-                for setpoint in SETPOINT_NAMES:
+                for setpoint in setpoints_used:
                     if setpoint in search_space:
                         test_conditions[setpoint] = np.random.choice(search_space[setpoint])
                 
@@ -1145,7 +1342,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 
                 if is_better(predicted_value, best_target):
                     best_target = predicted_value
-                    best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    #best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    best_setpoints = {k: test_conditions[k] for k in setpoints_used}
                 
                 if (i + 1) % 100 == 0:
                     log.info(f"Progress: {i + 1}/{n_iterations} iterations")
@@ -1154,8 +1352,13 @@ def optimize_generic(current_conditions: Dict[str, Any],
         
         log.info("="*60)
         log.info("OPTIMIZATION COMPLETED")
+        log.info(f"Optimization method: {optimization_method.upper()}")
         log.info(f"Best Setpoints: {best_setpoints}")
         log.info(f"Best {target_column} value ({direction}): {best_target:.4f}")
+        log.info(f"Total evaluations: {total_tested}")
+        log.info(f"Time elapsed: {elapsed_time:.2f} seconds")
+        if optimization_method.lower() == 'bayes':
+            log.info(f"Efficiency: Bayesian optimization required {total_tested} evaluations vs {len(list(itertools.product(*[search_space[sp] for sp in SETPOINT_NAMES if sp in search_space])))} for grid search")
         log.info("="*60)
         
         return {

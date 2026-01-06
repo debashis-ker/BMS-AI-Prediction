@@ -44,7 +44,6 @@ app.include_router(chatbot_ollama.router)
 app.include_router(fetch_datapoints_using_haystack.router)
 app.include_router(lstm_predictions.router)
 
-
 @app.get("/")
 def root():
     '''Basic health check endpoint.'''
@@ -52,7 +51,7 @@ def root():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
-    workers = int(os.getenv("WORKERS", 4))
+    workers = int(os.getenv("WORKERS", 2))
     
     import sys
     is_production = "--prod" in sys.argv or os.getenv("ENVIRONMENT", "development") == "production"

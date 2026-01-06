@@ -7,6 +7,7 @@ import time
 import threading
 import os
 from dotenv import load_dotenv
+from cassandra.auth import PlainTextAuthProvider
 
 # Load environment variables
 load_dotenv()
@@ -61,10 +62,28 @@ def get_cassandra_session() -> Session:
     
     Connection parameters are loaded from .env file
     """
-    # Load connection parameters from environment variables
-    CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', 'localhost').split(',')
-    CASSANDRA_PORT = int(os.getenv('CASSANDRA_PORT', '9042'))
-    KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
+    # Default development settings (no authentication)
+    CASSANDRA_HOST = ["localhost"]
+    CASSANDRA_PORT = 9042
+    KEYSPACE_NAME = 'user_keyspace'
+    auth_provider = None
+    
+    # Production settings (with authentication)
+    if os.getenv("ENVIRONMENT") == "production":
+        username = os.getenv('CASSANDRA_USERNAME')
+        password = os.getenv('CASSANDRA_PASSWORD')
+        
+        if username and password:
+            auth_provider = PlainTextAuthProvider(username=username, password=password)
+            log.debug("[Cassandra] Using authenticated connection")
+        else:
+            log.warning("[Cassandra] Production mode but no credentials found, connecting without authentication")
+        
+        CASSANDRA_HOST = os.getenv('CASSANDRA_HOST', '192.168.2.32').split(',')
+        CASSANDRA_PORT = os.getenv('CASSANDRA_PORT', '9042')
+        KEYSPACE_NAME = os.getenv('CASSANDRA_KEYSPACE', 'user_keyspace')
+    else:
+        log.debug("[Cassandra] Using development mode (no authentication)")
     
     with CASS_SESSION_LOCK:
         current_time = time.time()
@@ -77,7 +96,11 @@ def get_cassandra_session() -> Session:
         
         log.info(f"[Cassandra] Creating new session to {CASSANDRA_HOST}:{CASSANDRA_PORT}")
         try:
-            cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+            if auth_provider:
+                cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT, auth_provider=auth_provider)
+            else:
+                cluster = Cluster(CASSANDRA_HOST, port=CASSANDRA_PORT)
+            
             session = cluster.connect(KEYSPACE_NAME)
             
             CASS_SESSION_DATA['cluster'] = cluster

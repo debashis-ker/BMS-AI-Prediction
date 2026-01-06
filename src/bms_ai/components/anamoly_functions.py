@@ -55,7 +55,6 @@ KNOWN_MODEL_FILE_NAMES = [
     'TempSu', 'Co2Avg', 'HuR1', 'HuRt',
     'FbVFDSf', 'FbVFDSf1', 'HumRt', 'HuSu'
 ]
-
 def wrap_data_list(data_list: List[Dict]) -> Dict[str, Any]:
     """Wraps the list of datapoint records into the dictionary structure expected by build_dynamic_features."""
     return {"success": True, "data": data_list, "count": len(data_list)}
@@ -714,10 +713,17 @@ def format_cassandra_output(data_records: List[Dict], limit: Optional[int]) -> D
     else:
          final_historical_data = dict(historical_data)
 
+    # Unit_Mapping
+    # active_units = {
+    #     feature: UNIT_MAPPING.get(feature, "unknown") 
+    #     for feature in final_historical_data.keys()
+    # }
+
     return {
         "data": {
             "historical_data": final_historical_data,
         }
+        # "units": active_units # Unit_Mapping
     }
 
 def fetch_data_from_cassandra(params: Dict[str, Any], table_suffix: str, session: Session) -> List[Dict]:
