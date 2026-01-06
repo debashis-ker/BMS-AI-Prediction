@@ -1126,6 +1126,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
             features_metadata = json.load(f)
         
         selected_features = features_metadata['selected_features']
+        setpoints = features_metadata['setpoints']
+        setpoints_used = setpoints or SETPOINT_NAMES
         log.info(f"Loaded {len(selected_features)} selected features from training")
         log.info(f"Features: {selected_features}")
         
@@ -1290,7 +1292,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
             total_tested = n_iterations
             for i in range(n_iterations):
                 test_conditions = current_conditions.copy()
-                for setpoint in SETPOINT_NAMES:
+                for setpoint in setpoints_used:
                     if setpoint in search_space:
                         test_conditions[setpoint] = np.random.choice(search_space[setpoint])
                 
@@ -1316,7 +1318,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 
                 if is_better(predicted_value, best_target):
                     best_target = predicted_value
-                    best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    #best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    best_setpoints = {k: test_conditions[k] for k in setpoints_used}
                 
                 if (i + 1) % 100 == 0:
                     log.info(f"Progress: {i + 1}/{n_iterations} iterations")

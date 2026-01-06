@@ -1374,7 +1374,7 @@ class AdjustmentHistoryRequest(BaseModel):
     #adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
     limit: Optional[int] = Field(100, description="Maximum number of records to return")
 
-@router.get("/optimization_history", response_model=OptimizationResultsResponse)
+@router.post("/optimization_history", response_model=OptimizationResultsResponse)
 async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Session = Depends(get_cassandra_session)):
     """
     Fetches adjustment history for a given equipment within an optional date range.
