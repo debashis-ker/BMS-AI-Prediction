@@ -4,6 +4,7 @@ Dynamic pipeline for training surrogate models and optimizing setpoints for any 
 Automatically selects best features using correlation and mutual information.
 """
 
+import datetime
 import json
 import sys
 import os
@@ -270,7 +271,7 @@ class GenericDataTransformation:
         self.categorical_cols_at_training = []
         
     #def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
-    def transform_dataset(self, data: List[dict], setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+    def transform_dataset(self, data: List[dict], system_type : str = "AHU", setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Transform entire dataset from CSV with automatic feature selection.
         
@@ -292,8 +293,8 @@ class GenericDataTransformation:
             log.info(f"Raw data shape: {df.shape}")
             
             if 'system_type' in df.columns:
-                df = df[df['system_type'] == 'AHU'].copy()
-                log.info(f"Filtered for AHU system type. Shape: {df.shape}")
+                df = df[df['system_type'] == system_type].copy()
+                log.info(f"Filtered for {system_type} system type. Shape: {df.shape}")
             
             if 'equipment_id' in df.columns:
                 df = df[df['equipment_id'] == self.equipment_id].copy()
@@ -302,7 +303,7 @@ class GenericDataTransformation:
                 raise ValueError("'equipment_id' column not found in data")
             
             if df.empty:
-                raise ValueError(f"No data found for system_type='AHU' and equipment_id='{self.equipment_id}'")
+                raise ValueError(f"No data found for system_type={system_type} and equipment_id='{self.equipment_id}'")
             
             if 'data_received_on' in df.columns:
                 df['data_received_on'] = pd.to_datetime(df['data_received_on'], errors='coerce')
@@ -731,19 +732,38 @@ class GenericModelTrainer:
             json_path = os.path.join(
                 'artifacts', 'generic_models', 
                 f'best_model_metrics.json'
-            )    
+            )
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
-            if( not os.path.exists(json_path)):
+            if not os.path.exists(json_path):
                 with open(json_path, 'w') as file:
                     json.dump({}, file)
-            
+
             with open(json_path, 'r') as file:
-                file_data = json.load(file)
+                try:
+                    file_data = json.load(file)
+                    if not isinstance(file_data, dict):
+                        file_data = {}
+                except Exception:
+                    file_data = {}
 
-            file_data.update({self.equipment_id : {"accuracy_score" : all_results[best_model_name]['test_r2']}})
+            new_entry = {
+                "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "accuracy_score": float(all_results[best_model_name]['test_r2'])
+            }
 
-            json.dump(file_data, open(json_path, 'w'), indent=2)
-            log.info(f"Best Model : {best_model_name} metrics saved.")  
+            existing = file_data.get(self.equipment_id)
+            if existing is None:
+                file_data[self.equipment_id] = [new_entry]
+            elif isinstance(existing, list):
+                existing.append(new_entry)
+                file_data[self.equipment_id] = existing
+            else:
+                file_data[self.equipment_id] = [existing, new_entry]
+
+            with open(json_path, 'w') as f:
+                json.dump(file_data, f, indent=2)
+            log.info(f"Best Model : {best_model_name} metrics saved.")
 
             return {
                 'best_model_name': best_model_name,
@@ -781,7 +801,7 @@ class GenericModelTrainer:
 '''def train_generic(data_path: str, equipment_id: str, target_column: str,
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:'''
-def train_generic(data: List[dict], equipment_id: str, target_column: str,
+def train_generic(data: List[dict], equipment_id: str, target_column: str, system_type:str="AHU",
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -809,7 +829,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints)
+        X, y, selected_features = transformer.transform_dataset(data, setpoints=setpoints, system_type=system_type)
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42
@@ -854,7 +874,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
         log.error(f"Training failed: {e}")
         raise CustomException(e, sys)
     
-def train_genericV2(data: dict, equipment_id: str, target_column: str,
+def train_genericV2(data: dict, equipment_id: str, target_column: str, system_type : str = "AHU",
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -882,7 +902,7 @@ def train_genericV2(data: dict, equipment_id: str, target_column: str,
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints)
+        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints, system_type=system_type)
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42

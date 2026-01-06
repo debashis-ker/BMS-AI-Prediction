@@ -228,3 +228,6 @@ resources/
 
 
 catboost_info/
+
+
+artifacts/generic_models/

@@ -917,7 +917,7 @@ class GenericTrainRequestV2(BaseModel):
     #data_path: str = Field("D:\\My Donwloads\\bacnet_latest_data\\bacnet_latest_data.csv", description="Path to training data CSV file")
     #data : List[dict] = Field(..., description="Input data in JSON format")
     ticket: str = Field(..., description="Ticket ID for tracking the training job")
-    ticket_type: Optional[str] = Field(..., description="Ticket type (e.g., 'software', 'model', etc.)")
+    ticket_type: Optional[str] = Field(None, description="Ticket type (e.g., 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the training job")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field(..., description="Building ID where the equipment is located")
@@ -1085,6 +1085,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             search_method=request_data.search_method,
             cv_folds=request_data.cv_folds,
             n_iter=request_data.n_iter,
+            system_type = request_data.system_type,
             #setpoints=request_data.setpoints
             setpoints=setpoints
         )
@@ -1104,30 +1105,33 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
 class BestModelMetricsRequest(BaseModel):
     equipment_id: Optional[str] = Field("", description="Optional filter for a specific equipment ID.")
 
-@router.post('/best_model_metrics')
+@router.post('/get_best_model_metrics')
 def best_model_metrics(
     request_data: BestModelMetricsRequest
-) -> Dict[str, Any]:
+) -> List[Dict[str, Any]]:
     
     equipment_id = request_data.equipment_id
+    json_path = Path('artifacts/best_model_metrics.json')
+
     try:
-        best_model_metrics = pd.read_json('artifacts/generic_models/best_model_metrics.json', orient='index')
+        with open(json_path, 'r') as f:
+            file_data = json.load(f)
+            if not isinstance(file_data, dict):
+                raise ValueError("Best model metrics file format is invalid")
+    except FileNotFoundError:
+        log.error("Best Model Metrics file not found")
+        raise HTTPException(status_code=404, detail="Best Model Metrics file not found")
     except Exception as e:
-        log.error(f"Best Model Metrics is Empty: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Best Model Metrics is Empty."
-        )
+        log.error(f"Failed to load Best Model Metrics: {e}")
+        raise HTTPException(status_code=500, detail="Best Model Metrics is invalid or empty")
 
     if equipment_id:
-        if best_model_metrics.empty:
-            return {}
-        else:
-            if equipment_id not in best_model_metrics.index:
-                raise HTTPException(
-                    status_code=404,detail="False")
-            return best_model_metrics.loc[[equipment_id]].to_dict(orient='index') #type: ignore
-    return best_model_metrics.to_dict(orient='index') #type: ignore
+        result = file_data.get(equipment_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="False")
+        return result
+
+    return file_data #type:ignore
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
