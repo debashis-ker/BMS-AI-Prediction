@@ -4,6 +4,7 @@ Dynamic pipeline for training surrogate models and optimizing setpoints for any 
 Automatically selects best features using correlation and mutual information.
 """
 
+import datetime
 import json
 import sys
 import os
@@ -40,7 +41,7 @@ from exception import CustomException
 
 log = setup_logger(__name__)
 
-SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
+# SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 
 
 @dataclass
@@ -815,21 +816,39 @@ class GenericModelTrainer:
             log.info(f"Standard R²: {all_results[best_model_name]['test_r2']:.4f}")
             
             json_path = os.path.join(
-                'artifacts', 'generic_models', 
-                f'best_model_metrics.json'
-            )    
+                'artifacts',f'best_model_metrics.json'
+            )
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
-            if( not os.path.exists(json_path)):
+            if not os.path.exists(json_path):
                 with open(json_path, 'w') as file:
                     json.dump({}, file)
-            
+
             with open(json_path, 'r') as file:
-                file_data = json.load(file)
+                try:
+                    file_data = json.load(file)
+                    if not isinstance(file_data, dict):
+                        file_data = {}
+                except Exception:
+                    file_data = {}
 
-            file_data.update({self.equipment_id : {"accuracy_score" : all_results[best_model_name]['test_r2']}})
+            new_entry = {
+                "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "accuracy_score": float(all_results[best_model_name]['test_r2'])
+            }
 
-            json.dump(file_data, open(json_path, 'w'), indent=2)
-            log.info(f"Best Model : {best_model_name} metrics saved.")  
+            existing = file_data.get(self.equipment_id)
+            if existing is None:
+                file_data[self.equipment_id] = [new_entry]
+            elif isinstance(existing, list):
+                existing.append(new_entry)
+                file_data[self.equipment_id] = existing
+            else:
+                file_data[self.equipment_id] = [existing, new_entry]
+
+            with open(json_path, 'w') as f:
+                json.dump(file_data, f, indent=2)
+            log.info(f"Best Model : {best_model_name} metrics saved.")
 
             return {
                 'best_model_name': best_model_name,
