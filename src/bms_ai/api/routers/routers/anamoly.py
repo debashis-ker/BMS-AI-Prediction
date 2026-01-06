@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.components.anamoly_functions import *
+from src.bms_ai.components.anamoly_model_training import *
 
 load_dotenv()
 log = setup_logger(__name__)
@@ -41,6 +42,14 @@ class DatapointFetchingRequest(BaseModel):
     system_type: str = Field(..., description="System type (e.g., 'AHU', 'RTU')")
     equipment_id: str = Field("Ahu1", description="Equipment ID for datapoint fetching")
     search_tag_groups: List[List[str]] = Field(..., description="Search Tags for datapoint fetching")
+    ticket_type : Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
+
+class ModelTrainingRequest(BaseModel):
+    building_id: str = Field(default="36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building Id")
+    ticket: str = Field(default="", description="Ticket required to fetch datapoints name")
+    software_id: str = Field(default="", description="Software Id required to fetch datapoints name")
+    account_id: str = Field(default="", description="Account Id required to fetch datapoints name")
+    search_tag_groups: List[List[str]] = Field(default=[[""]], description="search tags required to fetch datapoints")
     ticket_type : Optional[str] = Field(None, description="IKon Ticket Type (Optional)")
 
 def common_response_handler(request: DataQueryRequest, table_suffix: str, session: Session) -> Dict[str, Any]:
@@ -126,3 +135,20 @@ def fetch_anomaly_data_endpoint(
 ) -> Dict[str, Any]:
     """Fetches only anomaly data from the Cassandra anomaly table."""
     return common_response_handler(request, ANAMOLY_TABLE_SUFFIX, session)
+
+@router.post("/anamoly_models_training")
+def anamoly_models_training(request:ModelTrainingRequest, background_tasks:BackgroundTasks):
+    start_time = time.time()
+
+    building_id = request.building_id
+    search_tags = request.search_tag_groups
+    ticket_id = request.ticket
+    software_id = request.software_id
+    account_id = request.account_id
+    ticket_type = request.ticket_type
+
+    log.debug(f"Parameters received - Building ID: {building_id}, Ticket ID: {ticket_id}, Software ID: {software_id}, Account ID: {account_id}, Search Tags: {search_tags}, Ticket Type: {ticket_type}")
+
+    result = training_pipeline(background_tasks=background_tasks, building_id=building_id, search_tag_groups=search_tags, ticket=ticket_id,software_id=software_id, account_id=account_id,ticket_type=ticket_type) 
+    log.info(f"Anomaly Model Training completed in {time.time() - start_time:.2f} seconds.")
+    return result
