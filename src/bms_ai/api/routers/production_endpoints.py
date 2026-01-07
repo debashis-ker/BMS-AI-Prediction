@@ -1087,6 +1087,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             search_method=request_data.search_method,
             cv_folds=request_data.cv_folds,
             n_iter=request_data.n_iter,
+            system_type = request_data.system_type,
             #setpoints=request_data.setpoints
             setpoints=setpoints
         )
