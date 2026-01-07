@@ -5,6 +5,7 @@ Automatically selects best features using correlation and mutual information.
 """
 
 import datetime
+import datetime
 import json
 import sys
 import os
@@ -298,7 +299,7 @@ class GenericDataTransformation:
         self.numeric_cols_at_training = []
         self.categorical_cols_at_training = []
         
-    def transform_dataset(self, data: List[dict], setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def transform_dataset(self, data: List[dict], system_type : str = "AHU", setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Load and prepare dataset without scaling or feature selection.
         
@@ -322,8 +323,8 @@ class GenericDataTransformation:
             log.info(f"Raw data shape: {df.shape}")
             
             if 'system_type' in df.columns:
-                df = df[df['system_type'] == 'AHU'].copy()
-                log.info(f"Filtered for AHU system type. Shape: {df.shape}")
+                df = df[df['system_type'] == system_type].copy()
+                log.info(f"Filtered for {system_type} system type. Shape: {df.shape}")
             
             if 'equipment_id' in df.columns:
                 df = df[df['equipment_id'] == self.equipment_id].copy()
@@ -332,7 +333,7 @@ class GenericDataTransformation:
                 raise ValueError("'equipment_id' column not found in data")
             
             if df.empty:
-                raise ValueError(f"No data found for system_type='AHU' and equipment_id='{self.equipment_id}'")
+                raise ValueError(f"No data found for system_type={system_type} and equipment_id='{self.equipment_id}'")
             
             if 'data_received_on' in df.columns:
                 df['data_received_on'] = pd.to_datetime(df['data_received_on'], errors='coerce')
@@ -923,7 +924,10 @@ class GenericModelTrainer:
             raise CustomException(e, sys)
 
 
-def train_generic(data: List[dict], equipment_id: str, target_column: str,
+'''def train_generic(data_path: str, equipment_id: str, target_column: str,
+                  test_size: float = 0.2, search_method: str = 'random',
+                  cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:'''
+def train_generic(data: List[dict], equipment_id: str, target_column: str, system_type:str="AHU",
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -953,7 +957,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        pivoted_df, present_setpoints = transformer.transform_dataset(data, setpoints=setpoints)
+        pivoted_df, present_setpoints = transformer.transform_dataset(data, setpoints=setpoints,system_type=system_type)
         
         if target_column not in pivoted_df.columns:
             raise ValueError(f"Target column '{target_column}' not found in pivoted data")
@@ -1016,7 +1020,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str,
         log.error(f"Training failed: {e}")
         raise CustomException(e, sys)
     
-def train_genericV2(data: dict, equipment_id: str, target_column: str,
+def train_genericV2(data: dict, equipment_id: str, target_column: str, system_type : str = "AHU",
                   test_size: float = 0.2, search_method: str = 'random',
                   cv_folds: int = 5, n_iter: int = 20, setpoints: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -1044,7 +1048,7 @@ def train_genericV2(data: dict, equipment_id: str, target_column: str,
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints)
+        X, y, selected_features = transformer.transform_dataset(data_path, setpoints=setpoints, system_type=system_type)
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42
