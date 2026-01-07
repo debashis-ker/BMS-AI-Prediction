@@ -5,6 +5,7 @@ Automatically selects best features using correlation and mutual information.
 """
 
 import datetime
+import datetime
 import json
 import sys
 import os
@@ -40,8 +41,7 @@ from logger_config import setup_logger
 from exception import CustomException
 
 log = setup_logger(__name__)
-
-SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
+#SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 
 
 @dataclass
@@ -62,16 +62,18 @@ class GenericFeatureSelector:
         self.target_column = target_column
         self.selected_features = []
         
-    def select_features(self, df: pd.DataFrame, n_features: int = 20) -> List[str]:
+    def select_features(self, df: pd.DataFrame, n_features: int = 20, setpoints: Optional[List[str]] = None) -> List[str]:
         """
         Select top features based on correlation and mutual information.
+        Setpoints are always added on top of the selected features.
         
         Args:
             df: DataFrame with features and target
-            n_features: Total number of features to select (default: 20)
+            n_features: Number of regular features to select (default: 20)
+            setpoints: Optional list of setpoint column names to exclude from selection and add on top
             
         Returns:
-            List of selected feature names
+            List of selected feature names (n_features + all setpoints)
         """
         try:
             log.info("="*60)
@@ -92,9 +94,20 @@ class GenericFeatureSelector:
             y = df[self.target_column].copy()
             X = df.drop(columns=[self.target_column]).copy()
             
-            log.info(f"Initial features: {X.shape[1]}")
+            # Identify setpoints in the data
+            setpoints = setpoints or []
+            available_setpoints = [sp for sp in setpoints if sp in X.columns]
             
-            X_transformed = self._transform_for_analysis(X)
+            # Exclude setpoints from feature selection
+            if available_setpoints:
+                X_for_selection = X.drop(columns=available_setpoints, errors='ignore')
+                log.info(f"Excluding {len(available_setpoints)} setpoints from feature selection: {available_setpoints}")
+                log.info(f"Features for selection (excluding setpoints): {X_for_selection.shape[1]}")
+            else:
+                X_for_selection = X
+                log.info(f"Initial features: {X_for_selection.shape[1]}")
+            
+            X_transformed = self._transform_for_analysis(X_for_selection)
             
             valid_idx = X_transformed.notna().all(axis=1) & y.notna()
             X_transformed = X_transformed[valid_idx]
@@ -118,6 +131,7 @@ class GenericFeatureSelector:
             
             self._plot_feature_importance(target_corr, mi_series)
             
+            # Select top features from non-setpoint columns
             top_mi_features = mi_series.nlargest(10).index.tolist()
             
             corr_abs = target_corr.abs()
@@ -128,15 +142,16 @@ class GenericFeatureSelector:
             
             self.selected_features = top_mi_features + top_corr_features
             
-            for setpoint in SETPOINT_NAMES:
-                if setpoint in X.columns and setpoint not in self.selected_features:
+            # Add all available setpoints on top of selected features
+            for setpoint in available_setpoints:
+                if setpoint not in self.selected_features:
                     self.selected_features.append(setpoint)
-                    log.info(f"Added setpoint: {setpoint}")
+                    log.info(f"Added setpoint to selected features: {setpoint}")
             
-            log.info(f"Selected {len(self.selected_features)} features")
+            log.info(f"Selected {len(self.selected_features)} total features ({len(self.selected_features) - len(available_setpoints)} regular + {len(available_setpoints)} setpoints)")
             log.info(f"Top 10 MI features: {top_mi_features}")
             log.info(f"Top 10 Correlation features: {top_corr_features}")
-            log.info(f"Setpoints included: {[s for s in SETPOINT_NAMES if s in self.selected_features]}")
+            log.info(f"Setpoints included: {available_setpoints}")
             
             self._save_selected_features(target_corr, mi_series)
             
@@ -221,8 +236,8 @@ class GenericFeatureSelector:
                 'selected_features': self.selected_features,
                 'feature_scores': {
                     feat: {
-                        'correlation': float(correlation.get(feat, 0.0)),
-                        'mutual_info': float(mutual_info.get(feat, 0.0))
+                        'correlation': 0.0 if pd.isna(correlation.get(feat, 0.0)) else float(correlation.get(feat, 0.0)),
+                        'mutual_info': 0.0 if pd.isna(mutual_info.get(feat, 0.0)) else float(mutual_info.get(feat, 0.0))
                     }
                     for feat in self.selected_features
                 }
@@ -230,8 +245,13 @@ class GenericFeatureSelector:
             
             if setpoints:
                 metadata['setpoints'] = setpoints
+                log.info(f"Adding setpoints to JSON metadata: {setpoints}")
+            else:
+                log.warning("No setpoints provided to save in JSON metadata")
+            
             if setpoint_ranges:
                 metadata['setpoint_ranges'] = setpoint_ranges
+                log.info(f"Adding setpoint_ranges to JSON metadata for: {list(setpoint_ranges.keys())}")
             
             json_path = os.path.join(
                 'artifacts', 'generic_models', 
@@ -349,7 +369,10 @@ class GenericDataTransformation:
             single_value_cols = []
             for col in pivoted_df.columns:
                 if pivoted_df[col].nunique() == 1:
-                    single_value_cols.append(col)
+                    if setpoints and col in setpoints:
+                        log.info(f"Column '{col}' has single value but keeping it (it's a requested setpoint)")
+                    else:
+                        single_value_cols.append(col)
             
             if single_value_cols:
                 pivoted_df.drop(columns=single_value_cols, inplace=True)
@@ -372,10 +395,15 @@ class GenericDataTransformation:
             
             setpoints = setpoints or SETPOINT_NAMES
             present_setpoints = [s for s in setpoints if s in pivoted_df.columns]
+            missing_setpoints = [s for s in setpoints if s not in pivoted_df.columns]
             
             log.info("Data preparation complete. Feature selection and scaling will occur after train/test split.")
             log.info(f"Prepared data shape: {pivoted_df.shape}")
+            log.info(f"Available columns in pivoted data: {list(pivoted_df.columns)}")
+            log.info(f"Requested setpoints: {setpoints}")
             log.info(f"Present setpoints: {present_setpoints}")
+            if missing_setpoints:
+                log.warning(f"Missing setpoints (not found in data): {missing_setpoints}")
             
             return pivoted_df, present_setpoints
             
@@ -403,48 +431,61 @@ class GenericDataTransformation:
             log.info("FITTING FEATURE SELECTOR AND SCALER ON TRAINING DATA")
             log.info("="*60)
             
-            # Step 1: Feature selection on training data only
+            present_setpoints_check = [s for s in setpoints if s in df.columns]
+            if present_setpoints_check:
+                log.info(f"Setpoints present in dataframe: {present_setpoints_check}")
+                log.info(f"Sample setpoint values:\n{df[present_setpoints_check].head(5)}")
+            
             log.info("Starting automatic feature selection on training data...")
             feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
-            selected_features = feature_selector.select_features(df, n_features=n_features)
+            selected_features = feature_selector.select_features(df, n_features=n_features, setpoints=setpoints)
             self.selected_features = selected_features
             
-            # Step 2: Ensure setpoints are included
             present_setpoints = [s for s in setpoints if s in df.columns]
             for sp in present_setpoints:
                 if sp not in self.selected_features:
                     self.selected_features.append(sp)
                     log.info(f"Added setpoint to selected features: {sp}")
             
-            # Step 3: Calculate and save setpoint ranges
+            # Step 3: Calculate and save setpoint ranges (only for present setpoints)
             setpoint_ranges = {}
             for sp in present_setpoints:
                 try:
                     col_vals = pd.to_numeric(df[sp].dropna(), errors='coerce')
                     if col_vals.empty:
+                        log.warning(f"Setpoint {sp} has no valid numeric values, skipping")
                         continue
+                    
                     min_val = float(col_vals.min())
                     max_val = float(col_vals.max())
+                    
                     if abs(max_val - min_val) < 1e-6:
-                        min_val = max(0, min_val - 0.1)
-                        max_val = max_val + 0.1
-                    setpoint_ranges[sp] = {
-                        "min": min_val,
-                        "max": max_val,
-                        "lookup": list(np.linspace(min_val, max_val, num=21))
-                    }
-                    log.info(f"Setpoint {sp} range: [{min_val:.2f}, {max_val:.2f}]")
+                        setpoint_ranges[sp] = {
+                            "min": min_val,
+                            "max": max_val,
+                            "lookup": [min_val] 
+                        }
+                        log.info(f"Setpoint {sp} has constant value: {min_val:.2f} (kept in features with single-value lookup)")
+                    else:
+                        setpoint_ranges[sp] = {
+                            "min": min_val,
+                            "max": max_val,
+                            "lookup": list(np.linspace(min_val, max_val, num=21))
+                        }
+                        log.info(f"Setpoint {sp} range: [{min_val:.2f}, {max_val:.2f}]")
                 except Exception as e:
                     log.warning(f"Could not compute range for setpoint {sp}: {e}")
             
+            log.info(f"Saving to JSON - All requested setpoints: {setpoints}")
+            log.info(f"Saving to JSON - Present setpoints in data: {present_setpoints}")
+            log.info(f"Saving to JSON - Setpoint ranges calculated for: {list(setpoint_ranges.keys())}")
             feature_selector._save_selected_features(
                 correlation=getattr(feature_selector, 'correlation', pd.Series()),
                 mutual_info=getattr(feature_selector, 'mutual_info', pd.Series()),
-                setpoints=present_setpoints,
-                setpoint_ranges=setpoint_ranges
+                setpoints=setpoints,  
+                setpoint_ranges=setpoint_ranges  
             )
             
-            # Step 4: Extract X and y
             available_features = [f for f in self.selected_features if f in df.columns]
             missing_features = [f for f in self.selected_features if f not in df.columns]
             
@@ -817,8 +858,7 @@ class GenericModelTrainer:
             log.info(f"Standard R²: {all_results[best_model_name]['test_r2']:.4f}")
             
             json_path = os.path.join(
-                'artifacts', 'generic_models', 
-                f'best_model_metrics.json'
+                'artifacts',f'best_model_metrics.json'
             )
             os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
@@ -934,7 +974,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
         
         X_train, y_train, selected_features = transformer.fit_transform_features(
             pd.concat([df_train, y_train], axis=1), 
-            present_setpoints,
+            setpoints,  
             n_features=20
         )
         
@@ -961,8 +1001,8 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
 
         feature_config = FeatureSelectionConfig()
         
-        setpoints_used = setpoints or SETPOINT_NAMES
-        trained_setpoints = [s for s in setpoints_used if s in selected_features]
+        trained_setpoints = setpoints if setpoints else []
+        log.info(f"Returning setpoints: {trained_setpoints} (present in data: {present_setpoints})")
         
         return {
             'status': 'success',
