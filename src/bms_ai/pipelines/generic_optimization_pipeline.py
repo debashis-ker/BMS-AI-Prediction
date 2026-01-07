@@ -299,7 +299,6 @@ class GenericDataTransformation:
         self.numeric_cols_at_training = []
         self.categorical_cols_at_training = []
         
-    #def transform_dataset(self, data_path: str, setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
     def transform_dataset(self, data: List[dict], system_type : str = "AHU", setpoints: Optional[List[str]] = None) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         """
         Load and prepare dataset without scaling or feature selection.
@@ -958,7 +957,7 @@ def train_generic(data: List[dict], equipment_id: str, target_column: str, syste
         log.info("="*60)
         
         transformer = GenericDataTransformation(equipment_id, target_column)
-        pivoted_df, present_setpoints = transformer.transform_dataset(data, setpoints=setpoints)
+        pivoted_df, present_setpoints = transformer.transform_dataset(data, setpoints=setpoints,system_type=system_type)
         
         if target_column not in pivoted_df.columns:
             raise ValueError(f"Target column '{target_column}' not found in pivoted data")
