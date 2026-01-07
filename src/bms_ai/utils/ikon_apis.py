@@ -263,13 +263,16 @@ def find_data_points_by_floor_and_tags(
             if not current_search_tag_array or len(current_search_tag_array) == 0:
                 continue
             
+            has_sp_tag = any(tag.lower() == 'sp' for tag in current_search_tag_array)
+            
+            matched_datapoints = []
             for dp in equipment_data.get('dataPoints', []):
                 dp_tags = dp.get('haystackTags', [])
                 dp_tags_set = set(dp_tags)
                 match_score = sum(1 for tag in current_search_tag_array if tag in dp_tags_set)
                 
                 if match_score == len(current_search_tag_array) and len(dp_tags) == len(current_search_tag_array):
-                    results.append({
+                    matched_datapoints.append({
                         'site': current_site_name,
                         'system_name': path_system_name,
                         'system_assetCode': path_system_asset_code,
@@ -282,8 +285,18 @@ def find_data_points_by_floor_and_tags(
                         'matchScore': match_score,
                         'queryTags': current_search_tag_array
                     })
+            
+            if matched_datapoints:
+                if has_sp_tag:
+                    sp_datapoints = [
+                        dp for dp in matched_datapoints 
+                        if dp['dataPointName'] and dp['dataPointName'].lower().startswith('sp')
+                    ]
+                    if sp_datapoints:
+                        results.append(sp_datapoints[0])
+                else:
+                    results.append(matched_datapoints[0])
     
-    # Recursive helper to find specific equipment
     def find_and_process_specific_equipment_recursive(
         current_level_data: Dict[str, Any],
         top_level_system_name: str,
@@ -306,7 +319,6 @@ def find_data_points_by_floor_and_tags(
                     return True
         return False
     
-    # Recursive helper for all equipment under system type
     def process_all_equipment_under_system_recursive(
         current_level_data: Dict[str, Any],
         top_level_system_name: str,

@@ -1018,7 +1018,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     #log.debug(f"Target variable tags: {matches_tags}")
     if request_data.setpoints != None:
         matches_tags = matches_tags + request_data.setpoints
-        #log.debug(f"Setpoint tags: {matches_tags}")
+        log.debug(f"Setpoint tags: {matches_tags}")
 
     results = fetch_and_find_data_points(
             building_id=request_data.building_id,
@@ -1037,7 +1037,7 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
     target_variable = ""
     setpoints = []
 
-    # log.debug(f"Fetched data points: {results}")
+    log.error(f"Fetched data points: {results}")
 
 
     if len(results) > 0:
@@ -1056,7 +1056,9 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
             raise HTTPException(status_code=500, detail="Data point name not found in results.")
     else:
         raise HTTPException(status_code=404, detail="No data points found for the specified target variable tags.")
-      
+
+    log.debug(f"Final target variable: {target_variable}")
+    log.debug(f"Final setpoints: {setpoints}")
     data = fetch_all_ahu_dataV2(
             building_id=request_data.building_id,
             site=request_data.site,
