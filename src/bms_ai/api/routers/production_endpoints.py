@@ -1425,3 +1425,199 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
     except Exception as e:
         log.error(f"Error fetching adjustment history: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
+
+
+class GenericOptimizeStaticRequest(BaseModel):
+    """Request model for static optimization with JSON data."""
+    equipment_id: str = Field(..., description="Equipment ID (must match training)")
+    target_variable: str = Field(..., description="Target variable to optimize (must match training)")
+    static_data_file: Optional[str] = Field("sample_response.json", description="Path to static JSON data file (default: sample_response.json)")
+    search_space: Optional[Dict[str, List[float]]] = Field(None, description="Setpoint ranges to search")
+    optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid' or 'random'")
+    n_iterations: Optional[int] = Field(1000, description="Number of iterations for random search (ignored for grid)")
+    direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
+    output_file: Optional[str] = Field("artifacts/optimization_history/static_optimization_results.json", description="Path to save static results JSON file")
+
+
+class StaticOptimizationResponse(BaseModel):
+    """Response model for static optimization."""
+    status: str = Field(..., description="Status of the optimization")
+    total_timestamps: int = Field(..., description="Total timestamps processed")
+    successful_optimizations: int = Field(..., description="Number of successful optimizations")
+    failed_optimizations: int = Field(..., description="Number of failed optimizations")
+    optimized_percentage: float = Field(..., description="Average difference between actual and predicted values")
+    output_file: str = Field(..., description="Path to the output JSON file")
+    results: List[Dict[str, Any]] = Field(..., description="Optimization results for each timestamp")
+
+
+@router.post('/generic_optimize_static', response_model=StaticOptimizationResponse)
+def generic_optimize_static_endpoint(request_data: GenericOptimizeStaticRequest):
+    """
+    Optimize AHU setpoints for multiple timestamps from static JSON data file.
+    
+    This endpoint reads data from sample_response.json (or specified file),
+    processes multiple timestamps for a single day, optimizes setpoints for each 
+    timestamp individually, and saves results to a static JSON file.
+    
+    Args:
+        equipment_id: Equipment ID (must match training)
+        target_variable: Target variable to optimize
+        static_data_file: Path to JSON file with data records (default: sample_response.json)
+        search_space: Optional setpoint ranges (defaults provided if not specified)
+        optimization_method: 'grid' or 'random'
+        n_iterations: Number of iterations for random search
+        direction: 'minimize' or 'maximize' the target variable
+        output_file: Path to save the results JSON file
+        
+    Returns:
+        Optimization results for all timestamps and summary statistics
+    """
+    from collections import defaultdict
+    
+    start_total = time.time()
+    log.info(f"Static optimization request: equipment={request_data.equipment_id}, target={request_data.target_variable}")
+    
+    try:
+        # Load static data from file
+        static_data_path = Path(request_data.static_data_file or "sample_response.json")
+        if not static_data_path.exists():
+            raise HTTPException(status_code=404, detail=f"Static data file not found: {static_data_path}")
+        
+        with open(static_data_path, 'r') as f:
+            static_data = json.load(f)
+        
+        # Filter data for the specified equipment_id
+        filtered_data = [
+            record for record in static_data 
+            if record.get("equipment_id") == request_data.equipment_id
+        ]
+        
+        log.info(f"Loaded {len(static_data)} records from {static_data_path}")
+        log.info(f"Filtered to {len(filtered_data)} records for equipment_id={request_data.equipment_id}")
+        
+        if not filtered_data:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No data found for equipment_id={request_data.equipment_id} in {static_data_path}"
+            )
+        
+        # Group data by timestamp (data_received_on)
+        timestamp_groups = defaultdict(list)
+        for record in filtered_data:
+            timestamp = record.get("data_received_on", record.get("timestamp", "unknown"))
+            timestamp_groups[timestamp].append(record)
+        
+        log.info(f"Found {len(timestamp_groups)} unique timestamps to process")
+        
+        all_results = []
+        successful = 0
+        failed = 0
+        
+        # Process each timestamp
+        for timestamp, records in timestamp_groups.items():
+            try:
+                log.info(f"Processing timestamp: {timestamp}")
+                
+                # Build current_conditions from records for this timestamp
+                current_conditions = {"timestamp": timestamp}
+                for record in records:
+                    datapoint = record.get("datapoint")
+                    monitoring_data = record.get("monitoring_data")
+                    if datapoint and monitoring_data is not None and monitoring_data != "null":
+                        current_conditions[datapoint] = monitoring_data
+                
+                log.debug(f"Current conditions for {timestamp}: {len(current_conditions)} fields")
+                
+                # Run optimization for this timestamp
+                result = optimize_generic(
+                    current_conditions=current_conditions,
+                    equipment_id=request_data.equipment_id,
+                    target_column=request_data.target_variable,
+                    search_space=request_data.search_space,
+                    optimization_method=request_data.optimization_method or "random",
+                    n_iterations=request_data.n_iterations or 1000,
+                    direction=request_data.direction or "minimize"
+                )
+                
+                # Prepare result record (similar to Cassandra format)
+                result_record = {
+                    "timestamp": timestamp,
+                    "actual_value": current_conditions.get(request_data.target_variable),
+                    "predicted_value": result['best_target_value'],
+                    "difference_actual_and_pred": None,
+                    "optimized_setpoints": result['best_setpoints'],
+                    "current_setpoints": {k: v for k, v in current_conditions.items() if k in result['best_setpoints']}
+                }
+                
+                # Calculate difference if actual value exists
+                if result_record["actual_value"] is not None:
+                    try:
+                        result_record["difference_actual_and_pred"] = abs(
+                            float(result_record["actual_value"]) - float(result_record["predicted_value"])
+                        )
+                    except (ValueError, TypeError):
+                        pass
+                
+                all_results.append(result_record)
+                successful += 1
+                log.info(f"Optimization successful for {timestamp}: best_value={result['best_target_value']:.4f}")
+                
+            except Exception as e:
+                log.error(f"Optimization failed for timestamp {timestamp}: {e}")
+                all_results.append({
+                    "timestamp": timestamp,
+                    "error": str(e),
+                    "actual_value": None,
+                    "predicted_value": None,
+                    "difference_actual_and_pred": None,
+                    "optimized_setpoints": {},
+                    "current_setpoints": {}
+                })
+                failed += 1
+        
+        # Calculate average difference
+        differences = [
+            r['difference_actual_and_pred'] 
+            for r in all_results 
+            if r.get('difference_actual_and_pred') is not None
+        ]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+        # Save results to static JSON file
+        output_path = Path(request_data.output_file or "artifacts/optimization_history/static_optimization_results.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        output_data = {
+            "equipment_id": request_data.equipment_id,
+            "target_variable": request_data.target_variable,
+            "optimization_method": request_data.optimization_method,
+            "direction": request_data.direction,
+            "generated_at": datetime.utcnow().isoformat(),
+            "total_timestamps": len(timestamp_groups),
+            "successful_optimizations": successful,
+            "failed_optimizations": failed,
+            "optimized_percentage": round(avg_difference, 4),
+            "results": all_results
+        }
+        
+        with open(output_path, 'w') as f:
+            json.dump(output_data, f, indent=2, default=str)
+        
+        end_total = time.time()
+        log.info(f"Static optimization completed in {end_total - start_total:.2f} seconds")
+        log.info(f"Results saved to {output_path}")
+        log.info(f"Processed {len(timestamp_groups)} timestamps: {successful} successful, {failed} failed")
+        
+        return StaticOptimizationResponse(
+            status="success",
+            total_timestamps=len(timestamp_groups),
+            successful_optimizations=successful,
+            failed_optimizations=failed,
+            optimized_percentage=round(avg_difference, 4),
+            output_file=str(output_path),
+            results=all_results
+        )
+        
+    except Exception as e:
+        log.error(f"Static optimization failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
