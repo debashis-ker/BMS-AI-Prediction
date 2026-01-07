@@ -61,7 +61,7 @@ class GenericFeatureSelector:
         self.target_column = target_column
         self.selected_features = []
         
-    def select_features(self, df: pd.DataFrame, n_features: int = 20, exclude_setpoints_from_selection: bool = True) -> List[str]:
+    def select_features(self, df: pd.DataFrame, n_features: int = 20, setpoints: Optional[List[str]] = None) -> List[str]:
         """
         Select top features based on correlation and mutual information.
         Setpoints are always added on top of the selected features.
@@ -69,7 +69,7 @@ class GenericFeatureSelector:
         Args:
             df: DataFrame with features and target
             n_features: Number of regular features to select (default: 20)
-            exclude_setpoints_from_selection: If True, setpoints won't count toward n_features
+            setpoints: Optional list of setpoint column names to exclude from selection and add on top
             
         Returns:
             List of selected feature names (n_features + all setpoints)
@@ -94,10 +94,11 @@ class GenericFeatureSelector:
             X = df.drop(columns=[self.target_column]).copy()
             
             # Identify setpoints in the data
-            available_setpoints = [sp for sp in SETPOINT_NAMES if sp in X.columns]
+            setpoints = setpoints or []
+            available_setpoints = [sp for sp in setpoints if sp in X.columns]
             
-            # Exclude setpoints from feature selection if requested
-            if exclude_setpoints_from_selection:
+            # Exclude setpoints from feature selection
+            if available_setpoints:
                 X_for_selection = X.drop(columns=available_setpoints, errors='ignore')
                 log.info(f"Excluding {len(available_setpoints)} setpoints from feature selection: {available_setpoints}")
                 log.info(f"Features for selection (excluding setpoints): {X_for_selection.shape[1]}")
@@ -140,15 +141,16 @@ class GenericFeatureSelector:
             
             self.selected_features = top_mi_features + top_corr_features
             
-            for setpoint in SETPOINT_NAMES:
-                if setpoint in X.columns and setpoint not in self.selected_features:
+            # Add all available setpoints on top of selected features
+            for setpoint in available_setpoints:
+                if setpoint not in self.selected_features:
                     self.selected_features.append(setpoint)
                     log.info(f"Added setpoint to selected features: {setpoint}")
             
             log.info(f"Selected {len(self.selected_features)} total features ({len(self.selected_features) - len(available_setpoints)} regular + {len(available_setpoints)} setpoints)")
             log.info(f"Top 10 MI features: {top_mi_features}")
             log.info(f"Top 10 Correlation features: {top_corr_features}")
-            log.info(f"Setpoints included: {[s for s in SETPOINT_NAMES if s in self.selected_features]}")
+            log.info(f"Setpoints included: {available_setpoints}")
             
             self._save_selected_features(target_corr, mi_series)
             
@@ -434,7 +436,7 @@ class GenericDataTransformation:
             
             log.info("Starting automatic feature selection on training data...")
             feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
-            selected_features = feature_selector.select_features(df, n_features=n_features,setpoints=setpoints)
+            selected_features = feature_selector.select_features(df, n_features=n_features, setpoints=setpoints)
             self.selected_features = selected_features
             
             present_setpoints = [s for s in setpoints if s in df.columns]
