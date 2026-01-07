@@ -1106,30 +1106,33 @@ def generic_train_endpointV2(request_data: GenericTrainRequestV2):
 class BestModelMetricsRequest(BaseModel):
     equipment_id: Optional[str] = Field("", description="Optional filter for a specific equipment ID.")
 
-@router.post('/best_model_metrics')
+@router.post('/get_best_model_metrics')
 def best_model_metrics(
     request_data: BestModelMetricsRequest
-) -> Dict[str, Any]:
+) -> List[Dict[str, Any]]:
     
     equipment_id = request_data.equipment_id
+    json_path = Path('artifacts/best_model_metrics.json')
+
     try:
-        best_model_metrics = pd.read_json('artifacts/generic_models/best_model_metrics.json', orient='index')
+        with open(json_path, 'r') as f:
+            file_data = json.load(f)
+            if not isinstance(file_data, dict):
+                raise ValueError("Best model metrics file format is invalid")
+    except FileNotFoundError:
+        log.error("Best Model Metrics file not found")
+        raise HTTPException(status_code=404, detail="Best Model Metrics file not found")
     except Exception as e:
-        log.error(f"Best Model Metrics is Empty: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Best Model Metrics is Empty."
-        )
+        log.error(f"Failed to load Best Model Metrics: {e}")
+        raise HTTPException(status_code=500, detail="Best Model Metrics is invalid or empty")
 
     if equipment_id:
-        if best_model_metrics.empty:
-            return {}
-        else:
-            if equipment_id not in best_model_metrics.index:
-                raise HTTPException(
-                    status_code=404,detail="False")
-            return best_model_metrics.loc[[equipment_id]].to_dict(orient='index') #type: ignore
-    return best_model_metrics.to_dict(orient='index') #type: ignore
+        result = file_data.get(equipment_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="False")
+        return result
+
+    return file_data #type:ignore
 
 class GenericOptimizeRequest(BaseModel):
     current_conditions: Dict[str, Any] = Field(..., description="Current system state")
@@ -1376,7 +1379,7 @@ class AdjustmentHistoryRequest(BaseModel):
     #adjustments: List[Dict[str, Any]] = Field(..., description="List of adjustment history records")
     limit: Optional[int] = Field(100, description="Maximum number of records to return")
 
-@router.get("/optimization_history", response_model=OptimizationResultsResponse)
+@router.post("/optimization_history", response_model=OptimizationResultsResponse)
 async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Session = Depends(get_cassandra_session)):
     """
     Fetches adjustment history for a given equipment within an optional date range.

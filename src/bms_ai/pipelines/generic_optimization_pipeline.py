@@ -4,6 +4,7 @@ Dynamic pipeline for training surrogate models and optimizing setpoints for any 
 Automatically selects best features using correlation and mutual information.
 """
 
+import datetime
 import json
 import sys
 import os
@@ -39,8 +40,7 @@ from logger_config import setup_logger
 from exception import CustomException
 
 log = setup_logger(__name__)
-
-SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
+#SETPOINT_NAMES = ['SpMinVFD', 'SpTREff', 'SpTROcc']
 
 
 @dataclass
@@ -140,16 +140,15 @@ class GenericFeatureSelector:
             
             self.selected_features = top_mi_features + top_corr_features
             
-            # Always add all available setpoints on top of selected features
-            for setpoint in available_setpoints:
-                if setpoint not in self.selected_features:
+            for setpoint in SETPOINT_NAMES:
+                if setpoint in X.columns and setpoint not in self.selected_features:
                     self.selected_features.append(setpoint)
                     log.info(f"Added setpoint to selected features: {setpoint}")
             
             log.info(f"Selected {len(self.selected_features)} total features ({len(self.selected_features) - len(available_setpoints)} regular + {len(available_setpoints)} setpoints)")
             log.info(f"Top 10 MI features: {top_mi_features}")
             log.info(f"Top 10 Correlation features: {top_corr_features}")
-            log.info(f"Setpoints included: {available_setpoints}")
+            log.info(f"Setpoints included: {[s for s in SETPOINT_NAMES if s in self.selected_features]}")
             
             self._save_selected_features(target_corr, mi_series)
             
@@ -435,7 +434,7 @@ class GenericDataTransformation:
             
             log.info("Starting automatic feature selection on training data...")
             feature_selector = GenericFeatureSelector(self.equipment_id, self.target_column)
-            selected_features = feature_selector.select_features(df, n_features=n_features)
+            selected_features = feature_selector.select_features(df, n_features=n_features,setpoints=setpoints)
             self.selected_features = selected_features
             
             present_setpoints = [s for s in setpoints if s in df.columns]
@@ -855,21 +854,39 @@ class GenericModelTrainer:
             log.info(f"Standard R²: {all_results[best_model_name]['test_r2']:.4f}")
             
             json_path = os.path.join(
-                'artifacts', 'generic_models', 
-                f'best_model_metrics.json'
-            )    
+                'artifacts',f'best_model_metrics.json'
+            )
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
-            if( not os.path.exists(json_path)):
+            if not os.path.exists(json_path):
                 with open(json_path, 'w') as file:
                     json.dump({}, file)
-            
+
             with open(json_path, 'r') as file:
-                file_data = json.load(file)
+                try:
+                    file_data = json.load(file)
+                    if not isinstance(file_data, dict):
+                        file_data = {}
+                except Exception:
+                    file_data = {}
 
-            file_data.update({self.equipment_id : {"accuracy_score" : all_results[best_model_name]['test_r2']}})
+            new_entry = {
+                "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "accuracy_score": float(all_results[best_model_name]['test_r2'])
+            }
 
-            json.dump(file_data, open(json_path, 'w'), indent=2)
-            log.info(f"Best Model : {best_model_name} metrics saved.")  
+            existing = file_data.get(self.equipment_id)
+            if existing is None:
+                file_data[self.equipment_id] = [new_entry]
+            elif isinstance(existing, list):
+                existing.append(new_entry)
+                file_data[self.equipment_id] = existing
+            else:
+                file_data[self.equipment_id] = [existing, new_entry]
+
+            with open(json_path, 'w') as f:
+                json.dump(file_data, f, indent=2)
+            log.info(f"Best Model : {best_model_name} metrics saved.")
 
             return {
                 'best_model_name': best_model_name,
@@ -1166,6 +1183,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
             features_metadata = json.load(f)
         
         selected_features = features_metadata['selected_features']
+        setpoints = features_metadata['setpoints']
+        setpoints_used = setpoints or SETPOINT_NAMES
         log.info(f"Loaded {len(selected_features)} selected features from training")
         log.info(f"Features: {selected_features}")
         
@@ -1330,7 +1349,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
             total_tested = n_iterations
             for i in range(n_iterations):
                 test_conditions = current_conditions.copy()
-                for setpoint in SETPOINT_NAMES:
+                for setpoint in setpoints_used:
                     if setpoint in search_space:
                         test_conditions[setpoint] = np.random.choice(search_space[setpoint])
                 
@@ -1356,7 +1375,8 @@ def optimize_generic(current_conditions: Dict[str, Any],
                 
                 if is_better(predicted_value, best_target):
                     best_target = predicted_value
-                    best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    #best_setpoints = {k: test_conditions[k] for k in SETPOINT_NAMES}
+                    best_setpoints = {k: test_conditions[k] for k in setpoints_used}
                 
                 if (i + 1) % 100 == 0:
                     log.info(f"Progress: {i + 1}/{n_iterations} iterations")
