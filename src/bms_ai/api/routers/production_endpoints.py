@@ -1394,6 +1394,48 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
         JSON containing adjustment history records
     """
     try:
+        # For Ahu1 or FAHU, return static data from JSON file
+        if request.equipment_id in ["Ahu1", "FAHU"]:
+            static_file_path = Path("artifacts/optimization_history/static_optimization_results.json")
+            
+            if static_file_path.exists():
+                with open(static_file_path, 'r') as f:
+                    static_data = json.load(f)
+                
+                # Get results and add site, equipment_id, system_type to each record
+                results = static_data.get('results', [])
+                formatted_results = []
+                
+                for record in results:
+                    formatted_record = {
+                        "timestamp": record.get("timestamp", ""),
+                        "actual_value": str(record.get("actual_value", "")) if record.get("actual_value") is not None else None,
+                        "predicted_value": str(record.get("predicted_value", "")) if record.get("predicted_value") is not None else None,
+                        "difference_actual_and_pred": str(record.get("difference_actual_and_pred", "")) if record.get("difference_actual_and_pred") is not None else None,
+                        "current_setpoints": record.get("current_setpoints", {}),
+                        "optimized_setpoints": record.get("optimized_setpoints", {}),
+                        "site": request.site,
+                        "equipment_id": request.equipment_id,
+                        "system_type": request.system_type
+                    }
+                    formatted_results.append(formatted_record)
+                
+                # Calculate optimized percentage from differences
+                differences = [
+                    float(r['difference_actual_and_pred']) 
+                    for r in formatted_results 
+                    if r.get('difference_actual_and_pred') is not None and r['difference_actual_and_pred'] != ''
+                ]
+                avg_difference = sum(differences) / len(differences) if differences else 0
+                
+                log.info(f"Returning {len(formatted_results)} static optimization records for equipment_id={request.equipment_id}")
+                
+                return OptimizationResultsResponse(
+                    optimized_percentage=round(avg_difference, 2) * 10,
+                    results=formatted_results
+                )
+            else:
+                log.warning(f"Static optimization file not found at {static_file_path}, falling back to Cassandra")
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(milliseconds=int(request.time_period))
@@ -1424,6 +1466,97 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
         
     except Exception as e:
         log.error(f"Error fetching adjustment history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
+
+
+@router.post("/optimization_historyV2", response_model=OptimizationResultsResponse)
+async def get_adjustment_history_v2(request: AdjustmentHistoryRequest):
+    """
+    Fetches adjustment history for a given equipment.
+    For Ahu1 and FAHU, returns static data from JSON file (no Cassandra required).
+    For other equipment, falls back to Cassandra.
+    
+    Args:
+        equipment_id: Equipment ID to filter adjustments
+        time_period: Time period for the adjustment history in milliseconds
+        limit: Maximum number of records to return (default 100)
+    Returns:
+        JSON containing adjustment history records
+    """
+    try:
+        if request.equipment_id in ["Ahu1", "FAHU"]:
+            static_file_path = Path(f"artifacts/optimization_history/{request.equipment_id}_static_optimization_results.json")
+            
+            if static_file_path.exists():
+                with open(static_file_path, 'r') as f:
+                    static_data = json.load(f)
+                
+                results = static_data.get('results', [])
+                formatted_results = []
+                
+                for record in results:
+                    formatted_record = {
+                        "timestamp": record.get("timestamp", ""),
+                        "actual_value": str(record.get("actual_value", "")) if record.get("actual_value") is not None else None,
+                        "predicted_value": str(record.get("predicted_value", "")) if record.get("predicted_value") is not None else None,
+                        "difference_actual_and_pred": str(record.get("difference_actual_and_pred", "")) if record.get("difference_actual_and_pred") is not None else None,
+                        "current_setpoints": record.get("current_setpoints", {}),
+                        "optimized_setpoints": record.get("optimized_setpoints", {}),
+                        "site": request.site,
+                        "equipment_id": request.equipment_id,
+                        "system_type": request.system_type
+                    }
+                    formatted_results.append(formatted_record)
+                
+                # Calculate optimized percentage from differences
+                differences = [
+                    float(r['difference_actual_and_pred']) 
+                    for r in formatted_results 
+                    if r.get('difference_actual_and_pred') is not None and r['difference_actual_and_pred'] != ''
+                ]
+                avg_difference = sum(differences) / len(differences) if differences else 0
+                
+                log.info(f"Returning {len(formatted_results)} static optimization records for equipment_id={request.equipment_id}")
+                
+                return OptimizationResultsResponse(
+                    optimized_percentage=round(avg_difference, 2) * 10,
+                    results=formatted_results
+                )
+            else:
+                log.warning(f"Static optimization file not found at {static_file_path}")
+                raise HTTPException(status_code=404, detail=f"Static optimization file not found for {request.equipment_id}")
+        
+        # For other equipment, use Cassandra
+        session = get_cassandra_session()
+        
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(milliseconds=int(request.time_period))
+
+        adjustments = fetch_adjustment_hisoryData(
+            building_id=request.building_id,
+            site=request.site,
+            system_type=request.system_type,
+            equipment_id=request.equipment_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=request.limit,
+            session=session
+        )
+        
+        differences = [float(r['difference_actual_and_pred']) for r in adjustments if r.get('difference_actual_and_pred') is not None]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
+        
+        return OptimizationResultsResponse(
+            optimized_percentage=round(avg_difference, 2) * 10,
+            results=adjustments
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error fetching adjustment history V2: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
 
 
