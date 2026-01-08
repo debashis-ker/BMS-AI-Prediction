@@ -254,12 +254,15 @@ def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: 
     
     final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
 
+    physical_name = raw_data[0].get('datapoint', feature) if raw_data else feature
+
     report_list = []
     for _, row in final_df.iterrows():
         record = {
             "data_received_on": row['data_received_on_str'],
             "Anomaly_Flag": str(int(row['Anomaly_Flag'])),
-            feature: str(float(row[data_column]))
+            # Use physical_name as the key instead of the master logical feature
+            physical_name: str(float(row[data_column]))
         }
         report_list.append(record)
     return report_list
@@ -325,12 +328,13 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
     
     all_data_records = fetch_all_ahu_data(building_id=building_id or DEFAULT_BUILDING_ID)
     
+    # Corrected MAHU fetch and merge
     mahu_records = fetch_mahu_data(building_id=building_id or DEFAULT_BUILDING_ID, equipment_id="AhuMkp1")
     if mahu_records:
         for record in mahu_records:
             record['site'] = "OS02"
             record['equipment_name'] = "AhuMkp1"
-            record['system_type'] = "AHU"
+            record['system_type'] = "MAHU" # Set to actual MAHU type
         
         if not all_data_records:
             all_data_records = mahu_records
@@ -370,41 +374,34 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
 
         for group, (phys_point, model_key) in active_physicals.items():
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == phys_point]
-            final_model_key = model_key if model_key in anamoly_model else CONSOLIDATION_MAP.get(phys_point, model_key) #type:ignore
+            final_model_key = model_key if model_key in anamoly_model else CONSOLIDATION_MAP.get(phys_point, model_key)
             
-            if final_model_key in anamoly_model: #type:ignore
+            if final_model_key in anamoly_model:
                 try:
                     feature_results = anomaly_detection(feature_raw_data, asset_code_key, final_model_key) #type:ignore
                     if feature_results:
-                        current_asset_anomalies[final_model_key] = feature_results
+                        # FIX: Key by physical name (phys_point)
+                        current_asset_anomalies[phys_point] = feature_results
                         if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
                             found_anomaly_for_asset = True
                 except Exception as e:
                     log.error(f"Error for {asset_code_key}/{phys_point}: {e}")
 
+        #Standalone features logic
         for feature in ALL_AVAILABLE_FEATURES:
             if feature in processed_in_groups: continue
-
-            datapoint_to_pull = feature
-            if feature in FEATURE_FALLBACKS:
-                datapoint_to_pull = next((fb for fb in FEATURE_FALLBACKS[feature] 
-                                         if any(r.get('datapoint') == fb for r in asset_records)), feature)
+            datapoint_to_pull = next((fb for fb in FEATURE_FALLBACKS.get(feature, []) if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
-            if datapoint_to_pull in processed_in_groups: continue
-
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_to_pull]
             if not feature_raw_data: continue
 
-            model_key = feature
-            if model_key not in anamoly_model: #type:ignore
-                model_key = CONSOLIDATION_MAP.get(model_key, model_key)
-                if model_key not in anamoly_model: continue #type:ignore
+            model_key = CONSOLIDATION_MAP.get(datapoint_to_pull, feature)
+            if model_key not in anamoly_model: continue
 
             try:
                 feature_results = anomaly_detection(feature_raw_data, asset_code_key, model_key)
                 if feature_results:
                     current_asset_anomalies[datapoint_to_pull] = feature_results 
-                    processed_in_groups.add(datapoint_to_pull)
                     if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
                         found_anomaly_for_asset = True
             except Exception as e:
@@ -412,11 +409,11 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
 
         if asset_code_key in reconciled_results:
             reconciled_results[asset_code_key]['data'].update(current_asset_anomalies)
-            if asset_code_key == "OS02_AhuMkp1":
-                reconciled_results[asset_code_key]['system_type'] = "AHU"
         elif current_asset_anomalies:
             site, eq_id = asset_code_key.split('_', 1) 
-            sType = "AHU" if asset_code_key == "OS02_AhuMkp1" else FIXED_SYSTEM_TYPE
+            # Preserve MAHU system type
+            orig_record = asset_records[0]
+            sType = orig_record.get('system_type', FIXED_SYSTEM_TYPE)
             reconciled_results[asset_code_key] = {"data": current_asset_anomalies, "site": site, "equipment_id": eq_id, "system_type": sType}
              
         if found_anomaly_for_asset: total_anomalous_assets += 1
@@ -464,12 +461,11 @@ def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> 
                 latest_record = max(feature_raw_data, key=lambda x: x.get(STANDARD_DATE_COLUMN, ''))
                 val = latest_record.get('monitoring_data')
                 if val is not None and str(val).lower() != 'null':
-                    logical_key = CONSOLIDATION_MAP.get(datapoint_name, feature)
-                    asset_historical_data[logical_key] = [{
-                        "data_received_on": latest_record.get(STANDARD_DATE_COLUMN).replace(' UTC', '.000000'), #type:ignore
-                        "Anomaly_Flag": "1",
-                        logical_key: str(val)
-                    }]
+                    asset_historical_data[datapoint_name] = [{
+                                    "data_received_on": latest_record.get(STANDARD_DATE_COLUMN).replace(' UTC', '.000000'), #type:ignore
+                                    "Anomaly_Flag": "1",
+                                    datapoint_name: str(val)
+                                }]
                     processed_physical_names.add(datapoint_name)
                  
         if asset_historical_data:
