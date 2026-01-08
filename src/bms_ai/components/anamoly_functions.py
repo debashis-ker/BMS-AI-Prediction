@@ -334,7 +334,7 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
         for record in mahu_records:
             record['site'] = "OS02"
             record['equipment_name'] = "AhuMkp1"
-            record['system_type'] = "MAHU" # Set to actual MAHU type
+            record['system_type'] = "MAHU1" # Set to actual MAHU type
         
         if not all_data_records:
             all_data_records = mahu_records
