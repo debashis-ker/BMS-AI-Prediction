@@ -9,4 +9,5 @@ openai >= 1.0.0
 cassandra-driver
 tensorflow==2.20.0
 scikit-optimize
+paho-mqtt
 -e .
