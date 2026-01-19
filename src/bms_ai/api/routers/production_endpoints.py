@@ -86,7 +86,7 @@ class AnomalyVizResponse(BaseModel):
 
 class EmissionRequest(BaseModel):
     equipment_id: List[str] = Field(['EMU06','EMU03'], description="Optional filter for a specific equipment ID.")
-    zone: Optional[str] = Field(None, description="Optional filter for a specific site/zone.")
+    zone: Optional[str] = Field('OS01', description="Optional filter for a specific site/zone.")
     from_date : Optional[str] = Field(None, description="Start date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
     to_date : Optional[str] = Field(None, description="End date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
 
