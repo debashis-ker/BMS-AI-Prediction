@@ -2,8 +2,10 @@ from typing import Dict, Any, List, Optional
 import os
 import json
 import requests
+from dotenv import load_dotenv
 from src.bms_ai.logger_config import setup_logger
 
+load_dotenv()
 log = setup_logger(__name__)
 
 def get_my_instances_v2(ticket: str, process_name: str, software_id: str, account_id: str,
