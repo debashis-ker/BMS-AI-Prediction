@@ -8,11 +8,18 @@ import threading
 import os
 from dotenv import load_dotenv
 from cassandra.auth import PlainTextAuthProvider
+import paho.mqtt.client as mqtt
 
 # Load environment variables
 load_dotenv()
 
 log = setup_logger(__name__)
+
+# MQTT shared state exported at module level so other modules can import them
+mqtt_thread = None
+latest_data = {}
+data_lock = threading.Lock()
+mqtt_client = mqtt.Client()
 
 CASS_SESSION_LOCK = threading.Lock()
 CASS_SESSION_DATA = {
@@ -129,3 +136,12 @@ def get_prescriptive_pipeline(request: Request) -> PrescriptivePipeline:
         prescriptive_pipeline = PrescriptivePipeline()
         request.app.state.prescriptive_pipeline = prescriptive_pipeline
     return prescriptive_pipeline
+
+def mqtt_dependency():
+    # kept for compatibility; shared objects are module-level
+    return {
+        'mqtt_thread': mqtt_thread,
+        'latest_data': latest_data,
+        'data_lock': data_lock,
+        'mqtt_client': mqtt_client,
+    }
