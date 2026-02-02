@@ -658,14 +658,29 @@ class ThermalPredictionModel:
     
     def load(self, filepath: str):
         """Load trained model from file."""
-        model_data = joblib.load(filepath)
-        self.model = model_data['model']
-        self.scaler_X = model_data['scaler_X']
-        self.scaler_y = model_data['scaler_y']
-        self.feature_names = model_data['feature_names']
-        self.config = model_data['config']
-        self.is_trained = True
-        print(f"Model loaded from {filepath}")
+        import sys
+        
+        # Fix pickle import issues - redirect old module paths to current ones
+        # This handles cases where model was trained with different module structure
+        if 'src.bms_ai.mpc.mpc_training_pipeline' not in sys.modules:
+            try:
+                import src.bms_ai.mpc.mpc_training_pipeline
+                sys.modules['src.bms_ai.mpc.mpc_training_pipeline'] = src.bms_ai.mpc.mpc_training_pipeline
+            except:
+                pass
+        
+        try:
+            model_data = joblib.load(filepath)
+            self.model = model_data['model']
+            self.scaler_X = model_data['scaler_X']
+            self.scaler_y = model_data['scaler_y']
+            self.feature_names = model_data['feature_names']
+            self.config = model_data['config']
+            self.is_trained = True
+            print(f"Model loaded from {filepath}")
+        except Exception as e:
+            print(f"Error loading model from {filepath}: {e}")
+            raise
 
 
 # =============================================================================

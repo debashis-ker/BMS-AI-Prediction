@@ -37,7 +37,7 @@ def parse_time_str(t_str: str):
     return datetime.strptime(t_str, "%I:%M%p").time()
 
 
-def fetch_movie_schedule(ticket: str="75b768a8-7237-436a-9c6d-904689ec4f21") -> Optional[List[Dict[str, Any]]]:
+def fetch_movie_schedule(ticket: str="1b9362bd-6a70-4827-b7e8-ff0af1f06375") -> Optional[List[Dict[str, Any]]]:
     """
     Fetches movie schedule data from IKON service.
     Returns all instances data (list of schedule data from all cinemas).

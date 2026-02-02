@@ -864,6 +864,17 @@ class MPCTrainingPipeline:
         Returns:
             Loaded CinemaAHUMPCSystem
         """
+        import sys
+        import pickle
+        
+        # CRITICAL: Fix pickle module resolution for old models
+        # Ensure this module is in sys.modules so pickle can find PipelineConfig
+        if __name__ not in sys.modules:
+            sys.modules[__name__] = sys.modules[__name__]
+        
+        # Also add class aliases for old pickle references
+        sys.modules['src.bms_ai.mpc.mpc_training_pipeline'] = sys.modules[__name__]
+        
         if filepath is None:
             if equipment_id is None:
                 raise ValueError("Either filepath or equipment_id must be provided")
@@ -876,18 +887,35 @@ class MPCTrainingPipeline:
             )
         
         self.mpc_system = CinemaAHUMPCSystem(self.mpc_config)
-        self.mpc_system.load_model(filepath)
+        
+        try:
+            self.mpc_system.load_model(filepath)
+        except AttributeError as e:
+            if 'PipelineConfig' in str(e):
+                log.error(f"Pickle import error: {e}")
+                log.error("The model was trained with an older version. Please retrain the model.")
+                log.error("To retrain, run: python -m src.bms_ai.mpc.mpc_training_pipeline")
+            raise
         
         # Try to load metadata
         metadata_path = filepath.replace('.joblib', '_metadata.joblib')
         if os.path.exists(metadata_path):
-            metadata = joblib.load(metadata_path)
-            self.training_metrics = metadata.get('training_metrics')
-            self.test_metrics = metadata.get('test_metrics')
-            self.validation_report = metadata.get('validation_report')
-            log.info(f"Loaded model trained at {metadata.get('trained_at')}")
-            if self.test_metrics:
-                log.info(f"Test RMSE: {self.test_metrics['rmse']:.4f}°C, Test R²: {self.test_metrics['r2']:.4f}")
+            try:
+                # Fix pickle module resolution for metadata saved from __main__
+                import __main__
+                if not hasattr(__main__, 'PipelineConfig'):
+                    __main__.PipelineConfig = PipelineConfig
+                
+                metadata = joblib.load(metadata_path)
+                self.training_metrics = metadata.get('training_metrics')
+                self.test_metrics = metadata.get('test_metrics')
+                self.validation_report = metadata.get('validation_report')
+                log.info(f"Loaded model trained at {metadata.get('trained_at')}")
+                if self.test_metrics:
+                    log.info(f"Test RMSE: {self.test_metrics['rmse']:.4f}°C, Test R²: {self.test_metrics['r2']:.4f}")
+            except (AttributeError, pickle.UnpicklingError) as e:
+                log.warning(f"Could not load metadata (pickle compatibility issue): {e}")
+                log.warning("Model loaded successfully, but training metrics are not available.")
         
         return self.mpc_system
     

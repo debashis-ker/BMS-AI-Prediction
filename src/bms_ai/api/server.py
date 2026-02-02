@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,chatbot_ollama,production_endpoints,fetch_datapoints_using_haystack,lstm_predictions
+from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,chatbot_ollama,production_endpoints,fetch_datapoints_using_haystack,lstm_predictions,mpc_endpoints
 import os
 from dotenv import load_dotenv
 
@@ -48,6 +48,7 @@ app.include_router(chatbot.router)
 app.include_router(chatbot_ollama.router) 
 app.include_router(fetch_datapoints_using_haystack.router)
 app.include_router(lstm_predictions.router)
+app.include_router(mpc_endpoints.router)  # MPC optimization endpoints
 # app.include_router(mqtt.router)
 
 @app.get("/")
