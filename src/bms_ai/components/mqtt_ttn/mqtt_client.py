@@ -104,7 +104,7 @@ def on_message(client, userdata, msg):
         
         try:
             data = json.loads(payload_str)
-            print("data", data)
+            # print("data", data)
         except json.JSONDecodeError:
             log.warning("Payload is not JSON, skipping database insert.")
             return
