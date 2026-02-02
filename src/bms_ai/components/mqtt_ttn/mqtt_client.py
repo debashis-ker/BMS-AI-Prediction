@@ -145,13 +145,13 @@ def on_message(client, userdata, msg):
             int(data.get('rssi')) if data.get('rssi') is not None else None,
             float(data.get('snr')) if data.get('snr') is not None else None,
             int(data.get('sf')) if data.get('sf') is not None else None,
-            datetime.now(timezone.utc)
+            datetime.now()
         )
 
         # 5. Execute
         session.execute(prepared, values)
         log.info(f"Successfully inserted sensor_id {data.get('sensor_id')} into Cassandra")
-        print(f"✓ Data inserted: sensor_id={data.get('sensor_id')}, timestamp={datetime.now(timezone.utc)}")
+        print(f"✓ Data inserted: sensor_id={data.get('sensor_id')}, timestamp={datetime.now()}")
 
     except Exception as e:
         log.error(f"Error processing message: {e}", exc_info=True)

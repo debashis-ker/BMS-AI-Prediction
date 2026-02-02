@@ -130,8 +130,8 @@ def mqtt_get_latest_data(request: MQTTDataRequest):
             query = f"""
                 SELECT * FROM bms_live_monitoring_mqtt_{request.buildingId}
                 WHERE sensor_id = %s 
-                AND event_timestamp >= %s
-                AND event_timestamp <= %s
+                AND created_at >= %s
+                AND created_at <= %s
                 ALLOW FILTERING
             """
             rows = list(session.execute(query, (request.sensor_id, time_start, time_end)))
@@ -140,8 +140,8 @@ def mqtt_get_latest_data(request: MQTTDataRequest):
             # Query all sensors
             query = f"""
                 SELECT * FROM bms_live_monitoring_mqtt_{request.buildingId}
-                WHERE event_timestamp >= %s
-                AND event_timestamp <= %s
+                WHERE created_at >= %s
+                AND created_at <= %s
                 ALLOW FILTERING
             """
             rows = list(session.execute(query, (time_start, time_end)))
