@@ -120,14 +120,14 @@ def on_message(client, userdata, msg):
         session = get_cassandra_session()
         # 2. Define the insert query
         
-        ist_tz = ZoneInfo("Asia/Kolkata")
+       
         
         query = """
             INSERT INTO bms_live_monitoring_mqtt_36c27828d0b44f1e8a94d962d342e7c2 (
                 sensor_id, corporate_id, created_at, sensor_type, device_id, room_name, 
                 temperature, total_in, total_out, people_count, period_in, period_out, 
                 periodic_people_count, battery, rssi, snr, sf
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         prepared = session.prepare(query)
@@ -152,7 +152,7 @@ def on_message(client, userdata, msg):
             int(data.get('rssi')) if data.get('rssi') is not None else None,
             float(data.get('snr')) if data.get('snr') is not None else None,
             int(data.get('sf')) if data.get('sf') is not None else None,
-            datetime.now(ist_tz)
+         
         )
 
         session.execute(prepared, values)
