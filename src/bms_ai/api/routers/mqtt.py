@@ -168,7 +168,7 @@ def mqtt_get_latest_data(request: MQTTDataRequest):
                 'rssi': row.rssi,
                 'snr': row.snr,
                 'sf': row.sf,
-                'event_timestamp': row.event_timestamp.isoformat() if row.event_timestamp else None,
+                
             })
         
         return {

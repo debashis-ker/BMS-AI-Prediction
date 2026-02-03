@@ -72,7 +72,7 @@ def on_connect(client, userdata, flags, rc):
                                                 rssi int,
                                                 snr float,
                                                 sf int,
-                                                event_timestamp timestamp,
+                                              
                                                 PRIMARY KEY (sensor_id,created_at)
                                             )
                                             WITH CLUSTERING ORDER BY (created_at DESC);
@@ -110,12 +110,8 @@ def on_message(client, userdata, msg):
             log.warning("Payload is not JSON, skipping.")
             return
 
-        # 1. SETUP TIMEZONE
-        ist_tz = pytz.timezone("Asia/Kolkata")
-        # Get current time in IST
-        now_ist = datetime.now(ist_tz)
-
-        # 2. FIX FOR DOUBLE INSERTION:
+        
+        # . FIX FOR DOUBLE INSERTION:
         # If your Primary Key includes event_timestamp, and you use datetime.now(),
         # a retry from MQTT will have a different millisecond, creating a duplicate.
         # Ideally, use the sensor's own 'created_at' for the timestamp if it's unique.
@@ -125,8 +121,8 @@ def on_message(client, userdata, msg):
             INSERT INTO bms_live_monitoring_mqtt_36c27828d0b44f1e8a94d962d342e7c2 (
                 sensor_id, corporate_id, created_at, sensor_type, device_id, room_name, 
                 temperature, total_in, total_out, people_count, period_in, period_out, 
-                periodic_people_count, battery, rssi, snr, sf, event_timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                periodic_people_count, battery, rssi, snr, sf
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         prepared = session.prepare(query)
@@ -151,13 +147,13 @@ def on_message(client, userdata, msg):
             int(data.get('rssi')) if data.get('rssi') is not None else None,
             float(data.get('snr')) if data.get('snr') is not None else None,
             int(data.get('sf')) if data.get('sf') is not None else None,
-            now_ist  # This is your localized IST timestamp
+            
         )
 
         session.execute(prepared, values)
         log.info(f"Successfully inserted sensor_id {data.get('sensor_id')}")
         # Print with localized formatting
-        print(f"Data inserted at {now_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print(f"Data inserted at {data.get('created_at')} for sensor_id {data.get('sensor_id')}")
 
     except Exception as e:
         log.error(f"Error processing message: {e}", exc_info=True)
