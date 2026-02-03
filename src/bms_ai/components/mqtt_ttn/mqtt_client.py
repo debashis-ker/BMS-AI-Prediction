@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import json
 import threading
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import os
 from dotenv import load_dotenv
 from cassandra.cluster import Session
@@ -10,6 +11,7 @@ from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.logger_config import setup_logger
 
 load_dotenv()
+
 
 MQTT_HOST = os.getenv('MQTT_HOST')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
@@ -112,6 +114,9 @@ def on_message(client, userdata, msg):
         # 1. Get the session
         session = get_cassandra_session()
         # 2. Define the insert query
+        
+        ist_tz = ZoneInfo("Asia/Kolkata")
+        
         query = """
             INSERT INTO bms_live_monitoring_mqtt_36c27828d0b44f1e8a94d962d342e7c2 (
                 sensor_id, corporate_id, created_at, sensor_type, device_id, room_name, 
@@ -145,7 +150,7 @@ def on_message(client, userdata, msg):
             int(data.get('rssi')) if data.get('rssi') is not None else None,
             float(data.get('snr')) if data.get('snr') is not None else None,
             int(data.get('sf')) if data.get('sf') is not None else None,
-            datetime.now()
+            datetime.now(ist_tz)
         )
 
         # 5. Execute
