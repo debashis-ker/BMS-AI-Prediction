@@ -182,18 +182,11 @@ async def optimize_setpoint(
             ticket_type=request.ticket_type
         )
         
-        if not result.get('success'):
-            log.error(f"[MPC Optimize] Optimization failed: {result.get('error')}")
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "success": False,
-                    "error": result.get('error'),
-                    "error_type": result.get('error_type')
-                }
-            )
+        if result.get('success'):
+            log.info(f"[MPC Optimize] Success: optimal_setpoint={result.get('optimized_setpoint')}")
+        else:
+            log.warning(f"[MPC Optimize] Failed (saved to Cassandra): {result.get('error')}")
         
-        log.info(f"[MPC Optimize] Success: optimal_setpoint={result.get('optimized_setpoint')}")
         return MPCOptimizeResponse(**result)
         
     except HTTPException:
@@ -213,6 +206,7 @@ async def optimize_setpoint(
 @router.get("/last_optimization/{equipment_id}", response_model=MPCOptimizeResponse)
 async def get_last_optimization(
     equipment_id: str = "Ahu13",
+    status: str = "success",
     session: Session = Depends(get_cassandra_session)
 ):
     """
@@ -220,18 +214,21 @@ async def get_last_optimization(
     
     Args:
         equipment_id: Equipment identifier (e.g., 'Ahu13')
+        status: Filter by optimization status - 'success' (default), 'all' for all records
         
     Returns:
         The last optimization result from Cassandra
     """
-    log.info(f"[MPC Last] Fetching last optimization for {equipment_id}")
+    log.info(f"[MPC Last] Fetching last optimization for {equipment_id}, status={status}")
     
     config = InferenceConfig(equipment_id=equipment_id)
     table_name = config.table_name
     
+    status_filter = "AND optimization_status IN ('success', 'bypassed')" if status != "all" else ""
+    
     query = f"""
         SELECT * FROM {table_name}
-        WHERE equipment_id = '{equipment_id}'
+        WHERE equipment_id = '{equipment_id}' {status_filter}
         LIMIT 1;
     """
     
@@ -281,6 +278,7 @@ async def get_last_optimization(
 @router.get("/history/{equipment_id}")
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
+    status: str = "success",
     limit: int = 100,
     session: Session = Depends(get_cassandra_session)
 ):
@@ -289,19 +287,22 @@ async def get_optimization_history(
     
     Args:
         equipment_id: Equipment identifier
+        status: Filter by optimization status - 'success' (default), 'all' for all records
         limit: Maximum number of records to return (default 100)
         
     Returns:
         List of optimization results
     """
-    log.info(f"[MPC History] Fetching history for {equipment_id}, limit={limit}")
+    log.info(f"[MPC History] Fetching history for {equipment_id}, status={status}, limit={limit}")
     
     config = InferenceConfig(equipment_id=equipment_id)
     table_name = config.table_name
     
+    status_filter = "AND optimization_status IN ('success', 'bypassed')" if status != "all" else ""
+    
     query = f"""
         SELECT * FROM {table_name}
-        WHERE equipment_id = '{equipment_id}'
+        WHERE equipment_id = '{equipment_id}' {status_filter}
         LIMIT {limit};
     """
     

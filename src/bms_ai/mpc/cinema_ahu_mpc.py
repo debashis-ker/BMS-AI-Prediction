@@ -200,17 +200,26 @@ class OccupancyInfo:
         status = response.get('status', 0)
         
         if status == 1:
-            time_remaining_str = response.get('time_remaining', '0 minutes')
-            time_remaining = int(time_remaining_str.split()[0]) if time_remaining_str else None
+            time_remaining_val = response.get('time_remaining', 0)
+            # Handle both string ("60 minutes") and int (60) formats
+            if isinstance(time_remaining_val, int):
+                time_remaining = time_remaining_val
+            elif isinstance(time_remaining_val, str) and time_remaining_val:
+                time_remaining = int(time_remaining_val.split()[0])
+            else:
+                time_remaining = None
             return cls(
                 status=1,
                 movie_name=response.get('movie_name'),
                 time_remaining=time_remaining
             )
         else:
-            time_until_str = response.get('time_until_next_movie', '')
-            if time_until_str and time_until_str != "No upcoming shows":
-                time_until = int(time_until_str.split()[0])
+            time_until_val = response.get('time_until_next_movie', '')
+            # Handle both string ("60 minutes") and int (60) formats
+            if isinstance(time_until_val, int):
+                time_until = time_until_val
+            elif isinstance(time_until_val, str) and time_until_val and time_until_val != "No upcoming shows":
+                time_until = int(time_until_val.split()[0])
             else:
                 time_until = None
                 

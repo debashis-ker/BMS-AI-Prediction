@@ -307,22 +307,25 @@ class CassandraDataHandler:
         self.config = config
         self.session = session
         
-    def get_last_optimization(self, equipment_id: str, timeout_minutes: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def get_last_optimization(self, equipment_id: str, timeout_minutes: Optional[int] = None, only_successful: bool = True) -> Optional[Dict[str, Any]]:
         """
         Get the most recent optimization result from Cassandra.
         
         Args:
             equipment_id: Equipment identifier
             timeout_minutes: Custom timeout in minutes (uses config default if None)
+            only_successful: If True, only return records where optimization_status is 'success' or 'bypassed' (default: True)
             
         Returns:
             Dict with last optimization data (includes 'age_minutes' field), or None if not found/too old
         """
         effective_timeout = timeout_minutes if timeout_minutes is not None else self.config.lag_timeout_minutes
         
+        success_filter = "AND optimization_status IN ('success', 'bypassed')" if only_successful else ""
+        
         query = f"""
             SELECT * FROM {self.config.table_name}
-            WHERE equipment_id = '{equipment_id}'
+            WHERE equipment_id = '{equipment_id}' {success_filter}
             LIMIT 1;
         """
         
@@ -486,6 +489,48 @@ class MPCInferencePipeline:
                 return None
         return self._model_cache.get(equipment_id)
     
+    def _create_fail_record(
+        self,
+        equipment_id: str,
+        screen_id: str,
+        now_utc: datetime,
+        now_sharjah: datetime,
+        reason: str,
+        sensor_data: Optional[Dict] = None,
+        weather: Optional[Dict] = None,
+        occupancy: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """Create a record for failed optimization to save to Cassandra."""
+        return {
+            'equipment_id': equipment_id,
+            'timestamp_utc': now_utc.replace(tzinfo=None),
+            'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+            'optimized_setpoint': None,
+            'actual_sptreff': sensor_data.get('SpTREff') if sensor_data else None,
+            'actual_tempsp1': sensor_data.get('TempSp1') if sensor_data else None,
+            'target_temperature': None,
+            'setpoint_difference': None,
+            'occupied': occupancy.get('status') if occupancy else None,
+            'movie_name': occupancy.get('movie_name') if occupancy else None,
+            'mode': None,
+            'is_precooling': None,
+            'time_until_next_movie': occupancy.get('time_until_next_movie') if occupancy and isinstance(occupancy.get('time_until_next_movie'), int) else None,
+            'outside_temp': weather.get('temperature') if weather else None,
+            'outside_humidity': weather.get('humidity') if weather else None,
+            'fb_vfd': sensor_data.get('FbVFD') if sensor_data else None,
+            'fb_fad': sensor_data.get('FbFAD') if sensor_data else None,
+            'co2_ra': sensor_data.get('Co2RA') if sensor_data else None,
+            'co2_load_category': None,
+            'co2_load_factor': None,
+            'optimization_status': f'fail: {reason}',
+            'objective_value': None,
+            'used_features': None,
+            'next_tempsp1_lag': sensor_data.get('TempSp1') if sensor_data else None,
+            'next_sptreff_lag': None,
+            'previous_setpoint': None,
+            'screen_id': screen_id
+        }
+    
     def run_inference(
         self,
         equipment_id: str = "Ahu13",
@@ -517,18 +562,36 @@ class MPCInferencePipeline:
         
         mpc_system = self.get_model(equipment_id)
         if mpc_system is None:
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason='MODEL_NOT_LOADED'
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
             return {
                 'success': False,
                 'error': f'MPC model not loaded for {equipment_id}',
-                'error_type': 'MODEL_NOT_LOADED'
+                'error_type': 'MODEL_NOT_LOADED',
+                'saved_to_cassandra': True
             }
         
         sensor_data = self.bms_fetcher.fetch_last_10_minutes(equipment_id)
         if sensor_data is None:
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason='SENSOR_DATA_FETCH_FAILED'
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
             return {
                 'success': False,
                 'error': f'Failed to fetch sensor data for {equipment_id}',
-                'error_type': 'SENSOR_DATA_FETCH_FAILED'
+                'error_type': 'SENSOR_DATA_FETCH_FAILED',
+                'saved_to_cassandra': True
             }
         
         log.debug(f"[MPCInference] Sensor data (10-min average) for {equipment_id}: {sensor_data}")
@@ -536,19 +599,40 @@ class MPCInferencePipeline:
         weather = self.weather_fetcher.fetch_current_weather()
         if weather is None:
             log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason='WEATHER_FETCH_FAILED',
+                sensor_data=sensor_data
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
             return {
                 'success': False,
                 'error': 'Failed to fetch weather data. Cannot proceed without weather information.',
-                'error_type': 'WEATHER_FETCH_FAILED'
+                'error_type': 'WEATHER_FETCH_FAILED',
+                'saved_to_cassandra': True
             }
         
         occupancy = self.occupancy_fetcher.fetch_occupancy_status(screen_id, ticket, ticket_type)
         if occupancy is None or occupancy == {}:
             log.error(f"[MPCInference] Schedule data unavailable for {screen_id} - cannot proceed")
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason='SCHEDULE_DATA_UNAVAILABLE',
+                sensor_data=sensor_data,
+                weather=weather
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
             return {
                 'success': False,
                 'error': f'Failed to fetch schedule/occupancy status for {screen_id}. No valid schedule found for current date.',
-                'error_type': 'SCHEDULE_DATA_UNAVAILABLE'
+                'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
+                'saved_to_cassandra': True
             }
         
         last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
@@ -563,55 +647,99 @@ class MPCInferencePipeline:
         
         log.debug(f"[MPCInference] Last optimization from Cassandra: {last_optimization is not None}, fallback_used: {cassandra_fallback_used}")
         
+        using_sensor_as_lag = False
+        
         if last_optimization:
             tempsp1_lag = last_optimization.get('next_tempsp1_lag', sensor_data.get('TempSp1', 24.0))
             sptreff_lag = last_optimization.get('next_sptreff_lag', sensor_data.get('SpTREff', 24.0))
             previous_setpoint = last_optimization.get('previous_setpoint')
             log.debug(f"[MPCInference] Using lag from Cassandra - TempSp1_lag: {tempsp1_lag}, SpTREff_lag: {sptreff_lag}, previous_setpoint: {previous_setpoint}")
         else:
-            is_occupied = occupancy.get('status') == 1
-            time_until_next = occupancy.get('time_until_next_movie')
-            is_precooling = False
-            if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next < 60:
-                is_precooling = True
+            current_tempsp1 = sensor_data.get('TempSp1')
+            current_sptreff = sensor_data.get('SpTREff')
             
-            default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
-            mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else 'unoccupied')
-            
-            log.warning(f"[MPCInference] No Cassandra data within 30 min - returning default setpoint {default_setpoint}°C (mode: {mode})")
-            
-            return {
-                'success': True,
-                'equipment_id': equipment_id,
-                'timestamp_utc': now_utc.isoformat(),
-                'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
-                'optimized_setpoint': default_setpoint,
-                'actual_sptreff': sensor_data.get('SpTREff'),
-                'actual_tempsp1': sensor_data.get('TempSp1'),
-                'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
-                'setpoint_difference': default_setpoint - sensor_data.get('SpTREff', default_setpoint),
-                'occupied': 1 if (is_occupied or is_precooling) else 0,
-                'movie_name': occupancy.get('movie_name'),
-                'mode': mode,
-                'is_precooling': is_precooling,
-                'time_until_next_movie': time_until_next if isinstance(time_until_next, int) else None,
-                'outside_temp': weather['temperature'],
-                'outside_humidity': weather['humidity'],
-                'fb_vfd': sensor_data.get('FbVFD'),
-                'fb_fad': sensor_data.get('FbFAD'),
-                'co2_ra': sensor_data.get('Co2RA'),
-                'co2_load_category': 'unknown',
-                'co2_load_factor': 0.0,
-                'optimization_status': 'DEFAULT_NO_LAG_DATA',
-                'objective_value': None,
-                'used_features': None,
-                'next_tempsp1_lag': sensor_data.get('TempSp1'),
-                'next_sptreff_lag': default_setpoint,
-                'previous_setpoint': default_setpoint,
-                'screen_id': screen_id,
-                'saved_to_cassandra': False,
-                'fallback_reason': 'No Cassandra optimization data available within 30 minutes'
-            }
+            if current_tempsp1 is not None and current_sptreff is not None:
+                tempsp1_lag = current_tempsp1
+                sptreff_lag = current_sptreff
+                previous_setpoint = current_sptreff
+                using_sensor_as_lag = True
+                log.info(f"[MPCInference] No Cassandra data - using current sensor data as lag: TempSp1_lag={tempsp1_lag}, SpTREff_lag={sptreff_lag}")
+            else:
+                is_occupied = occupancy.get('status') == 1
+                time_until_next = occupancy.get('time_until_next_movie')
+                is_precooling = False
+                if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next < 60:
+                    is_precooling = True
+                
+                default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
+                mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else 'unoccupied')
+                
+                log.warning(f"[MPCInference] No sensor lag data (TempSp1/SpTREff) - returning default setpoint {default_setpoint}°C (mode: {mode})")
+                
+                fail_record = {
+                    'equipment_id': equipment_id,
+                    'timestamp_utc': now_utc.replace(tzinfo=None),
+                    'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+                    'optimized_setpoint': default_setpoint,
+                    'actual_sptreff': sensor_data.get('SpTREff'),
+                    'actual_tempsp1': sensor_data.get('TempSp1'),
+                    'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
+                    'setpoint_difference': None,
+                    'occupied': 1 if (is_occupied or is_precooling) else 0,
+                    'movie_name': occupancy.get('movie_name'),
+                    'mode': mode,
+                    'is_precooling': is_precooling,
+                    'time_until_next_movie': time_until_next if isinstance(time_until_next, int) else None,
+                    'outside_temp': weather['temperature'],
+                    'outside_humidity': weather['humidity'],
+                    'fb_vfd': sensor_data.get('FbVFD'),
+                    'fb_fad': sensor_data.get('FbFAD'),
+                    'co2_ra': sensor_data.get('Co2RA'),
+                    'co2_load_category': 'unknown',
+                    'co2_load_factor': 0.0,
+                    'optimization_status': 'fail: NO_SENSOR_LAG_DATA',
+                    'objective_value': None,
+                    'used_features': None,
+                    'next_tempsp1_lag': None,
+                    'next_sptreff_lag': default_setpoint,
+                    'previous_setpoint': default_setpoint,
+                    'screen_id': screen_id
+                }
+                self.cassandra_handler.save_optimization_result(fail_record)
+                
+                return {
+                    'success': False,
+                    'equipment_id': equipment_id,
+                    'timestamp_utc': now_utc.isoformat(),
+                    'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+                    'optimized_setpoint': default_setpoint,
+                    'actual_sptreff': sensor_data.get('SpTREff'),
+                    'actual_tempsp1': sensor_data.get('TempSp1'),
+                    'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
+                    'setpoint_difference': None,
+                    'occupied': 1 if (is_occupied or is_precooling) else 0,
+                    'movie_name': occupancy.get('movie_name'),
+                    'mode': mode,
+                    'is_precooling': is_precooling,
+                    'time_until_next_movie': time_until_next if isinstance(time_until_next, int) else None,
+                    'outside_temp': weather['temperature'],
+                    'outside_humidity': weather['humidity'],
+                    'fb_vfd': sensor_data.get('FbVFD'),
+                    'fb_fad': sensor_data.get('FbFAD'),
+                    'co2_ra': sensor_data.get('Co2RA'),
+                    'co2_load_category': 'unknown',
+                    'co2_load_factor': 0.0,
+                    'optimization_status': 'fail: NO_SENSOR_LAG_DATA',
+                    'objective_value': None,
+                    'used_features': None,
+                    'next_tempsp1_lag': None,
+                    'next_sptreff_lag': default_setpoint,
+                    'previous_setpoint': default_setpoint,
+                    'screen_id': screen_id,
+                    'saved_to_cassandra': True,
+                    'error': 'No sensor lag data (TempSp1/SpTREff) available',
+                    'error_type': 'NO_SENSOR_LAG_DATA'
+                }
         
         current_measurements = {
             'TempSp1': sensor_data.get('TempSp1', 24.0),
@@ -653,8 +781,30 @@ class MPCInferencePipeline:
             )
         except Exception as e:
             log.error(f"[MPCInference] MPC optimization failed: {e}")
+            
+            default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason=f'OPTIMIZATION_FAILED: {str(e)}',
+                sensor_data=sensor_data,
+                weather=weather,
+                occupancy=occupancy
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
+            
             return {
                 'success': False,
+                'equipment_id': equipment_id,
+                'timestamp_utc': now_utc.isoformat(),
+                'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+                'optimized_setpoint': default_setpoint,
+                'actual_sptreff': sensor_data.get('SpTREff'),
+                'actual_tempsp1': sensor_data.get('TempSp1'),
+                'optimization_status': f'fail: OPTIMIZATION_FAILED: {str(e)}',
+                'saved_to_cassandra': True,
                 'error': f'MPC optimization failed: {str(e)}',
                 'error_type': 'OPTIMIZATION_FAILED'
             }
