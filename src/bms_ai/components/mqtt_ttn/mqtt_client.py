@@ -1,10 +1,12 @@
 import paho.mqtt.client as mqtt
 import json
 import threading
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 from dotenv import load_dotenv
 from cassandra.cluster import Session
+import pytz
 from src.bms_ai.api.dependencies import data_lock, latest_data, mqtt_client
 from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.logger_config import setup_logger
@@ -71,9 +73,9 @@ def on_connect(client, userdata, flags, rc):
                                                 snr float,
                                                 sf int,
                                                 event_timestamp timestamp,
-                                                PRIMARY KEY (sensor_id, event_timestamp)
+                                                PRIMARY KEY (sensor_id,created_at)
                                             )
-                                            WITH CLUSTERING ORDER BY (event_timestamp DESC);
+                                            WITH CLUSTERING ORDER BY (created_at DESC);
 
 
                                       """)
@@ -104,33 +106,37 @@ def on_message(client, userdata, msg):
         
         try:
             data = json.loads(payload_str)
-            # print("data", data)
         except json.JSONDecodeError:
-            log.warning("Payload is not JSON, skipping database insert.")
+            log.warning("Payload is not JSON, skipping.")
             return
 
-        # 1. Get the session
+        # 1. SETUP TIMEZONE
+        ist_tz = pytz.timezone("Asia/Kolkata")
+        # Get current time in IST
+        now_ist = datetime.now(ist_tz)
+
+        # 2. FIX FOR DOUBLE INSERTION:
+        # If your Primary Key includes event_timestamp, and you use datetime.now(),
+        # a retry from MQTT will have a different millisecond, creating a duplicate.
+        # Ideally, use the sensor's own 'created_at' for the timestamp if it's unique.
+        
         session = get_cassandra_session()
-        # 2. Define the insert query
         query = """
             INSERT INTO bms_live_monitoring_mqtt_36c27828d0b44f1e8a94d962d342e7c2 (
                 sensor_id, corporate_id, created_at, sensor_type, device_id, room_name, 
                 temperature, total_in, total_out, people_count, period_in, period_out, 
                 periodic_people_count, battery, rssi, snr, sf, event_timestamp
-            ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
-        # 3. Prepare the statement (Best practice for performance)
         prepared = session.prepare(query)
 
-        # 4. Explicitly cast and Map values
-        # This ensures strings from JSON are converted to Ints/Floats for Cassandra
         values = (
             int(data.get('sensor_id')) if data.get('sensor_id') is not None else None,
             int(data.get('corporate_id')) if data.get('corporate_id') is not None else None,
-            int(data.get('created_at')) if data.get('created_at') is not None else None,
+            # If created_at is a timestamp in Cassandra, convert the JSON value to a datetime object
+            # If it's an int, keep it as int.
+            data.get('created_at'), 
             str(data.get('sensor_type')) if data.get('sensor_type') else None,
             str(data.get('device_id')) if data.get('device_id') else None,
             str(data.get('room_name')) if data.get('room_name') else None,
@@ -145,17 +151,20 @@ def on_message(client, userdata, msg):
             int(data.get('rssi')) if data.get('rssi') is not None else None,
             float(data.get('snr')) if data.get('snr') is not None else None,
             int(data.get('sf')) if data.get('sf') is not None else None,
-            datetime.now()
+            now_ist  # This is your localized IST timestamp
         )
 
-        # 5. Execute
         session.execute(prepared, values)
-        log.info(f"Successfully inserted sensor_id {data.get('sensor_id')} into Cassandra")
-        print(f"✓ Data inserted: sensor_id={data.get('sensor_id')}, timestamp={datetime.now()}")
+        log.info(f"Successfully inserted sensor_id {data.get('sensor_id')}")
+        # Print with localized formatting
+        print(f"Data inserted at {now_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
     except Exception as e:
         log.error(f"Error processing message: {e}", exc_info=True)
-        print(f"✗ Error inserting data: {e}")
+
+    except Exception as e:
+        log.error(f"Error processing message: {e}", exc_info=True)
+        print(f"Error inserting data: {e}")
 
 
 # ---------- MQTT Setup ----------
