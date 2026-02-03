@@ -16,6 +16,7 @@ Author: BMS-AI Team
 Date: January 2026
 """
 
+import sys
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional, Tuple
@@ -47,35 +48,34 @@ class OccupancyMode(Enum):
 class MPCConfig:
     """Configuration parameters for the MPC controller."""
     
-    # Prediction & Control Horizons
-    prediction_horizon: int = 6         # N_p: 6 steps × 10 min = 60 minutes
-    control_horizon: int = 3            # N_c: 3 control moves
-    sample_time_minutes: int = 10       # Sampling interval
+    prediction_horizon: int = 6         
+    control_horizon: int = 3           
+    sample_time_minutes: int = 10      
     
     # Setpoint Constraints (SpTREff)
-    sp_min_occupied: float = 23.0       # Minimum setpoint during occupied/pre-cooling
-    sp_max_occupied: float = 26.0       # Maximum setpoint during occupied/pre-cooling
-    sp_unoccupied: float = 27.0         # Static unoccupied setpoint (SpTrNoc)
+    sp_min_occupied: float = 23.0       
+    sp_max_occupied: float = 26.0       
+    sp_unoccupied: float = 27.0         
     
     # Temperature Safety Bounds (TempSp1 - Space Air Temperature)
-    temp_min_hard: float = 22.0         # Hard lower bound
-    temp_max_hard: float = 26.0         # Hard upper bound
-    temp_comfort_target: float = 23.5   # Target comfort temperature
+    temp_min_hard: float = 22.0         
+    temp_max_hard: float = 26.0    
+    temp_comfort_target: float = 23.5  
     
     # Rate of Change Constraints
-    delta_sp_max: float = 0.5           # Max setpoint change per step (°C)
+    delta_sp_max: float = 0.5           
     
     # Pre-cooling Threshold
-    precool_threshold_minutes: int = 60  # Pre-cooling activation threshold
+    precool_threshold_minutes: int = 60  
     
     # Objective Function Weights
-    w_comfort: float = 100.0            # Weight for comfort penalty
-    w_energy: float = 1.0               # Weight for energy (higher SP = less cooling)
-    w_smoothness: float = 50.0          # Weight for setpoint change penalty
-    w_soft_constraint: float = 1000.0   # Weight for soft constraint violations
+    w_comfort: float = 100.0           
+    w_energy: float = 1.0               
+    w_smoothness: float = 50.0         
+    w_soft_constraint: float = 1000.0   
     
     # Model Parameters
-    thermal_time_constant: float = 30.0  # Approximate thermal time constant (minutes)
+    thermal_time_constant: float = 30.0  
 
 
 @dataclass
@@ -92,14 +92,14 @@ class MPCState:
     - SpTREff: Current effective setpoint (°C)
     - SpTREff_lag_10m: Setpoint 10 minutes ago (°C)
     """
-    TempSp1: float                      # Current space air temperature
-    TempSp1_lag_10m: float              # Lagged space temperature
-    SpTREff: float                      # Current setpoint
-    SpTREff_lag_10m: float              # Lagged setpoint
-    TempSu: float = 20.0                # Supply air temperature
-    FbVFD: float = 50.0                 # Fan speed feedback (%)
-    FbFAD: float = 50.0                 # Fresh air damper feedback (%)
-    Co2RA: float = 600.0                # Space CO2 level (ppm) - occupancy proxy
+    TempSp1: float               
+    TempSp1_lag_10m: float              
+    SpTREff: float                      
+    SpTREff_lag_10m: float             
+    TempSu: float = 20.0                
+    FbVFD: float = 50.0                
+    FbFAD: float = 50.0                 
+    Co2RA: float = 600.0               
     
     def get_co2_load_category(self) -> str:
         """
@@ -113,13 +113,13 @@ class MPCState:
         """
         co2_range = int(self.Co2RA / 100)
         if co2_range <= 6:
-            return 'low'       # Empty/few people
+            return 'low'       
         elif co2_range <= 8:
-            return 'medium'    # Light occupancy
+            return 'medium'    
         elif co2_range <= 10:
-            return 'high'      # Moderate occupancy
+            return 'high'      
         else:
-            return 'very_high' # Heavy occupancy (full show)
+            return 'very_high' 
     
     def get_co2_load_factor(self) -> float:
         """
@@ -128,7 +128,6 @@ class MPCState:
         Returns:
             0.0 = minimal load (empty), 1.0 = full load, >1.0 = overcrowded
         """
-        # Normalize: 500 ppm = 0.0, 1000 ppm = 1.0, 1500 ppm = 1.5
         return max(0.0, (self.Co2RA - 500) / 500)
     
     def to_vector(self) -> np.ndarray:
@@ -201,7 +200,6 @@ class OccupancyInfo:
         status = response.get('status', 0)
         
         if status == 1:
-            # Movie is currently playing
             time_remaining_str = response.get('time_remaining', '0 minutes')
             time_remaining = int(time_remaining_str.split()[0]) if time_remaining_str else None
             return cls(
@@ -210,7 +208,6 @@ class OccupancyInfo:
                 time_remaining=time_remaining
             )
         else:
-            # No movie playing
             time_until_str = response.get('time_until_next_movie', '')
             if time_until_str and time_until_str != "No upcoming shows":
                 time_until = int(time_until_str.split()[0])
@@ -253,21 +250,16 @@ class OccupancyLogicHandler:
             OccupancyMode enum value
         """
         if occupancy_info.status == 1:
-            # Movie is currently playing
             return OccupancyMode.OCCUPIED
             
-        # No movie playing - check time until next
         time_until = occupancy_info.time_until_next_movie
         
         if time_until is None:
-            # No upcoming shows
             return OccupancyMode.UNOCCUPIED
             
         if time_until < self.config.precool_threshold_minutes:
-            # Pre-cooling window - treat as occupied for optimization
             return OccupancyMode.PRE_COOLING
         else:
-            # True unoccupied - bypass optimization
             return OccupancyMode.UNOCCUPIED
     
     def get_mode_constraints(
@@ -298,54 +290,37 @@ class OccupancyLogicHandler:
             Tuple of (min_setpoint, max_setpoint)
         """
         if mode == OccupancyMode.UNOCCUPIED:
-            # Force static unoccupied setpoint
             return (self.config.sp_unoccupied, self.config.sp_unoccupied)
         
-        # Base bounds
         target = self.config.temp_comfort_target  # 23.5
         sp_min = self.config.sp_min_occupied      # 23.0
         sp_max = target + 1.0                     # 24.5
         
-        # === CO2-BASED LOAD ADJUSTMENTS ===
-        # Higher CO2 = more people = need tighter cooling
         if co2_load_factor is not None:
-            if co2_load_factor >= 1.0:  # High/very high load (>1000 ppm)
-                # Full cinema: stricter cooling, less relaxation allowed
-                sp_max = target + 0.5             # Max 24.0 for crowded cinema
-            elif co2_load_factor <= 0.2:  # Very low load (<600 ppm)
-                # Nearly empty: can relax setpoint more for energy savings
-                sp_max = target + 1.5             # Allow up to 25.0
+            if co2_load_factor >= 1.0:  
+                sp_max = target + 0.5            
+            elif co2_load_factor <= 0.2:  
+                sp_max = target + 1.5             
         
-        # === WEATHER ADJUSTMENTS (modified by CO2) ===
         if outside_temp is not None:
-            # HOT outside (>25°C): Strict cooling needed regardless of CO2
             if outside_temp > 25.0:
-                sp_max = target + 0.5             # Max 24.0 on hot days
+                sp_max = target + 0.5         
                 
-            # COLD outside (<20°C): Energy savings opportunity
-            # BUT limit by CO2 - high occupancy still needs cooling
             elif outside_temp < 20.0:
-                sp_min = target                   # At least at target (23.5)
+                sp_min = target                
                 
-                # Cold day energy savings - limited by occupancy
                 if co2_load_factor is not None and co2_load_factor >= 1.0:
-                    # High occupancy: even on cold day, people generate heat
-                    sp_max = target + 0.5         # Limited savings
+                    sp_max = target + 0.5      
                 elif outside_temp < 15.0:
-                    # Very cold + low occupancy: max savings
-                    sp_max = target + 1.5         # Allow up to 25.0
+                    sp_max = target + 1.5         
                 else:
-                    sp_max = target + 1.0         # Allow up to 24.5
+                    sp_max = target + 1.0        
         
-        # Room-temp override: if room is already warm, must cool down
         if current_room_temp is not None and current_room_temp > target + 1.0:
-            # Room is warm (>24.5°C) - override weather logic, need to cool
-            sp_min = target - 0.5                 # Can go to 23.0
-            sp_max = target                       # Force to target or below
+            sp_min = target - 0.5               
+            sp_max = target                       
         
-        # SAFETY: Ensure sp_min <= sp_max (prevents constraint incompatibility)
         if sp_min > sp_max:
-            # Conflict - use target as both bounds
             sp_min = target
             sp_max = target
         
@@ -380,19 +355,14 @@ class OccupancyLogicHandler:
             
         time_until = occupancy_info.time_until_next_movie
         
-        # Calculate temperature gap
         temp_gap = current_temp - target_comfort
         
         if temp_gap <= 0:
-            # Already at or below target
             return target_comfort
         
-        # Linear interpolation: gradually reduce setpoint
-        # Full pre-cooling window is 60 minutes
         progress = 1.0 - (time_until / self.config.precool_threshold_minutes)
         progress = np.clip(progress, 0.0, 1.0)
         
-        # Interpolate between current temp and target
         intermediate_target = current_temp - (temp_gap * progress)
         
         return np.clip(
@@ -447,25 +417,23 @@ class ThermalPredictionModel:
             Tuple of (X features, y target)
         """
         self.feature_names = [
-            'TempSp1',              # Current space temperature
-            'TempSp1_lag_10m',      # Lagged temperature
-            'SpTREff',              # Current setpoint
-            'SpTREff_lag_10_min',   # Lagged setpoint (note: column name from data)
-            'outside_temp',         # Outdoor temperature
-            'outside_humidity',     # Outdoor humidity
-            'occupied',             # Binary occupancy (0 or 1)
-            'hour_sin',             # Cyclic hour encoding
+            'TempSp1',              
+            'TempSp1_lag_10m',      
+            'SpTREff',              
+            'SpTREff_lag_10_min',   
+            'outside_temp',         
+            'outside_humidity',     
+            'occupied',             
+            'hour_sin',             
             'hour_cos',
-            'day_sin',              # Cyclic day encoding
+            'day_sin',              
             'day_cos',
-            'FbVFD',                # Fan speed (read-only but informative)
-            'FbFAD'                 # Damper position (read-only but informative)
+            'FbVFD',              
+            'FbFAD'                
         ]
         
-        # Filter to available columns
         available_features = [f for f in self.feature_names if f in df.columns]
         
-        # Handle column name variations
         if 'SpTREff_lag_10_min' in df.columns:
             df = df.rename(columns={'SpTREff_lag_10_min': 'SpTREff_lag_10m'})
             if 'SpTREff_lag_10m' in self.feature_names:
@@ -476,11 +444,9 @@ class ThermalPredictionModel:
         
         self.feature_names = available_features
         
-        # Prepare features and target
         X = df[available_features].copy()
-        y = df['Target_Temp'].copy()  # Next timestep temperature
+        y = df['Target_Temp'].copy()  
         
-        # Drop rows with NaN
         valid_mask = ~(X.isna().any(axis=1) | y.isna())
         X = X[valid_mask]
         y = y[valid_mask]
@@ -505,19 +471,15 @@ class ThermalPredictionModel:
         
         X, y = self.prepare_features(df)
         
-        # Initialize scalers
         self.scaler_X = StandardScaler()
         self.scaler_y = StandardScaler()
         
-        # Scale features
         X_scaled = self.scaler_X.fit_transform(X)
         y_scaled = self.scaler_y.fit_transform(y.values.reshape(-1, 1)).ravel()
         
-        # Train Ridge model
         self.model = Ridge(alpha=alpha)
         self.model.fit(X_scaled, y_scaled)
         
-        # Calculate training metrics
         y_pred_scaled = self.model.predict(X_scaled)
         y_pred = self.scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
         
@@ -533,7 +495,6 @@ class ThermalPredictionModel:
         print(f"  MAE: {mae:.4f}°C")
         print(f"  R²: {r2:.4f}")
         
-        # Print feature importance
         print("\n  Feature Coefficients:")
         for name, coef in zip(self.feature_names, self.model.coef_):
             print(f"    {name}: {coef:.4f}")
@@ -560,12 +521,11 @@ class ThermalPredictionModel:
         if not self.is_trained:
             raise RuntimeError("Model not trained. Call train() first.")
         
-        # Build feature vector
         features = {
             'TempSp1': state.TempSp1,
             'TempSp1_lag_10m': state.TempSp1_lag_10m,
             'SpTREff': control_input,
-            'SpTREff_lag_10m': state.SpTREff,  # Current becomes lagged
+            'SpTREff_lag_10m': state.SpTREff,  
             'outside_temp': disturbance.outside_temp,
             'outside_humidity': disturbance.outside_humidity,
             'occupied': 1.0 if disturbance.occupancy_mode != OccupancyMode.UNOCCUPIED else 0.0,
@@ -577,10 +537,8 @@ class ThermalPredictionModel:
             'FbFAD': state.FbFAD
         }
         
-        # Create feature vector in correct order
         X = np.array([[features.get(f, 0.0) for f in self.feature_names]])
         
-        # Scale and predict
         X_scaled = self.scaler_X.transform(X)
         y_pred_scaled = self.model.predict(X_scaled)
         y_pred = self.scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()[0]
@@ -590,7 +548,7 @@ class ThermalPredictionModel:
     def predict_trajectory(
         self,
         initial_state: MPCState,
-        control_sequence: np.ndarray,  # SpTREff values for N_p steps
+        control_sequence: np.ndarray, 
         disturbance_forecast: List[DisturbanceVector]
     ) -> np.ndarray:
         """
@@ -607,7 +565,6 @@ class ThermalPredictionModel:
         N_p = len(control_sequence)
         trajectory = np.zeros(N_p)
         
-        # Initialize rolling state
         current_state = MPCState(
             TempSp1=initial_state.TempSp1,
             TempSp1_lag_10m=initial_state.TempSp1_lag_10m,
@@ -619,7 +576,6 @@ class ThermalPredictionModel:
         )
         
         for k in range(N_p):
-            # Predict next temperature
             next_temp = self.predict_single_step(
                 state=current_state,
                 control_input=control_sequence[k],
@@ -627,7 +583,6 @@ class ThermalPredictionModel:
             )
             trajectory[k] = next_temp
             
-            # Update state for next iteration
             new_state = MPCState(
                 TempSp1=next_temp,
                 TempSp1_lag_10m=current_state.TempSp1,
@@ -658,10 +613,7 @@ class ThermalPredictionModel:
     
     def load(self, filepath: str):
         """Load trained model from file."""
-        import sys
         
-        # Fix pickle import issues - redirect old module paths to current ones
-        # This handles cases where model was trained with different module structure
         if 'src.bms_ai.mpc.mpc_training_pipeline' not in sys.modules:
             try:
                 import src.bms_ai.mpc.mpc_training_pipeline
@@ -732,7 +684,6 @@ class CinemaAHUMPC:
         self.config = config or MPCConfig()
         self.occupancy_handler = OccupancyLogicHandler(self.config)
         
-        # Track previous setpoint for rate limiting
         self.previous_setpoint: Optional[float] = None
         
     def _build_objective(
@@ -770,14 +721,12 @@ class CinemaAHUMPC:
         N_p = self.config.prediction_horizon
         N_c = self.config.control_horizon
         
-        # Pre-compute weather conditions for adaptive logic
         avg_outside_temp = np.mean([d.outside_temp for d in disturbance_forecast])
         is_hot_day = avg_outside_temp > 25.0
         is_cold_day = avg_outside_temp < 20.0
         room_is_warm = initial_state.TempSp1 > target_temp + 0.5
         room_is_comfortable = initial_state.TempSp1 <= target_temp + 0.5
         
-        # CO2-based occupancy load factor (0.0 = empty, 1.0 = full, 1.5 = overcrowded)
         co2_load = initial_state.get_co2_load_factor()
         is_high_occupancy = co2_load >= 1.0      # CO2 > 1000 ppm (full cinema)
         is_low_occupancy = co2_load <= 0.2       # CO2 < 600 ppm (nearly empty)
@@ -789,12 +738,10 @@ class CinemaAHUMPC:
             
             u_sequence: Control inputs (SpTREff setpoints) for N_c steps
             """
-            # Extend control sequence to prediction horizon (hold last value)
             full_sequence = np.zeros(N_p)
             full_sequence[:N_c] = u_sequence
-            full_sequence[N_c:] = u_sequence[-1]  # Hold last value
+            full_sequence[N_c:] = u_sequence[-1] 
             
-            # Predict temperature trajectory
             temp_trajectory = self.thermal_model.predict_trajectory(
                 initial_state=initial_state,
                 control_sequence=full_sequence,
@@ -804,7 +751,6 @@ class CinemaAHUMPC:
             # Initialize cost
             J = 0.0
             
-            # Previous setpoint for smoothness calculation
             prev_sp = self.previous_setpoint or initial_state.SpTREff
             
             for k in range(N_p):
@@ -813,78 +759,60 @@ class CinemaAHUMPC:
                 outside_k = disturbance_forecast[k].outside_temp
                 co2_k = disturbance_forecast[k].co2_load_factor
                 
-                # === WEATHER + CO2 ADAPTIVE TARGET ===
-                # Effective target depends on: weather, CO2 load, room state
                 effective_target = target_temp
                 
-                # Cold day with low occupancy: can raise target for energy savings
                 if is_cold_day and room_is_comfortable and not is_high_occupancy:
-                    cold_bonus = min(1.0, (20.0 - avg_outside_temp) / 10.0)  # 0 to 1
-                    # Scale bonus by inverse of occupancy (less people = more savings)
-                    occupancy_scale = max(0.0, 1.0 - co2_load)  # 1.0 for empty, 0.0 for full
+                    cold_bonus = min(1.0, (20.0 - avg_outside_temp) / 10.0)  
+                    occupancy_scale = max(0.0, 1.0 - co2_load)  
                     effective_target = target_temp + cold_bonus * occupancy_scale * 0.5
                 
-                # High occupancy: stricter target (people generate heat + expect comfort)
                 if is_high_occupancy:
                     effective_target = min(effective_target, target_temp)
                 
-                # 1. PRIMARY OBJECTIVE: Setpoint tracks effective target
                 setpoint_error = (sp_k - effective_target) ** 2
                 J += self.config.w_comfort * 2.0 * setpoint_error
                 
-                # 2. SECONDARY: Predicted room temperature should stay comfortable
                 temp_target = effective_target if (is_cold_day and not is_high_occupancy) else target_temp
                 predicted_comfort_error = (temp_k - temp_target) ** 2
                 J += self.config.w_comfort * 0.5 * predicted_comfort_error
                 
-                # 3. ASYMMETRIC PENALTY: Being too warm is worse than too cool
-                # HIGH OCCUPANCY: Stronger penalty for being above target (people complain!)
                 if sp_k > effective_target:
                     above_target = sp_k - effective_target
-                    # Weather multiplier
                     if is_hot_day:
                         weather_multiplier = 3.0
                     elif is_cold_day:
                         weather_multiplier = 0.5
                     else:
                         weather_multiplier = 1.0
-                    # CO2/occupancy multiplier: full cinema = stricter penalty
-                    occupancy_multiplier = 1.0 + co2_load  # 1.0 for empty, 2.0 for full
+                    occupancy_multiplier = 1.0 + co2_load  
                     J += self.config.w_comfort * 3.0 * weather_multiplier * occupancy_multiplier * (above_target ** 2)
                 
-                # 4. HOT DAY or HIGH OCCUPANCY: Penalize deviation above target
                 # High CO2 = full cinema = people expect comfort
                 if (outside_k > 25.0 or is_high_occupancy) and sp_k > target_temp:
                     heat_penalty = (sp_k - target_temp) * 10.0
                     if outside_k > 25.0:
-                        heat_penalty *= (outside_k - 25.0)  # Scale by how hot
+                        heat_penalty *= (outside_k - 25.0) 
                     if is_high_occupancy:
-                        heat_penalty *= (1.0 + co2_load)    # Scale by occupancy
+                        heat_penalty *= (1.0 + co2_load)   
                     J += self.config.w_comfort * heat_penalty
                 
-                # 5. COLD DAY + LOW OCCUPANCY: REWARD higher setpoints for energy savings
-                # Only allow energy savings when cinema is NOT full
                 if outside_k < 20.0 and room_is_comfortable and not is_high_occupancy:
                     if sp_k > target_temp and sp_k <= target_temp + 1.0:
-                        cold_saving = (20.0 - outside_k) / 10.0  # 0 to 1 scale
-                        # Scale reward by LOW occupancy (more savings when empty)
-                        occupancy_bonus = max(0.0, 1.0 - co2_k)  # 1.0 for empty, 0.0 for full
+                        cold_saving = (20.0 - outside_k) / 10.0  
+                        occupancy_bonus = max(0.0, 1.0 - co2_k)  
                         energy_reward = cold_saving * occupancy_bonus * (sp_k - target_temp) * 5.0
-                        J -= self.config.w_energy * energy_reward  # Negative = reward
+                        J -= self.config.w_energy * energy_reward  
                 
-                # 6. ROOM CORRECTION: If room is already warm, favor lower setpoints
                 if room_is_warm and sp_k > target_temp:
                     room_error = initial_state.TempSp1 - target_temp
                     J += self.config.w_comfort * 5.0 * room_error * (sp_k - target_temp)
                 
-                # 7. Smoothness Penalty
                 if k < N_c:
                     delta_sp = sp_k - prev_sp
                     smoothness_penalty = delta_sp ** 2
                     J += self.config.w_smoothness * smoothness_penalty
                     prev_sp = sp_k
                 
-                # 8. Soft Constraint Violations (temperature bounds)
                 lower_violation = max(0, self.config.temp_min_hard - temp_k)
                 upper_violation = max(0, temp_k - self.config.temp_max_hard)
                 J += self.config.w_soft_constraint * (lower_violation ** 2)
@@ -915,28 +843,19 @@ class CinemaAHUMPC:
         
         constraints = []
         
-        # Bound constraints are handled via 'bounds' parameter
         # Add rate constraints as inequality constraints
-        # IMPORTANT: Skip rate constraint if previous_setpoint is outside current bounds
-        # (e.g., transitioning from unoccupied 27°C to occupied 23.5-24.5°C bounds)
         if self.previous_setpoint is not None:
-            # Check if previous setpoint is compatible with current bounds
             prev_in_bounds = True
             if sp_min is not None and sp_max is not None:
-                # Check if rate constraint can possibly be satisfied
-                # Rate constraint: |u[0] - prev| <= delta_sp_max
-                # Bounds: sp_min <= u[0] <= sp_max
-                # Feasible if: prev - delta <= sp_max AND prev + delta >= sp_min
                 delta = self.config.delta_sp_max
                 if self.previous_setpoint - delta > sp_max or self.previous_setpoint + delta < sp_min:
-                    prev_in_bounds = False  # No feasible solution possible
+                    prev_in_bounds = False  
             
             if prev_in_bounds:
                 def rate_constraint_first(u):
                     return self.config.delta_sp_max - np.abs(u[0] - self.previous_setpoint)
                 constraints.append({'type': 'ineq', 'fun': rate_constraint_first})
         
-        # Rate constraints between consecutive control moves
         for k in range(N_c - 1):
             def rate_constraint(u, k=k):
                 return self.config.delta_sp_max - np.abs(u[k+1] - u[k])
@@ -966,10 +885,8 @@ class CinemaAHUMPC:
         N_p = self.config.prediction_horizon
         N_c = self.config.control_horizon
         
-        # Determine operational mode
         mode = self.occupancy_handler.determine_mode(occupancy_info)
         
-        # Check if we should bypass optimization
         if self.occupancy_handler.should_bypass_optimization(mode):
             optimal_sp = self.config.sp_unoccupied
             self.previous_setpoint = optimal_sp
@@ -983,7 +900,6 @@ class CinemaAHUMPC:
                 'optimization_status': 'bypassed'
             }
         
-        # Determine target temperature
         if mode == OccupancyMode.PRE_COOLING:
             target_temp = self.occupancy_handler.get_precool_ramp_target(
                 occupancy_info=occupancy_info,
@@ -993,17 +909,14 @@ class CinemaAHUMPC:
         else:
             target_temp = self.config.temp_comfort_target
         
-        # Build disturbance forecast with CO2 load
         disturbance_forecast = []
-        co2_load_factor = current_state.get_co2_load_factor()  # Use current CO2
+        co2_load_factor = current_state.get_co2_load_factor()  
         
         for k in range(N_p):
-            # Calculate time for this step
             step_time = current_time + timedelta(minutes=k * self.config.sample_time_minutes)
             hour = step_time.hour + step_time.minute / 60.0
             day = step_time.weekday()
             
-            # Get weather for this step (use last available if not enough forecast)
             weather_k = weather_forecast[min(k, len(weather_forecast) - 1)]
             
             disturbance_forecast.append(DisturbanceVector(
@@ -1015,10 +928,9 @@ class CinemaAHUMPC:
                 day_sin=np.sin(2 * np.pi * day / 7),
                 day_cos=np.cos(2 * np.pi * day / 7),
                 time_until_event=occupancy_info.time_until_next_movie,
-                co2_load_factor=co2_load_factor  # Pass CO2 load
+                co2_load_factor=co2_load_factor  
             ))
         
-        # Build objective function
         objective = self._build_objective(
             initial_state=current_state,
             disturbance_forecast=disturbance_forecast,
@@ -1026,36 +938,29 @@ class CinemaAHUMPC:
             target_temp=target_temp
         )
         
-        # Get weather + CO2 adaptive bounds
         outside_temp = disturbance_forecast[0].outside_temp if disturbance_forecast else None
         sp_min, sp_max = self.occupancy_handler.get_mode_constraints(
             mode=mode,
             outside_temp=outside_temp,
             current_room_temp=current_state.TempSp1,
-            co2_load_factor=co2_load_factor  # Pass CO2 load
+            co2_load_factor=co2_load_factor 
         )
         bounds = [(sp_min, sp_max)] * N_c
         
-        # Build constraints with bounds (to check rate constraint feasibility)
         constraints = self._build_constraints(mode, sp_min, sp_max)
         
-        # Initial guess: START FROM TARGET, not current setpoint
-        # This helps optimizer find solutions near comfort target
         u0 = np.full(N_c, target_temp)
         u0 = np.clip(u0, sp_min, sp_max)
         
-        # Solve optimization with multiple attempts
-        # Try SLSQP first, fall back to L-BFGS-B if gradient issues
         result = minimize(
             objective,
             u0,
             method='SLSQP',
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 200, 'ftol': 1e-5}  # More iterations, relaxed tolerance
+            options={'maxiter': 200, 'ftol': 1e-5} 
         )
         
-        # If SLSQP fails with gradient issues, try L-BFGS-B (no constraints)
         if not result.success and 'directional' in result.message:
             result_lbfgsb = minimize(
                 objective,
@@ -1067,38 +972,29 @@ class CinemaAHUMPC:
             if result_lbfgsb.success or result_lbfgsb.fun < result.fun:
                 result = result_lbfgsb
         
-        # Extract optimal setpoint (first control move)
         if result.success:
             optimal_sp = float(result.x[0])
             optimization_status = 'success'
         else:
-            # SMART FALLBACK based on weather conditions
             if outside_temp is not None and outside_temp < 20.0:
-                # Cold day: use upper bound for energy savings
                 optimal_sp = sp_max
             elif current_state.TempSp1 > target_temp + 0.5:
-                # Room is warm: aggressive cooling
                 optimal_sp = max(sp_min, target_temp - 0.3)
             else:
-                # Default: use target
                 optimal_sp = target_temp
             
             optimal_sp = np.clip(optimal_sp, sp_min, sp_max)
             optimization_status = f'failed: {result.message}'
         
-        # Apply rate limiting
         if self.previous_setpoint is not None:
             delta = optimal_sp - self.previous_setpoint
             if abs(delta) > self.config.delta_sp_max:
                 optimal_sp = self.previous_setpoint + np.sign(delta) * self.config.delta_sp_max
         
-        # Ensure bounds
         optimal_sp = np.clip(optimal_sp, sp_min, sp_max)
         
-        # Update previous setpoint
         self.previous_setpoint = optimal_sp
         
-        # Predict trajectory with optimal control
         full_sequence = np.zeros(N_p)
         full_sequence[:N_c] = result.x if result.success else u0
         full_sequence[N_c:] = full_sequence[N_c - 1]
@@ -1187,7 +1083,6 @@ class CinemaAHUMPCSystem:
         
         current_time = current_time or datetime.now()
         
-        # Build state from measurements (including CO2 for occupancy load)
         state = MPCState(
             TempSp1=current_measurements.get('TempSp1', 24.0),
             TempSp1_lag_10m=current_measurements.get('TempSp1_lag_10m', 
@@ -1198,17 +1093,14 @@ class CinemaAHUMPCSystem:
             TempSu=current_measurements.get('TempSu', 18.0),
             FbVFD=current_measurements.get('FbVFD', 50.0),
             FbFAD=current_measurements.get('FbFAD', 50.0),
-            Co2RA=current_measurements.get('Co2RA', 600.0)  # CO2 for occupancy load
+            Co2RA=current_measurements.get('Co2RA', 600.0)  
         )
         
-        # Parse occupancy info
         occupancy_info = OccupancyInfo.from_api_response(occupancy_api_response)
         
-        # Default weather forecast if not provided
         if weather_forecast is None:
             weather_forecast = [{'temperature': 35.0, 'humidity': 50.0}] * self.config.prediction_horizon
         
-        # Compute optimal setpoint
         result = self.mpc.compute_optimal_setpoint(
             current_state=state,
             occupancy_info=occupancy_info,
@@ -1254,7 +1146,7 @@ class CinemaAHUMPCSystem:
             except Exception as e:
                 results[screen_name] = {
                     'error': str(e),
-                    'optimal_setpoint': self.config.sp_max_occupied  # Safe fallback
+                    'optimal_setpoint': self.config.sp_max_occupied  
                 }
         
         return results
@@ -1270,9 +1162,6 @@ class CinemaAHUMPCSystem:
         self.is_initialized = True
 
 
-# =============================================================================
-# SECTION 6: UTILITY FUNCTIONS
-# =============================================================================
 
 def create_disturbance_forecast_from_weather_api(
     base_time: datetime,
@@ -1305,145 +1194,141 @@ def create_disturbance_forecast_from_weather_api(
     return forecast
 
 
-# =============================================================================
-# SECTION 7: MAIN EXECUTION & DEMO
-# =============================================================================
-
-if __name__ == "__main__":
-    import json
+# if __name__ == "__main__":
+    # import json
     
-    # AHU identifier for model naming
-    AHU_ID = "ahu13"
+    # # AHU identifier for model naming
+    # AHU_ID = "ahu13"
     
-    print("=" * 70)
-    print(f"CINEMA AHU SUPERVISORY MPC SYSTEM - {AHU_ID.upper()}")
-    print("=" * 70)
+    # print("=" * 70)
+    # print(f"CINEMA AHU SUPERVISORY MPC SYSTEM - {AHU_ID.upper()}")
+    # print("=" * 70)
     
-    # Load training data
-    data_path = f"notebooks/{AHU_ID}_preprocessed_data.csv"
+    # # Load training data
+    # data_path = f"notebooks/{AHU_ID}_preprocessed_data.csv"
     
-    try:
-        df = pd.read_csv(data_path)
-        print(f"\nLoaded training data: {len(df)} samples")
-        print(f"Columns: {list(df.columns)}")
-    except FileNotFoundError:
-        print(f"Training data not found at {data_path}")
-        print("Please ensure the preprocessed data file exists.")
-        exit(1)
+    # try:
+    #     df = pd.read_csv(data_path)
+    #     print(f"\nLoaded training data: {len(df)} samples")
+    #     print(f"Columns: {list(df.columns)}")
+    # except FileNotFoundError:
+    #     print(f"Training data not found at {data_path}")
+    #     print("Please ensure the preprocessed data file exists.")
+    #     exit(1)
     
-    # Initialize MPC system with configuration
-    config = MPCConfig(
-        prediction_horizon=6,       # 60 minutes lookahead
-        control_horizon=3,          # 30 minutes control horizon
-        sample_time_minutes=10,
-        sp_min_occupied=23.0,
-        sp_max_occupied=26.0,
-        sp_unoccupied=28.0,
-        temp_comfort_target=23.5,
-        w_comfort=100.0,
-        w_energy=1.0,
-        w_smoothness=50.0
-    )
+    # # Initialize MPC system with configuration
+    # config = MPCConfig(
+    #     prediction_horizon=6,       # 60 minutes lookahead
+    #     control_horizon=3,          # 30 minutes control horizon
+    #     sample_time_minutes=10,
+    #     sp_min_occupied=23.0,
+    #     sp_max_occupied=26.0,
+    #     sp_unoccupied=28.0,
+    #     temp_comfort_target=23.5,
+    #     w_comfort=100.0,
+    #     w_energy=1.0,
+    #     w_smoothness=50.0
+    # )
     
-    mpc_system = CinemaAHUMPCSystem(config)
+    # mpc_system = CinemaAHUMPCSystem(config)
     
-    # Train the model
-    print("\n" + "-" * 70)
-    print(f"TRAINING THERMAL PREDICTION MODEL FOR {AHU_ID.upper()}")
-    print("-" * 70)
-    metrics = mpc_system.train(df)
+    # # Train the model
+    # print("\n" + "-" * 70)
+    # print(f"TRAINING THERMAL PREDICTION MODEL FOR {AHU_ID.upper()}")
+    # print("-" * 70)
+    # metrics = mpc_system.train(df)
     
-    # Save model in AHU-specific folder: artifacts/{ahu_id}/mpc_model.joblib
-    model_dir = os.path.join("artifacts", AHU_ID)
-    os.makedirs(model_dir, exist_ok=True)
-    model_path = os.path.join(model_dir, "mpc_model.joblib")
-    mpc_system.save_model(model_path)
+    # # Save model in AHU-specific folder: artifacts/{ahu_id}/mpc_model.joblib
+    # model_dir = os.path.join("artifacts", AHU_ID)
+    # os.makedirs(model_dir, exist_ok=True)
+    # model_path = os.path.join(model_dir, "mpc_model.joblib")
+    # mpc_system.save_model(model_path)
     
-    # Demo: Simulate different occupancy scenarios
-    print("\n" + "-" * 70)
-    print("DEMO: MPC OPTIMIZATION FOR DIFFERENT SCENARIOS")
-    print("-" * 70)
+    # # Demo: Simulate different occupancy scenarios
+    # print("\n" + "-" * 70)
+    # print("DEMO: MPC OPTIMIZATION FOR DIFFERENT SCENARIOS")
+    # print("-" * 70)
     
-    # Current measurements (simulated)
-    current_measurements = {
-        'TempSp1': 24.5,
-        'TempSp1_lag_10m': 24.3,
-        'SpTREff': 24.0,
-        'SpTREff_lag_10m': 24.0,
-        'TempSu': 18.5,
-        'FbVFD': 65.0,
-        'FbFAD': 45.0
-    }
+    # # Current measurements (simulated)
+    # current_measurements = {
+    #     'TempSp1': 24.5,
+    #     'TempSp1_lag_10m': 24.3,
+    #     'SpTREff': 24.0,
+    #     'SpTREff_lag_10m': 24.0,
+    #     'TempSu': 18.5,
+    #     'FbVFD': 65.0,
+    #     'FbFAD': 45.0
+    # }
     
-    # Weather forecast (simplified)
-    weather_forecast = [{'temperature': 35.0, 'humidity': 55.0}] * 6
+    # # Weather forecast (simplified)
+    # weather_forecast = [{'temperature': 35.0, 'humidity': 55.0}] * 6
     
-    # Scenario 1: Movie currently playing
-    print("\n1. SCENARIO: Movie Currently Playing (OCCUPIED)")
-    occupancy_playing = {
-        "status": 1,
-        "movie_name": "The Spongebob Movie",
-        "time_remaining": "108 minutes"
-    }
-    result1 = mpc_system.get_optimal_setpoint(
-        current_measurements=current_measurements,
-        occupancy_api_response=occupancy_playing,
-        weather_forecast=weather_forecast
-    )
-    print(f"   Mode: {result1['mode']}")
-    print(f"   Optimal Setpoint: {result1['optimal_setpoint']}°C")
-    print(f"   Target Temperature: {result1.get('target_temperature', 'N/A')}°C")
-    print(f"   Predicted Trajectory: {[round(t, 2) for t in result1.get('predicted_trajectory', [])[:3]]}...")
+    # # Scenario 1: Movie currently playing
+    # print("\n1. SCENARIO: Movie Currently Playing (OCCUPIED)")
+    # occupancy_playing = {
+    #     "status": 1,
+    #     "movie_name": "The Spongebob Movie",
+    #     "time_remaining": "108 minutes"
+    # }
+    # result1 = mpc_system.get_optimal_setpoint(
+    #     current_measurements=current_measurements,
+    #     occupancy_api_response=occupancy_playing,
+    #     weather_forecast=weather_forecast
+    # )
+    # print(f"   Mode: {result1['mode']}")
+    # print(f"   Optimal Setpoint: {result1['optimal_setpoint']}°C")
+    # print(f"   Target Temperature: {result1.get('target_temperature', 'N/A')}°C")
+    # print(f"   Predicted Trajectory: {[round(t, 2) for t in result1.get('predicted_trajectory', [])[:3]]}...")
     
-    # Scenario 2: Pre-cooling (movie starting in 30 min)
-    print("\n2. SCENARIO: Pre-Cooling (movie in 30 min)")
-    occupancy_precool = {
-        "status": 0,
-        "time_until_next_movie": "30 minutes",
-        "next_movie_name": "Mercy (18TC)"
-    }
-    result2 = mpc_system.get_optimal_setpoint(
-        current_measurements=current_measurements,
-        occupancy_api_response=occupancy_precool,
-        weather_forecast=weather_forecast
-    )
-    print(f"   Mode: {result2['mode']}")
-    print(f"   Optimal Setpoint: {result2['optimal_setpoint']}°C")
-    print(f"   Target Temperature: {result2.get('target_temperature', 'N/A')}°C")
-    print(f"   Time Until Event: {result2.get('time_until_event')} minutes")
+    # # Scenario 2: Pre-cooling (movie starting in 30 min)
+    # print("\n2. SCENARIO: Pre-Cooling (movie in 30 min)")
+    # occupancy_precool = {
+    #     "status": 0,
+    #     "time_until_next_movie": "30 minutes",
+    #     "next_movie_name": "Mercy (18TC)"
+    # }
+    # result2 = mpc_system.get_optimal_setpoint(
+    #     current_measurements=current_measurements,
+    #     occupancy_api_response=occupancy_precool,
+    #     weather_forecast=weather_forecast
+    # )
+    # print(f"   Mode: {result2['mode']}")
+    # print(f"   Optimal Setpoint: {result2['optimal_setpoint']}°C")
+    # print(f"   Target Temperature: {result2.get('target_temperature', 'N/A')}°C")
+    # print(f"   Time Until Event: {result2.get('time_until_event')} minutes")
     
-    # Scenario 3: Unoccupied (no movie for 2 hours)
-    print("\n3. SCENARIO: Unoccupied (no movie for 2 hours)")
-    occupancy_unoccupied = {
-        "status": 0,
-        "time_until_next_movie": "120 minutes",
-        "next_movie_name": "Avatar 3"
-    }
-    result3 = mpc_system.get_optimal_setpoint(
-        current_measurements=current_measurements,
-        occupancy_api_response=occupancy_unoccupied,
-        weather_forecast=weather_forecast
-    )
-    print(f"   Mode: {result3['mode']}")
-    print(f"   Optimal Setpoint: {result3['optimal_setpoint']}°C")
-    print(f"   Bypass Optimization: {result3['bypass_optimization']}")
-    print(f"   Reason: {result3.get('reason', 'N/A')}")
+    # # Scenario 3: Unoccupied (no movie for 2 hours)
+    # print("\n3. SCENARIO: Unoccupied (no movie for 2 hours)")
+    # occupancy_unoccupied = {
+    #     "status": 0,
+    #     "time_until_next_movie": "120 minutes",
+    #     "next_movie_name": "Avatar 3"
+    # }
+    # result3 = mpc_system.get_optimal_setpoint(
+    #     current_measurements=current_measurements,
+    #     occupancy_api_response=occupancy_unoccupied,
+    #     weather_forecast=weather_forecast
+    # )
+    # print(f"   Mode: {result3['mode']}")
+    # print(f"   Optimal Setpoint: {result3['optimal_setpoint']}°C")
+    # print(f"   Bypass Optimization: {result3['bypass_optimization']}")
+    # print(f"   Reason: {result3.get('reason', 'N/A')}")
     
-    # Scenario 4: No upcoming shows
-    print("\n4. SCENARIO: No Upcoming Shows")
-    occupancy_none = {
-        "status": 0,
-        "time_until_next_movie": "No upcoming shows"
-    }
-    result4 = mpc_system.get_optimal_setpoint(
-        current_measurements=current_measurements,
-        occupancy_api_response=occupancy_none,
-        weather_forecast=weather_forecast
-    )
-    print(f"   Mode: {result4['mode']}")
-    print(f"   Optimal Setpoint: {result4['optimal_setpoint']}°C")
-    print(f"   Bypass Optimization: {result4['bypass_optimization']}")
+    # # Scenario 4: No upcoming shows
+    # print("\n4. SCENARIO: No Upcoming Shows")
+    # occupancy_none = {
+    #     "status": 0,
+    #     "time_until_next_movie": "No upcoming shows"
+    # }
+    # result4 = mpc_system.get_optimal_setpoint(
+    #     current_measurements=current_measurements,
+    #     occupancy_api_response=occupancy_none,
+    #     weather_forecast=weather_forecast
+    # )
+    # print(f"   Mode: {result4['mode']}")
+    # print(f"   Optimal Setpoint: {result4['optimal_setpoint']}°C")
+    # print(f"   Bypass Optimization: {result4['bypass_optimization']}")
     
-    print("\n" + "=" * 70)
-    print("MPC SYSTEM DEMO COMPLETE")
-    print("=" * 70)
+    # print("\n" + "=" * 70)
+    # print("MPC SYSTEM DEMO COMPLETE")
+    # print("=" * 70)

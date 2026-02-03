@@ -43,12 +43,6 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/mpc", tags=["MPC Optimization"])
 
-
-# =============================================================================
-# MODEL LOADING AT STARTUP
-# =============================================================================
-
-# Load MPC model at module import (startup)
 _mpc_model_loaded = False
 
 try:
@@ -61,14 +55,10 @@ except Exception as e:
     log.error(f"Error loading MPC Model at startup: {e}")
 
 
-# =============================================================================
-# REQUEST/RESPONSE MODELS
-# =============================================================================
-
 class MPCOptimizeRequest(BaseModel):
     """Request model for MPC optimization endpoint."""
     ticket: str = Field(..., description="Ticket ID for movie schedule API")
-    ticket_type: Optional[str] = Field(None, description="Ticket type (e.g., 'software', 'model', etc.)")
+    ticket_type: Optional[str] = Field(None, description="Ticket type (e.g., 'jobUser' to set User-Agent header, 'software', 'model', etc.)")
     account_id: str = Field(..., description="Account ID associated with the request")
     software_id: str = Field(..., description="Software ID for versioning")
     building_id: str = Field("36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID for querying live data")
@@ -161,7 +151,6 @@ async def optimize_setpoint(
     """
     log.info(f"[MPC Optimize] Request for {request.equipment_id} / {request.screen_id}")
     
-    # Check if model is loaded
     if not _mpc_model_loaded:
         log.error("[MPC Optimize] MPC model not loaded")
         raise HTTPException(
@@ -174,7 +163,6 @@ async def optimize_setpoint(
         )
     
     try:
-        # Create inference pipeline
         config = InferenceConfig(
             equipment_id=request.equipment_id,
             screen_id=request.screen_id,
@@ -186,12 +174,12 @@ async def optimize_setpoint(
             config=config
         )
         
-        # Run inference
         result = pipeline.run_inference(
             equipment_id=request.equipment_id,
             screen_id=request.screen_id,
             ticket=request.ticket,
-            building_id=request.building_id
+            building_id=request.building_id,
+            ticket_type=request.ticket_type
         )
         
         if not result.get('success'):
@@ -261,17 +249,14 @@ async def get_last_optimization(
                 }
             )
         
-        # Convert row to dict
         result = {col: getattr(row, col, None) for col in row._fields}
         
-        # Parse used_features JSON
         if result.get('used_features'):
             try:
                 result['used_features'] = json.loads(result['used_features'])
             except:
                 pass
         
-        # Format timestamps
         if result.get('timestamp_utc'):
             result['timestamp_utc'] = result['timestamp_utc'].isoformat()
         
@@ -327,14 +312,12 @@ async def get_optimization_history(
         for row in rows:
             record = {col: getattr(row, col, None) for col in row._fields}
             
-            # Parse used_features JSON
             if record.get('used_features'):
                 try:
                     record['used_features'] = json.loads(record['used_features'])
                 except:
                     pass
             
-            # Format timestamps
             if record.get('timestamp_utc'):
                 record['timestamp_utc'] = record['timestamp_utc'].isoformat()
             

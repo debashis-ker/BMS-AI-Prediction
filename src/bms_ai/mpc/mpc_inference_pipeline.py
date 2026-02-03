@@ -10,21 +10,6 @@ It handles:
 4. Fetching occupancy from movie schedule API
 5. Running MPC optimization
 6. Saving results to Cassandra
-
-Usage:
-------
-    from src.bms_ai.mpc.mpc_inference_pipeline import MPCInferencePipeline
-    
-    pipeline = MPCInferencePipeline(cassandra_session=session)
-    result = pipeline.run_inference(
-        equipment_id="Ahu13",
-        screen_id="Screen 13",
-        ticket="...",
-        building_id="36c27828-d0b4-4f1e-8a94-d962d342e7c2"
-    )
-
-Author: BMS-AI Team
-Date: January 2026
 """
 
 import os
@@ -62,7 +47,7 @@ class InferenceConfig:
     equipment_id: str = "Ahu13"
     screen_id: str = "Screen 13"
     
-    # Building Configuration
+   
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
     
     # API Configuration
@@ -73,28 +58,24 @@ class InferenceConfig:
     latitude: float = 25.34
     longitude: float = 55.41
     
-    # Data Configuration
     lookback_minutes: int = 10
     lag_timeout_minutes: int = 20  # If last optimization is older, use current as lag
     
-    # Required Datapoints
     required_datapoints: List[str] = None
     
-    # Model Path
     model_dir: str = "artifacts"
     
-    # Cassandra Table
     table_name: str = "mpc_optimization_results_36c27828d0b44f1e8a94d962d342e7c2"
     
     def __post_init__(self):
         if self.required_datapoints is None:
             self.required_datapoints = [
-                'SpTREff',   # Effective setpoint
-                'FbVFD',     # Fan speed feedback
-                'TempSu',    # Supply air temperature
-                'TempSp1',   # Space air temperature
-                'FbFAD',     # Fresh air damper feedback
-                'Co2RA'      # CO2 level
+                'SpTREff',  
+                'FbVFD',    
+                'TempSu',    
+                'TempSp1',   
+                'FbFAD',     
+                'Co2RA'    
             ]
 
 
@@ -118,14 +99,11 @@ class BMSDataFetcher:
         Returns:
             Dict with resampled sensor values
         """
-        # Calculate time range (UTC)
         now_utc = datetime.now(timezone.utc)
         from_time = now_utc - timedelta(minutes=self.config.lookback_minutes)
         
-        # Format timestamps for query
         from_str = from_time.strftime("%Y-%m-%dT%H:%M:%S UTC")
         
-        # Build query
         cleaned_building_id = self.config.building_id.replace("-", "")
         table_name = f"datapoint_live_monitoring_{cleaned_building_id}"
         
@@ -159,7 +137,6 @@ class BMSDataFetcher:
                 log.warning(f"[BMSFetcher] No data returned for {equipment_id}")
                 return None
             
-            # Parse and resample data
             return self._parse_and_resample(data)
             
         except requests.exceptions.RequestException as e:
@@ -175,12 +152,10 @@ class BMSDataFetcher:
         if not data_list:
             return None
         
-        # Convert to DataFrame
         records = []
         for item in data_list:
             try:
                 timestamp_str = item.get('data_received_on', '')
-                # Parse timestamp: "2026-01-29T11:29:49.883 UTC"
                 timestamp = pd.to_datetime(timestamp_str.replace(' UTC', ''), utc=True)
                 
                 datapoint = item.get('datapoint', '')
@@ -200,7 +175,6 @@ class BMSDataFetcher:
         
         df = pd.DataFrame(records)
         
-        # Pivot to get columns for each datapoint
         df_pivot = df.pivot_table(
             index='timestamp',
             columns='datapoint',
@@ -208,7 +182,6 @@ class BMSDataFetcher:
             aggfunc='mean'
         )
         
-        # Resample to single value (mean of last 10 minutes)
         result = {}
         for col in df_pivot.columns:
             result[col] = df_pivot[col].mean()
@@ -272,12 +245,13 @@ class OccupancyFetcher:
         self.config = config
         self._schedule_cache = None
         self._cache_time = None
-        self._cache_ttl_minutes = 30  # Cache schedule for 30 minutes
+        self._cache_ttl_minutes = 30  
         
     def fetch_occupancy_status(
         self, 
         screen_id: str, 
-        ticket: str
+        ticket: str,
+        ticket_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Fetch current occupancy status for a screen.
@@ -285,13 +259,13 @@ class OccupancyFetcher:
         Args:
             screen_id: Screen identifier (e.g., 'Screen 13')
             ticket: Ticket for API authentication
+            ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
             
         Returns:
             Dict with occupancy status, movie name, time remaining, etc.
         """
         log.info(f"[OccupancyFetcher] Fetching occupancy for {screen_id}")
         
-        # Check cache
         now = datetime.now()
         if (self._schedule_cache is not None and 
             self._cache_time is not None and
@@ -299,8 +273,7 @@ class OccupancyFetcher:
             schedule_data = self._schedule_cache
             log.debug("[OccupancyFetcher] Using cached schedule data")
         else:
-            # Fetch fresh schedule
-            schedule_data = fetch_movie_schedule(ticket=ticket)
+            schedule_data = fetch_movie_schedule(ticket=ticket, ticket_type=ticket_type)
             if schedule_data:
                 self._schedule_cache = schedule_data
                 self._cache_time = now
@@ -310,12 +283,11 @@ class OccupancyFetcher:
             log.error("[OccupancyFetcher] Failed to fetch movie schedule")
             return None
         
-        # Get occupancy status for the screen
         status = get_current_movie_occupancy_status(
             schedule_data=schedule_data,
             screens=[screen_id],
-            for_which_time=0,  # Current time
-            instance_index=0   # Most recent schedule
+            for_which_time=0, 
+            instance_index=0  
         )
         
         if screen_id not in status:
@@ -335,23 +307,26 @@ class CassandraDataHandler:
         self.config = config
         self.session = session
         
-    def get_last_optimization(self, equipment_id: str) -> Optional[Dict[str, Any]]:
+    def get_last_optimization(self, equipment_id: str, timeout_minutes: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         Get the most recent optimization result from Cassandra.
         
         Args:
             equipment_id: Equipment identifier
+            timeout_minutes: Custom timeout in minutes (uses config default if None)
             
         Returns:
-            Dict with last optimization data, or None if not found/too old
+            Dict with last optimization data (includes 'age_minutes' field), or None if not found/too old
         """
+        effective_timeout = timeout_minutes if timeout_minutes is not None else self.config.lag_timeout_minutes
+        
         query = f"""
             SELECT * FROM {self.config.table_name}
             WHERE equipment_id = '{equipment_id}'
             LIMIT 1;
         """
         
-        log.debug(f"[CassandraHandler] Fetching last optimization for {equipment_id}")
+        log.debug(f"[CassandraHandler] Fetching last optimization for {equipment_id} (timeout: {effective_timeout} min)")
         
         try:
             rows = self.session.execute(query)
@@ -361,10 +336,8 @@ class CassandraDataHandler:
                 log.info(f"[CassandraHandler] No previous optimization found for {equipment_id}")
                 return None
             
-            # Convert row to dict
             result = {col: getattr(row, col, None) for col in row._fields}
             
-            # Check if data is within timeout
             timestamp_utc = result.get('timestamp_utc')
             if timestamp_utc:
                 now_utc = datetime.now(timezone.utc)
@@ -372,9 +345,10 @@ class CassandraDataHandler:
                     timestamp_utc = timestamp_utc.replace(tzinfo=timezone.utc)
                 
                 age_minutes = (now_utc - timestamp_utc).total_seconds() / 60
+                result['age_minutes'] = age_minutes  
                 
-                if age_minutes > self.config.lag_timeout_minutes:
-                    log.info(f"[CassandraHandler] Last optimization is {age_minutes:.1f} min old (> {self.config.lag_timeout_minutes} min), will use current as lag")
+                if age_minutes > effective_timeout:
+                    log.info(f"[CassandraHandler] Last optimization is {age_minutes:.1f} min old (> {effective_timeout} min timeout)")
                     return None
                 
                 log.info(f"[CassandraHandler] Found optimization from {age_minutes:.1f} min ago")
@@ -395,7 +369,6 @@ class CassandraDataHandler:
         Returns:
             True if successful, False otherwise
         """
-        # Build INSERT query with all columns
         columns = [
             'equipment_id', 'timestamp_utc', 'optimized_setpoint', 'actual_sptreff',
             'actual_tempsp1', 'target_temperature', 'setpoint_difference',
@@ -406,14 +379,12 @@ class CassandraDataHandler:
             'previous_setpoint', 'screen_id', 'timestamp_sharjah'
         ]
         
-        # Build values
         values = []
         for col in columns:
             val = result.get(col)
             if val is None:
                 values.append('NULL')
             elif isinstance(val, str):
-                # Escape single quotes
                 val = val.replace("'", "''")
                 values.append(f"'{val}'")
             elif isinstance(val, bool):
@@ -462,7 +433,6 @@ class MPCInferencePipeline:
     6. Saving results to Cassandra
     """
     
-    # Class-level model cache (loaded once at startup)
     _model_cache: Dict[str, CinemaAHUMPCSystem] = {}
     
     def __init__(
@@ -473,7 +443,6 @@ class MPCInferencePipeline:
         self.config = config or InferenceConfig()
         self.session = cassandra_session
         
-        # Initialize fetchers
         self.bms_fetcher = BMSDataFetcher(self.config)
         self.weather_fetcher = WeatherFetcher(self.config)
         self.occupancy_fetcher = OccupancyFetcher(self.config)
@@ -493,7 +462,6 @@ class MPCInferencePipeline:
         log.info(f"[MPCInference] Loading MPC model for {equipment_id} at startup...")
         
         try:
-            # Import here to ensure all dependencies are available
             from src.bms_ai.mpc.mpc_training_pipeline import MPCTrainingPipeline
             
             pipeline = MPCTrainingPipeline()
@@ -523,7 +491,8 @@ class MPCInferencePipeline:
         equipment_id: str = "Ahu13",
         screen_id: str = "Screen 13",
         ticket: str = "",
-        building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
+        building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
+        ticket_type: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Run complete MPC inference pipeline.
@@ -533,21 +502,19 @@ class MPCInferencePipeline:
             screen_id: Screen identifier for occupancy lookup
             ticket: Ticket for movie schedule API
             building_id: Building identifier
+            ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
             
         Returns:
             Dict with optimization result and all saved data
         """
         log.info(f"[MPCInference] Starting inference for {equipment_id} / {screen_id}")
         
-        # Update config if building_id provided
         if building_id:
             self.config.building_id = building_id
         
-        # Timestamps
         now_utc = datetime.now(timezone.utc)
         now_sharjah = now_utc.astimezone(SHARJAH_OFFSET)
         
-        # Step 1: Get model
         mpc_system = self.get_model(equipment_id)
         if mpc_system is None:
             return {
@@ -556,7 +523,6 @@ class MPCInferencePipeline:
                 'error_type': 'MODEL_NOT_LOADED'
             }
         
-        # Step 2: Fetch sensor data
         sensor_data = self.bms_fetcher.fetch_last_10_minutes(equipment_id)
         if sensor_data is None:
             return {
@@ -567,43 +533,86 @@ class MPCInferencePipeline:
         
         log.debug(f"[MPCInference] Sensor data (10-min average) for {equipment_id}: {sensor_data}")
         
-        # Step 3: Fetch lag values from Cassandra
-        last_optimization = self.cassandra_handler.get_last_optimization(equipment_id)
+        weather = self.weather_fetcher.fetch_current_weather()
+        if weather is None:
+            log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
+            return {
+                'success': False,
+                'error': 'Failed to fetch weather data. Cannot proceed without weather information.',
+                'error_type': 'WEATHER_FETCH_FAILED'
+            }
         
-        log.debug(f"[MPCInference] Last optimization from Cassandra: {last_optimization is not None}")
+        occupancy = self.occupancy_fetcher.fetch_occupancy_status(screen_id, ticket, ticket_type)
+        if occupancy is None or occupancy == {}:
+            log.error(f"[MPCInference] Schedule data unavailable for {screen_id} - cannot proceed")
+            return {
+                'success': False,
+                'error': f'Failed to fetch schedule/occupancy status for {screen_id}. No valid schedule found for current date.',
+                'error_type': 'SCHEDULE_DATA_UNAVAILABLE'
+            }
+        
+        last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
+        cassandra_fallback_used = False
+        
+        if last_optimization is None:
+            log.info("[MPCInference] No Cassandra data within 10 min, trying 30 min fallback...")
+            last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=30)
+            if last_optimization:
+                cassandra_fallback_used = True
+                log.info(f"[MPCInference] Found Cassandra data within 30 min (age: {last_optimization.get('age_minutes', 'unknown'):.1f} min)")
+        
+        log.debug(f"[MPCInference] Last optimization from Cassandra: {last_optimization is not None}, fallback_used: {cassandra_fallback_used}")
         
         if last_optimization:
-            # Use lag values from last optimization
             tempsp1_lag = last_optimization.get('next_tempsp1_lag', sensor_data.get('TempSp1', 24.0))
             sptreff_lag = last_optimization.get('next_sptreff_lag', sensor_data.get('SpTREff', 24.0))
             previous_setpoint = last_optimization.get('previous_setpoint')
             log.debug(f"[MPCInference] Using lag from Cassandra - TempSp1_lag: {tempsp1_lag}, SpTREff_lag: {sptreff_lag}, previous_setpoint: {previous_setpoint}")
         else:
-            # No previous optimization or too old - use current as lag
-            tempsp1_lag = sensor_data.get('TempSp1', 24.0)
-            sptreff_lag = sensor_data.get('SpTREff', 24.0)
-            previous_setpoint = None
-            log.debug(f"[MPCInference] No Cassandra data - using current as lag - TempSp1_lag: {tempsp1_lag}, SpTREff_lag: {sptreff_lag}")
-        
-        # Step 4: Fetch weather
-        weather = self.weather_fetcher.fetch_current_weather()
-        if weather is None:
+            is_occupied = occupancy.get('status') == 1
+            time_until_next = occupancy.get('time_until_next_movie')
+            is_precooling = False
+            if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next < 60:
+                is_precooling = True
+            
+            default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
+            mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else 'unoccupied')
+            
+            log.warning(f"[MPCInference] No Cassandra data within 30 min - returning default setpoint {default_setpoint}°C (mode: {mode})")
+            
             return {
-                'success': False,
-                'error': 'Failed to fetch weather data',
-                'error_type': 'WEATHER_FETCH_FAILED'
+                'success': True,
+                'equipment_id': equipment_id,
+                'timestamp_utc': now_utc.isoformat(),
+                'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+                'optimized_setpoint': default_setpoint,
+                'actual_sptreff': sensor_data.get('SpTREff'),
+                'actual_tempsp1': sensor_data.get('TempSp1'),
+                'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
+                'setpoint_difference': default_setpoint - sensor_data.get('SpTREff', default_setpoint),
+                'occupied': 1 if (is_occupied or is_precooling) else 0,
+                'movie_name': occupancy.get('movie_name'),
+                'mode': mode,
+                'is_precooling': is_precooling,
+                'time_until_next_movie': time_until_next if isinstance(time_until_next, int) else None,
+                'outside_temp': weather['temperature'],
+                'outside_humidity': weather['humidity'],
+                'fb_vfd': sensor_data.get('FbVFD'),
+                'fb_fad': sensor_data.get('FbFAD'),
+                'co2_ra': sensor_data.get('Co2RA'),
+                'co2_load_category': 'unknown',
+                'co2_load_factor': 0.0,
+                'optimization_status': 'DEFAULT_NO_LAG_DATA',
+                'objective_value': None,
+                'used_features': None,
+                'next_tempsp1_lag': sensor_data.get('TempSp1'),
+                'next_sptreff_lag': default_setpoint,
+                'previous_setpoint': default_setpoint,
+                'screen_id': screen_id,
+                'saved_to_cassandra': False,
+                'fallback_reason': 'No Cassandra optimization data available within 30 minutes'
             }
         
-        # Step 5: Fetch occupancy
-        occupancy = self.occupancy_fetcher.fetch_occupancy_status(screen_id, ticket)
-        if occupancy is None:
-            return {
-                'success': False,
-                'error': f'Failed to fetch occupancy status for {screen_id}',
-                'error_type': 'OCCUPANCY_FETCH_FAILED'
-            }
-        
-        # Step 6: Build measurements dict
         current_measurements = {
             'TempSp1': sensor_data.get('TempSp1', 24.0),
             'TempSp1_lag_10m': tempsp1_lag,
@@ -619,7 +628,6 @@ class MPCInferencePipeline:
         log.debug(f"[MPCInference] Weather: temp={weather['temperature']}°C, humidity={weather['humidity']}%")
         log.debug(f"[MPCInference] Occupancy: status={occupancy.get('status')}, movie={occupancy.get('movie_name')}, time_until_next={occupancy.get('time_until_next_movie')}")
         
-        # Build occupancy response format expected by MPC
         occupancy_response = {
             'status': occupancy.get('status', 0),
             'movie_name': occupancy.get('movie_name'),
@@ -628,17 +636,14 @@ class MPCInferencePipeline:
             'next_movie_name': occupancy.get('next_movie_name')
         }
         
-        # Build weather forecast (constant for prediction horizon)
         weather_forecast = [{
             'temperature': weather['temperature'],
             'humidity': weather['humidity']
         }] * mpc_system.config.prediction_horizon
         
-        # Set previous setpoint for rate limiting
         if previous_setpoint is not None:
             mpc_system.mpc.previous_setpoint = previous_setpoint
         
-        # Step 7: Run MPC optimization
         try:
             mpc_result = mpc_system.get_optimal_setpoint(
                 current_measurements=current_measurements,
@@ -654,8 +659,6 @@ class MPCInferencePipeline:
                 'error_type': 'OPTIMIZATION_FAILED'
             }
         
-        # Step 8: Build result for Cassandra
-        # Determine if pre-cooling
         is_precooling = False
         movie_name = occupancy.get('movie_name')
         if occupancy.get('status') == 0:
@@ -664,7 +667,6 @@ class MPCInferencePipeline:
                 is_precooling = True
                 movie_name = f"[PRE-COOLING] {occupancy.get('next_movie_name', 'Unknown')}"
         
-        # Build used_features JSON
         used_features = {
             'TempSp1': current_measurements['TempSp1'],
             'TempSp1_lag_10m': current_measurements['TempSp1_lag_10m'],
@@ -681,10 +683,8 @@ class MPCInferencePipeline:
             'FbFAD': current_measurements['FbFAD']
         }
         
-        # Determine occupied flag (1 for occupied or pre-cooling)
         occupied = 1 if (occupancy.get('status') == 1 or is_precooling) else 0
         
-        # Build storage record
         storage_record = {
             'equipment_id': equipment_id,
             'timestamp_utc': now_utc.replace(tzinfo=None),
@@ -715,13 +715,11 @@ class MPCInferencePipeline:
             'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        # Step 9: Save to Cassandra
         save_success = self.cassandra_handler.save_optimization_result(storage_record)
         
         if not save_success:
             log.warning("[MPCInference] Failed to save result to Cassandra, returning result anyway")
         
-        # Step 10: Build response
         response = {
             'success': True,
             'equipment_id': equipment_id,
@@ -768,7 +766,8 @@ def run_mpc_optimization(
     equipment_id: str = "Ahu13",
     screen_id: str = "Screen 13",
     ticket: str = "",
-    building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
+    building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
+    ticket_type: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Convenience function to run MPC optimization.
@@ -779,6 +778,7 @@ def run_mpc_optimization(
         screen_id: Screen identifier
         ticket: Ticket for movie schedule API
         building_id: Building identifier
+        ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
         
     Returns:
         Dict with optimization result
@@ -788,5 +788,6 @@ def run_mpc_optimization(
         equipment_id=equipment_id,
         screen_id=screen_id,
         ticket=ticket,
-        building_id=building_id
+        building_id=building_id,
+        ticket_type=ticket_type
     )

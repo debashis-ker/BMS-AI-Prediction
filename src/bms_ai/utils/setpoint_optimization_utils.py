@@ -37,11 +37,15 @@ def parse_time_str(t_str: str):
     return datetime.strptime(t_str, "%I:%M%p").time()
 
 
-def fetch_movie_schedule(ticket: str="1b9362bd-6a70-4827-b7e8-ff0af1f06375") -> Optional[List[Dict[str, Any]]]:
+def fetch_movie_schedule(ticket: str="11e3af98-d7ef-49a0-b50f-5a8939e5538c", ticket_type: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
     """
     Fetches movie schedule data from IKON service.
     Returns all instances data (list of schedule data from all cinemas).
     Most recent/active schedule is typically at index 0.
+    
+    Args:
+        ticket: Authentication ticket
+        ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
     """
     
     try:
@@ -50,7 +54,8 @@ def fetch_movie_schedule(ticket: str="1b9362bd-6a70-4827-b7e8-ff0af1f06375") -> 
                                         predefined_filters={"taskName" : "Utility Bill"},
                                         software_id='6e1c5d34-3711-4614-8f19-39a730463dc8',
                                         account_id="7a66effc-2da2-44c2-84c6-23061ae62671",
-                                        env="prod"
+                                        env="prod",
+                                        ticket_type=ticket_type
                                         )
         
         if not instances:
@@ -85,40 +90,89 @@ def get_current_movie_occupancy_status(
     schedule_data: List[Dict[str, Any]],
     screens: Optional[List[str]] = None,
     for_which_time: int = 0,
-    instance_index: int = 0
+    instance_index: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Returns movie occupancy status for the specified screens in Sharjah time.
     If a movie is showing, returns status=1 with movie name and time remaining.
     If no movie is showing, returns status=0 with time until next movie.
     
+    Automatically finds the correct schedule instance based on current Sharjah date
+    (where current date is before or equal to end_date of the schedule).
+    
     Args:
         schedule_data: List of schedule data from all instances
         screens: List of screen names to check (e.g., ["Screen 13", "Screen 16"]).
                  If None, checks all screens in the dataset.
         for_which_time: Minutes from now to check (default 0 = current time)
-        instance_index: Which instance to use (default 0 = most recent)
+        instance_index: Optional - Which instance to use. If None, auto-detects based on current date.
     
     Returns:
         Dict of dicts where keys are screen names and values contain:
         - status: 1 if movie is showing, 0 otherwise
         - movie_name and time_remaining if showing
         - time_until_next_movie if not showing
+        Returns empty dict if no valid schedule found.
     """
-    # Use specified instance index (default 0 for most recent)
-    if not schedule_data or instance_index >= len(schedule_data):
-        log.error(f"Invalid instance_index {instance_index} for schedule_data length {len(schedule_data) if schedule_data else 0}")
+    if not schedule_data:
+        log.error("No schedule data provided")
         return {}
     
-    schedule = schedule_data[instance_index]
     day_map = {
         0: "mon", 1: "tue", 2: "wed",
         3: "thu", 4: "fri", 5: "sat", 6: "sun"
     }
-
+    
     now_sharjah = datetime.now(SHARJAH_OFFSET).replace(tzinfo=None)
     target_dt = now_sharjah + timedelta(minutes=for_which_time)
-
+    current_date = target_dt.date()
+    
+    schedule = None
+    selected_instance_index = None
+    
+    if instance_index is not None:
+        if instance_index < len(schedule_data):
+            schedule = schedule_data[instance_index]
+            selected_instance_index = instance_index
+            log.debug(f"Using provided instance_index={instance_index}")
+        else:
+            log.error(f"Invalid instance_index {instance_index} for schedule_data length {len(schedule_data)}")
+            return {}
+    else:
+        for idx, sched in enumerate(schedule_data):
+            end_date_str = sched.get('end_date', '')
+            start_date_str = sched.get('start_date', '')
+            
+            if not end_date_str:
+                log.debug(f"Instance {idx}: No end_date, skipping")
+                continue
+            
+            try:
+                end_date = datetime.strptime(end_date_str, "%d/%m/%Y").date()
+                start_date = datetime.strptime(start_date_str, "%d/%m/%Y").date() if start_date_str else None
+                
+                if start_date and current_date >= start_date and current_date <= end_date:
+                    schedule = sched
+                    selected_instance_index = idx
+                    log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} ({start_date_str} to {end_date_str})")
+                    break
+                elif not start_date and current_date <= end_date:
+                    schedule = sched
+                    selected_instance_index = idx
+                    log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} (end: {end_date_str})")
+                    break
+                else:
+                    log.debug(f"Instance {idx}: current_date {current_date} not in range {start_date_str} to {end_date_str}")
+            except Exception as e:
+                log.warning(f"Failed to parse dates for instance {idx}: {e}")
+                continue
+        
+        if schedule is None:
+            log.error(f"No valid schedule instance found for current date {current_date}. Checked {len(schedule_data)} instances.")
+            return {}
+    
+    log.debug(f"Using schedule instance {selected_instance_index} for date {current_date}")
+    
     sessions = schedule.get('sessions', {})
     
     if screens is None:
@@ -243,18 +297,15 @@ def get_occupancy_status_for_timestamp(
         3: "thu", 4: "fri", 5: "sat", 6: "sun"
     }
     
-    # Validate inputs
     if not schedule_data:
         log.error("No schedule data provided")
         return {"status": 0, "error": "No schedule data"}
     
-    # Convert UTC to Sharjah time
     if timestamp_utc.tzinfo is None:
         timestamp_utc = timestamp_utc.replace(tzinfo=timezone.utc)
     timestamp_sharjah = timestamp_utc.astimezone(SHARJAH_OFFSET).replace(tzinfo=None)
     target_date = timestamp_sharjah.date()
     
-    # Find all instances that cover this date
     matching_instances = []
     for idx, schedule in enumerate(schedule_data):
         start_date_str = schedule.get('start_date', '')
@@ -264,11 +315,9 @@ def get_occupancy_status_for_timestamp(
             continue
         
         try:
-            # Parse dates (format: "DD/MM/YYYY")
             start_date = datetime.strptime(start_date_str, "%d/%m/%Y").date()
             end_date = datetime.strptime(end_date_str, "%d/%m/%Y").date()
             
-            # Check if target_date falls within this schedule range
             if start_date <= target_date <= end_date:
                 matching_instances.append((idx, schedule))
                 log.debug(f"Instance {idx} matches date {target_date}: {start_date} to {end_date}")
@@ -288,7 +337,6 @@ def get_occupancy_status_for_timestamp(
     
     log.info(f"Found {len(matching_instances)} schedule instance(s) covering {target_date}")
     
-    # Collect all upcoming shows across all instances for when no movie is currently playing
     all_upcoming_shows = []
     
     def check_schedule_for_movie(schedule, instance_idx, check_overnight_from_previous_day=False, collect_upcoming=True):
@@ -303,12 +351,9 @@ def get_occupancy_status_for_timestamp(
             if session_data.get("screen", "").lower() != screen.lower():
                 continue
             
-            # Determine which day offsets to check
             if check_overnight_from_previous_day:
-                # Only check previous day's shows that extend past midnight
                 day_offsets = [-1]
             else:
-                # Check current day and adjacent days
                 day_offsets = [0, -1, 1]
             
             for day_offset in day_offsets:
@@ -334,16 +379,13 @@ def get_occupancy_status_for_timestamp(
                         show_start = datetime.combine(schedule_date, start_time)
                         show_end = datetime.combine(schedule_date, end_time)
                         
-                        # Handle overnight shows
                         if show_end <= show_start:
                             show_end += timedelta(days=1)
                         
-                        # For overnight check, only consider shows that extend past midnight
                         if check_overnight_from_previous_day:
                             if show_end.date() != timestamp_sharjah.date():
-                                continue  # Show doesn't extend to target date
+                                continue 
                         
-                        # Check if timestamp falls within this show
                         if show_start <= timestamp_sharjah < show_end:
                             time_remaining_seconds = (show_end - timestamp_sharjah).total_seconds()
                             time_remaining_minutes = math.ceil(time_remaining_seconds / 60)
@@ -365,7 +407,6 @@ def get_occupancy_status_for_timestamp(
                                 "is_overnight_from_previous_schedule": check_overnight_from_previous_day
                             }
                         
-                        # Collect upcoming shows (for pre-cooling logic)
                         if collect_upcoming and show_start > timestamp_sharjah:
                             all_upcoming_shows.append({
                                 "start": show_start,
@@ -378,16 +419,11 @@ def get_occupancy_status_for_timestamp(
                         continue
         
         return None
-    
-    # For overlapping dates (multiple instances), handle overnight shows from older schedule
-    # E.g., Jan 22 is in both [0] (22/01-29/01) and [1] (15/01-22/01)
-    # A movie from Tue 21st night (old schedule) would still be playing early Wed 22nd
+
     
     if len(matching_instances) > 1:
         log.info(f"Overlapping date detected: {target_date}")
         
-        # First, check OLDER schedules for overnight movies from previous day
-        # Sort by instance_idx descending (older schedules first for overnight check)
         older_instances = sorted(matching_instances, key=lambda x: x[0], reverse=True)
         
         for instance_idx, schedule in older_instances:
@@ -396,8 +432,6 @@ def get_occupancy_status_for_timestamp(
                 log.info(f"Found overnight movie from older schedule (instance {instance_idx})")
                 return result
         
-        # Then, check NEWER schedules for current day movies
-        # Sort by instance_idx ascending (newer schedules first for same-day check)
         newer_instances = sorted(matching_instances, key=lambda x: x[0])
         
         for instance_idx, schedule in newer_instances:
@@ -406,14 +440,11 @@ def get_occupancy_status_for_timestamp(
                 log.info(f"Found movie from newer schedule (instance {instance_idx})")
                 return result
     else:
-        # Single matching instance - check normally
         instance_idx, schedule = matching_instances[0]
         result = check_schedule_for_movie(schedule, instance_idx, check_overnight_from_previous_day=False)
         if result:
             return result
     
-    # No movie found in any matching instance - unoccupied
-    # Check for upcoming shows (for pre-cooling logic)
     if all_upcoming_shows:
         all_upcoming_shows.sort(key=lambda x: x["start"])
         next_show = all_upcoming_shows[0]

@@ -9,25 +9,9 @@ This module provides a complete end-to-end training pipeline that:
 4. Trains the MPC thermal prediction model
 5. Returns a ready-to-use MPC system for real-time optimization
 
-Usage:
-------
-    from src.bms_ai.mpc.mpc_training_pipeline import MPCTrainingPipeline
-    
-    # Initialize and run full pipeline
-    pipeline = MPCTrainingPipeline()
-    mpc_system = pipeline.run_full_pipeline(
-        equipment_id="Ahu13",
-        from_date="2025-11-29 07:00:00",
-        to_date="2026-01-27 07:00:00"
-    )
-    
-    # Use for optimization
-    result = mpc_system.get_optimal_setpoint(measurements, occupancy_response)
-
-Author: BMS-AI Team
-Date: January 2026
 """
-
+import sys
+import pickle
 import pandas as pd
 import numpy as np
 import requests
@@ -57,44 +41,36 @@ log = setup_logger(__name__)
 class PipelineConfig:
     """Configuration for the MPC training pipeline."""
     
-    # API Configuration
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
     api_url: str = "https://ikoncloud.keross.com/bms-express-server/data"
     system_type: str = "AHU"
     
-    # Weather API (Sharjah coordinates)
     latitude: float = 25.33
     longitude: float = 55.39
     
-    # Required datapoints for MPC
     required_datapoints: List[str] = None
     
-    # Preprocessing
     resample_interval: str = "10min"
     date_column: str = "data_received_on"
     
-    # Occupancy detection threshold
-    # If SpTREff < 26, system is considered occupied
     occupancy_threshold: float = 26.0
     
-    # Model save path (folder per AHU)
     model_base_dir: str = "artifacts"
     model_filename: str = "mpc_model.joblib"
     
-    # Train/Test Split
-    test_size: float = 0.2              # 20% for testing
-    validation_enabled: bool = True      # Enable train-test split
+    test_size: float = 0.2             
+    validation_enabled: bool = True      
     
     def __post_init__(self):
         if self.required_datapoints is None:
             self.required_datapoints = [
-                'SpTREff',   # Effective setpoint
-                'FbVFD',     # Fan speed feedback
-                'TempSu',    # Supply air temperature
-                'TempSp1',   # Space air temperature
-                'SpTROcc',   # Occupied setpoint
-                'FbFAD',     # Fresh air damper feedback
-                'Co2RA'      # CO2 level for occupancy load estimation
+                'SpTREff',  
+                'FbVFD',   
+                'TempSu',    
+                'TempSp1',  
+                'SpTROcc', 
+                'FbFAD',    
+                'Co2RA'     
             ]
 
 
@@ -131,11 +107,9 @@ class DataFetcher:
         """
         datapoints = datapoints or self.config.required_datapoints
         
-        # Build database table name
         cleaned_id = self.config.building_id.replace("-", "").lower()
         location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
         
-        # Build CQL query
         query = f"select * from {location_table_name} where "
         
         if equipment_id:
@@ -154,7 +128,6 @@ class DataFetcher:
         if from_date and to_date:
             query += f"data_received_on >= '{from_date}' and data_received_on <= '{to_date}' "
         else:
-            # Default to last 30 days
             previous_30_days = (
                 pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)
             ).strftime('%Y-%m-%d %H:%M:%S.%f%z')
@@ -164,7 +137,6 @@ class DataFetcher:
         
         query += " allow filtering;"
         
-        # Execute API request
         payload = {"query": query}
         
         log.debug(f"[DataFetcher] Query: {query}")
@@ -179,7 +151,6 @@ class DataFetcher:
             response.raise_for_status()
             raw_response = response.json()
             
-            # Parse response
             if isinstance(raw_response, list):
                 data_list = raw_response
             elif isinstance(raw_response, dict) and 'queryResponse' in raw_response:
@@ -243,7 +214,6 @@ class WeatherDataIntegrator:
                 'outside_humidity': data['hourly']['relative_humidity_2m']
             })
             
-            # Merge using nearest timestamp
             df = df.sort_values('data_received_on')
             combined_df = pd.merge_asof(
                 df,
@@ -312,41 +282,33 @@ class DataPreprocessor:
         print(f"[Preprocessor] Processing {len(records)} records...")
         log.info(f"Processing {len(records)} records...")
         
-        # Step 1: Convert to DataFrame
         df = pd.DataFrame(records)
         
-        # Step 2: Parse monitoring_data column
         if 'monitoring_data' in df.columns:
             mapping = {'inactive': 0.0, 'active': 1.0}
             df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
             df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
         
-        # Step 3: Parse datetime
         date_col = self.config.date_column
         df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
         if df[date_col].dt.tz is not None:
             df[date_col] = df[date_col].dt.tz_localize(None)
         
-        # Step 4: Add weather data
         if add_weather:
             df = self.weather_integrator.add_weather_data(df)
         else:
             df['outside_temp'] = 0
             df['outside_humidity'] = 0
         
-        # Step 5: Pivot datapoints to columns
         aggregated = df.groupby([date_col, 'datapoint'])['monitoring_data'].agg('first')
         result_df = aggregated.unstack(level='datapoint').reset_index()
         
-        # Merge weather back
         weather = df[[date_col, 'outside_temp', 'outside_humidity']].drop_duplicates()
         result_df = pd.merge(result_df, weather, on=date_col, how='left')
         
-        # Step 6: Resample to regular intervals
         result_df = result_df.sort_values(date_col).set_index(date_col)
         result_df = result_df.resample(self.config.resample_interval).mean().ffill()
         
-        # Step 7: Add time features (cyclic encoding)
         result_df['hour'] = result_df.index.hour
         result_df['day_of_week'] = result_df.index.dayofweek
         result_df['hour_sin'] = np.sin(2 * np.pi * result_df['hour'] / 24)
@@ -354,7 +316,6 @@ class DataPreprocessor:
         result_df['day_sin'] = np.sin(2 * np.pi * result_df['day_of_week'] / 7)
         result_df['day_cos'] = np.cos(2 * np.pi * result_df['day_of_week'] / 7)
         
-        # Step 8: Add lagged features
         if 'TempSp1' in result_df.columns:
             result_df['Target_Temp'] = result_df['TempSp1'].shift(-1)
             result_df['TempSp1_lag_10m'] = result_df['TempSp1'].shift(1)
@@ -362,7 +323,6 @@ class DataPreprocessor:
         if 'SpTREff' in result_df.columns:
             result_df['SpTREff_lag_10_min'] = result_df['SpTREff'].shift(1)
         
-        # Step 9: Add occupancy indicator
         if 'SpTREff' in result_df.columns:
             result_df['occupied'] = np.where(
                 result_df['SpTREff'] < self.config.occupancy_threshold, 
@@ -370,7 +330,6 @@ class DataPreprocessor:
                 0
             )
         
-        # Drop rows with NaN in critical columns
         required_cols = ['Target_Temp', 'TempSp1_lag_10m']
         available_required = [c for c in required_cols if c in result_df.columns]
         
@@ -406,10 +365,8 @@ class DataPreprocessor:
         missing = [f for f in required_features if f not in df.columns]
         available = [f for f in required_features if f in df.columns]
         
-        # Check for NaN
         nan_counts = df[available].isna().sum().to_dict()
         
-        # Data statistics
         stats = df[available].describe().to_dict()
         
         report = {
@@ -437,26 +394,12 @@ class MPCTrainingPipeline:
     Complete end-to-end training pipeline for Cinema AHU MPC.
     
     This class orchestrates:
-    1. Data fetching from BMS API
+    1. Data fetching from BMS (IKON API)
     2. Weather data integration
     3. Data preprocessing and normalization
     4. MPC model training
     5. Model saving/loading
     
-    Example:
-    --------
-    >>> pipeline = MPCTrainingPipeline()
-    >>> mpc_system = pipeline.run_full_pipeline(
-    ...     equipment_id="Ahu13",
-    ...     from_date="2025-11-29 07:00:00",
-    ...     to_date="2026-01-27 07:00:00"
-    ... )
-    >>> 
-    >>> # Use for optimization
-    >>> result = mpc_system.get_optimal_setpoint(
-    ...     current_measurements={'TempSp1': 24.5, 'SpTREff': 24.0, ...},
-    ...     occupancy_api_response={'status': 1, 'movie_name': 'Avatar', ...}
-    ... )
     """
     
     def __init__(
@@ -474,11 +417,9 @@ class MPCTrainingPipeline:
         self.pipeline_config = pipeline_config or PipelineConfig()
         self.mpc_config = mpc_config or MPCConfig()
         
-        # Initialize components
         self.data_fetcher = DataFetcher(self.pipeline_config)
         self.preprocessor = DataPreprocessor(self.pipeline_config)
         
-        # State
         self.raw_data: Optional[List[Dict]] = None
         self.preprocessed_data: Optional[pd.DataFrame] = None
         self.train_data: Optional[pd.DataFrame] = None
@@ -487,7 +428,7 @@ class MPCTrainingPipeline:
         self.training_metrics: Optional[Dict] = None
         self.test_metrics: Optional[Dict] = None
         self.validation_report: Optional[Dict] = None
-        self.equipment_id: Optional[str] = None  # Track which AHU we're training for
+        self.equipment_id: Optional[str] = None 
         
     def fetch_data(
         self,
@@ -557,7 +498,6 @@ class MPCTrainingPipeline:
             add_weather=add_weather
         )
         
-        # Validate
         self.validation_report = self.preprocessor.validate_data(self.preprocessed_data)
         
         print(f"\n[Validation] Samples: {self.validation_report['total_samples']}")
@@ -595,12 +535,10 @@ class MPCTrainingPipeline:
         if data is None:
             raise ValueError("No training data. Call preprocess_data() first.")
         
-        # Train-Test Split if validation enabled
         if self.pipeline_config.validation_enabled:
             print(f"Splitting data: {100*(1-self.pipeline_config.test_size):.0f}% train, {100*self.pipeline_config.test_size:.0f}% test")
             log.info(f"Splitting data: {100*(1-self.pipeline_config.test_size):.0f}% train, {100*self.pipeline_config.test_size:.0f}% test")
             
-            # Chronological split to respect time series nature
             split_idx = int(len(data) * (1 - self.pipeline_config.test_size))
             self.train_data = data.iloc[:split_idx].copy()
             self.test_data = data.iloc[split_idx:].copy()
@@ -615,10 +553,8 @@ class MPCTrainingPipeline:
             self.train_data = data
             self.test_data = None
         
-        # Initialize MPC system
         self.mpc_system = CinemaAHUMPCSystem(self.mpc_config)
         
-        # Train on training set
         print("Training thermal prediction model...")
         log.info("Training thermal prediction model...")
         self.training_metrics = self.mpc_system.train(train_dataset)
@@ -632,7 +568,6 @@ class MPCTrainingPipeline:
         log.info(f"  Train MAE: {self.training_metrics['mae']:.4f}°C")
         log.info(f"  Train R²: {self.training_metrics['r2']:.4f}")
         
-        # Evaluate on test set if available
         if self.test_data is not None:
             print("\nEvaluating on test set...")
             log.info("Evaluating on test set...")
@@ -646,13 +581,12 @@ class MPCTrainingPipeline:
             log.info(f"  Test MAE: {self.test_metrics['mae']:.4f}°C")
             log.info(f"  Test R²: {self.test_metrics['r2']:.4f}")
             
-            # Check for overfitting
             rmse_diff = abs(self.test_metrics['rmse'] - self.training_metrics['rmse'])
             if rmse_diff > 0.5:
-                print(f"  ⚠ Potential overfitting detected: RMSE difference = {rmse_diff:.4f}°C")
+                print(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}°C")
                 log.warning(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}°C")
             else:
-                print(f"  ✓ Model generalization good: RMSE difference = {rmse_diff:.4f}°C")
+                print(f"Model generalization good: RMSE difference = {rmse_diff:.4f}°C")
                 log.info(f"Model generalization good: RMSE difference = {rmse_diff:.4f}°C")
         
         return self.mpc_system
@@ -667,24 +601,19 @@ class MPCTrainingPipeline:
         if self.test_data is None or self.mpc_system is None:
             raise ValueError("Test data or trained model not available")
         
-        # Get thermal model
         thermal_model = self.mpc_system.thermal_model
         
-        # Prepare test features
         X_test, y_test = thermal_model.prepare_features(self.test_data)
         
-        # Scale and predict
         X_test_scaled = thermal_model.scaler_X.transform(X_test)
         y_pred_scaled = thermal_model.model.predict(X_test_scaled)
         y_pred = thermal_model.scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
         
-        # Calculate metrics
         mse = np.mean((y_test.values - y_pred) ** 2)
         rmse = np.sqrt(mse)
         mae = np.mean(np.abs(y_test.values - y_pred))
         r2 = 1 - (np.sum((y_test.values - y_pred) ** 2) / np.sum((y_test.values - y_test.mean()) ** 2))
         
-        # Generate optimized setpoints for test set comparison
         self._generate_test_comparison()
         
         return {'rmse': rmse, 'mae': mae, 'r2': r2}
@@ -710,13 +639,11 @@ class MPCTrainingPipeline:
         
         comparison_data = []
         
-        # Sample every 10th row to avoid too many MPC optimizations (speeds up processing)
         sample_interval = 10
         test_sample = self.test_data.iloc[::sample_interval].copy()
         
         for idx, row in test_sample.iterrows():
             try:
-                # Extract current measurements (including CO2)
                 current_measurements = {
                     'TempSp1': row.get('TempSp1', 24.0),
                     'TempSp1_lag_10m': row.get('TempSp1_lag_10m', 24.0),
@@ -725,10 +652,9 @@ class MPCTrainingPipeline:
                     'TempSu': row.get('TempSu', 18.0),
                     'FbVFD': row.get('FbVFD', 50.0),
                     'FbFAD': row.get('FbFAD', 50.0),
-                    'Co2RA': row.get('Co2RA', 600.0)  # CO2 for occupancy load
+                    'Co2RA': row.get('Co2RA', 600.0)  
                 }
                 
-                # Create occupancy info from binary occupancy
                 occupancy_status = int(row.get('occupied', 0))
                 occupancy_response = {
                     'status': occupancy_status,
@@ -737,13 +663,11 @@ class MPCTrainingPipeline:
                     'time_until_next_movie': 'No upcoming shows'
                 }
                 
-                # Create simple weather forecast (constant)
                 weather_forecast = [{
                     'temperature': row.get('outside_temp', 35.0),
                     'humidity': row.get('outside_humidity', 50.0)
                 }] * 6
                 
-                # Get MPC optimal setpoint
                 result = self.mpc_system.get_optimal_setpoint(
                     current_measurements=current_measurements,
                     occupancy_api_response=occupancy_response,
@@ -751,7 +675,6 @@ class MPCTrainingPipeline:
                     current_time=row.get('data_received_on', pd.Timestamp.now())
                 )
                 
-                # Store comparison (including CO2 info)
                 comparison_data.append({
                     'timestamp': row.get('data_received_on'),
                     'actual_SpTREff': row.get('SpTREff', np.nan),
@@ -774,11 +697,9 @@ class MPCTrainingPipeline:
                 log.warning(f"Failed to optimize for row {idx}: {e}")
                 continue
         
-        # Save comparison to CSV
         if comparison_data:
             comparison_df = pd.DataFrame(comparison_data)
             
-            # Determine save path
             ahu_name = (self.equipment_id or "unknown_ahu").lower()
             ahu_folder = os.path.join(self.pipeline_config.model_base_dir, f"{ahu_name}_mpc")
             os.makedirs(ahu_folder, exist_ok=True)
@@ -786,7 +707,6 @@ class MPCTrainingPipeline:
             comparison_path = os.path.join(ahu_folder, "test_comparison_actual_vs_optimized.csv")
             comparison_df.to_csv(comparison_path, index=False)
             
-            # Calculate summary statistics
             avg_diff = comparison_df['setpoint_difference'].mean()
             std_diff = comparison_df['setpoint_difference'].std()
             energy_savings_potential = (comparison_df['setpoint_difference'] > 0).sum() / len(comparison_df) * 100
@@ -818,12 +738,10 @@ class MPCTrainingPipeline:
         if self.mpc_system is None:
             raise ValueError("No trained model to save. Call train_mpc() first.")
         
-        # Use stored equipment_id if not provided
         ahu_name = equipment_id or self.equipment_id or "unknown_ahu"
-        ahu_name = f"{ahu_name.lower()}_mpc"  # Normalize to lowercase (e.g., "ahu13")
+        ahu_name = f"{ahu_name.lower()}_mpc"  
         
         if filepath is None:
-            # Create AHU-specific folder: artifacts/{ahu_name}/
             ahu_folder = os.path.join(self.pipeline_config.model_base_dir, ahu_name)
             os.makedirs(ahu_folder, exist_ok=True)
             filepath = os.path.join(
@@ -833,7 +751,6 @@ class MPCTrainingPipeline:
         
         self.mpc_system.save_model(filepath)
         
-        # Also save pipeline metadata
         metadata = {
             'pipeline_config': self.pipeline_config,
             'mpc_config': self.mpc_config,
@@ -864,15 +781,11 @@ class MPCTrainingPipeline:
         Returns:
             Loaded CinemaAHUMPCSystem
         """
-        import sys
-        import pickle
         
-        # CRITICAL: Fix pickle module resolution for old models
-        # Ensure this module is in sys.modules so pickle can find PipelineConfig
+        
         if __name__ not in sys.modules:
             sys.modules[__name__] = sys.modules[__name__]
         
-        # Also add class aliases for old pickle references
         sys.modules['src.bms_ai.mpc.mpc_training_pipeline'] = sys.modules[__name__]
         
         if filepath is None:
@@ -897,11 +810,9 @@ class MPCTrainingPipeline:
                 log.error("To retrain, run: python -m src.bms_ai.mpc.mpc_training_pipeline")
             raise
         
-        # Try to load metadata
         metadata_path = filepath.replace('.joblib', '_metadata.joblib')
         if os.path.exists(metadata_path):
             try:
-                # Fix pickle module resolution for metadata saved from __main__
                 import __main__
                 if not hasattr(__main__, 'PipelineConfig'):
                     __main__.PipelineConfig = PipelineConfig
@@ -950,15 +861,6 @@ class MPCTrainingPipeline:
             
         Returns:
             Trained CinemaAHUMPCSystem ready for optimization
-            
-        Example:
-        --------
-        >>> pipeline = MPCTrainingPipeline()
-        >>> mpc = pipeline.run_full_pipeline(
-        ...     equipment_id="Ahu13",
-        ...     from_date="2025-11-29 07:00:00",
-        ...     to_date="2026-01-27 07:00:00"
-        ... )
         """
         print("\n" + "=" * 70)
         print("      CINEMA AHU MPC - FULL TRAINING PIPELINE")
@@ -975,7 +877,6 @@ class MPCTrainingPipeline:
         log.info(f"Weather Data: {'Enabled' if add_weather else 'Disabled'}")
         log.info(f"Validation: {'Enabled' if self.pipeline_config.validation_enabled else 'Disabled'}")
         
-        # Step 1: Fetch data
         self.fetch_data(
             equipment_id=equipment_id,
             from_date=from_date,
@@ -983,13 +884,10 @@ class MPCTrainingPipeline:
             zone=zone
         )
         
-        # Step 2: Preprocess
         self.preprocess_data(add_weather=add_weather)
         
-        # Step 3: Train
         self.train_mpc()
         
-        # Step 4: Save (optional)
         if save_model:
             print("\n" + "=" * 60)
             print("STEP 4: SAVING MODEL")
@@ -1028,10 +926,6 @@ class MPCTrainingPipeline:
             )
         return self.mpc_system
 
-
-# =============================================================================
-# SECTION 6: CONVENIENCE FUNCTIONS
-# =============================================================================
 
 def train_mpc_from_scratch(
     equipment_id: str,
@@ -1078,82 +972,74 @@ def load_trained_mpc(
         
     Returns:
         Loaded CinemaAHUMPCSystem
-        
-    Example:
-        >>> mpc = load_trained_mpc(equipment_id="Ahu13")
-        >>> # or
-        >>> mpc = load_trained_mpc(filepath="artifacts/ahu13/mpc_model.joblib")
     """
     pipeline = MPCTrainingPipeline()
     return pipeline.load_model(filepath=filepath, equipment_id=equipment_id)
 
 
-# =============================================================================
-# SECTION 7: MAIN EXECUTION
-# =============================================================================
 
-if __name__ == "__main__":
-    print("=" * 70)
-    print("MPC TRAINING PIPELINE - DEMO")
-    print("=" * 70)
+# if __name__ == "__main__":
+#     print("=" * 70)
+#     print("MPC TRAINING PIPELINE - DEMO")
+#     print("=" * 70)
     
-    # Configure MPC
-    mpc_config = MPCConfig(
-        prediction_horizon=6,
-        control_horizon=3,
-        sample_time_minutes=10,
-        sp_min_occupied=23.0,
-        sp_max_occupied=26.0,
-        sp_unoccupied=27.0,
-        temp_comfort_target=23.5,
-        w_comfort=100.0,
-        w_energy=1.0,
-        w_smoothness=50.0
-    )
+#     # Configure MPC
+#     mpc_config = MPCConfig(
+#         prediction_horizon=6,
+#         control_horizon=3,
+#         sample_time_minutes=10,
+#         sp_min_occupied=23.0,
+#         sp_max_occupied=26.0,
+#         sp_unoccupied=27.0,
+#         temp_comfort_target=23.5,
+#         w_comfort=100.0,
+#         w_energy=1.0,
+#         w_smoothness=50.0
+#     )
     
-    # Initialize pipeline
-    pipeline = MPCTrainingPipeline(mpc_config=mpc_config)
+#     # Initialize pipeline
+#     pipeline = MPCTrainingPipeline(mpc_config=mpc_config)
     
-    # Run full pipeline
-    mpc_system = pipeline.run_full_pipeline(
-        equipment_id="Ahu13",
-        from_date="2025-11-29 07:00:00",
-        to_date="2026-01-27 07:00:00",
-        save_model=True
-    )
+#     # Run full pipeline
+#     mpc_system = pipeline.run_full_pipeline(
+#         equipment_id="Ahu13",
+#         from_date="2025-11-29 07:00:00",
+#         to_date="2026-01-27 07:00:00",
+#         save_model=True
+#     )
     
-    # Test optimization
-    print("\n" + "=" * 70)
-    print("TESTING OPTIMIZATION")
-    print("=" * 70)
+#     # Test optimization
+#     print("\n" + "=" * 70)
+#     print("TESTING OPTIMIZATION")
+#     print("=" * 70)
     
-    test_measurements = {
-        'TempSp1': 24.5,
-        'TempSp1_lag_10m': 24.3,
-        'SpTREff': 24.0,
-        'SpTREff_lag_10m': 24.0,
-        'TempSu': 18.5,
-        'FbVFD': 65.0,
-        'FbFAD': 45.0
-    }
+#     test_measurements = {
+#         'TempSp1': 24.5,
+#         'TempSp1_lag_10m': 24.3,
+#         'SpTREff': 24.0,
+#         'SpTREff_lag_10m': 24.0,
+#         'TempSu': 18.5,
+#         'FbVFD': 65.0,
+#         'FbFAD': 45.0
+#     }
     
-    test_occupancy = {
-        "status": 1,
-        "movie_name": "Test Movie",
-        "time_remaining": "90 minutes"
-    }
+#     test_occupancy = {
+#         "status": 1,
+#         "movie_name": "Test Movie",
+#         "time_remaining": "90 minutes"
+#     }
     
-    result = mpc_system.get_optimal_setpoint(
-        current_measurements=test_measurements,
-        occupancy_api_response=test_occupancy
-    )
+#     result = mpc_system.get_optimal_setpoint(
+#         current_measurements=test_measurements,
+#         occupancy_api_response=test_occupancy
+#     )
     
-    print(f"\nOptimization Result:")
-    print(f"  Mode: {result['mode']}")
-    print(f"  Optimal Setpoint: {result['optimal_setpoint']}°C")
-    print(f"  Target Temperature: {result.get('target_temperature', 'N/A')}°C")
-    print(f"  Status: {result['optimization_status']}")
+#     print(f"\nOptimization Result:")
+#     print(f"  Mode: {result['mode']}")
+#     print(f"  Optimal Setpoint: {result['optimal_setpoint']}°C")
+#     print(f"  Target Temperature: {result.get('target_temperature', 'N/A')}°C")
+#     print(f"  Status: {result['optimization_status']}")
     
-    print("\n" + "=" * 70)
-    print("DEMO COMPLETE")
-    print("=" * 70)
+#     print("\n" + "=" * 70)
+#     print("DEMO COMPLETE")
+#     print("=" * 70)
