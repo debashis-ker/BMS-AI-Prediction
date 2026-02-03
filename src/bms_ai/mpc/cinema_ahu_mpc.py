@@ -12,8 +12,6 @@ System Architecture:
 - Role: Setpoint optimizer running on top of existing BMS
 - Actuators: Read-only (controlled by existing PID loops)
 
-Author: BMS-AI Team
-Date: January 2026
 """
 
 import sys
@@ -201,7 +199,6 @@ class OccupancyInfo:
         
         if status == 1:
             time_remaining_val = response.get('time_remaining', 0)
-            # Handle both string ("60 minutes") and int (60) formats
             if isinstance(time_remaining_val, int):
                 time_remaining = time_remaining_val
             elif isinstance(time_remaining_val, str) and time_remaining_val:
@@ -215,7 +212,6 @@ class OccupancyInfo:
             )
         else:
             time_until_val = response.get('time_until_next_movie', '')
-            # Handle both string ("60 minutes") and int (60) formats
             if isinstance(time_until_val, int):
                 time_until = time_until_val
             elif isinstance(time_until_val, str) and time_until_val and time_until_val != "No upcoming shows":
