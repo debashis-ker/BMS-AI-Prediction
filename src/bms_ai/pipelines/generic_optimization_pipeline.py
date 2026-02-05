@@ -392,7 +392,7 @@ class GenericDataTransformation:
             if pivoted_df.empty:
                 raise ValueError("No valid data remaining after preprocessing")
             
-            setpoints = setpoints or SETPOINT_NAMES
+            setpoints = setpoints or []
             present_setpoints = [s for s in setpoints if s in pivoted_df.columns]
             missing_setpoints = [s for s in setpoints if s not in pivoted_df.columns]
             
@@ -1073,7 +1073,7 @@ def train_genericV2(data: dict, equipment_id: str, target_column: str, system_ty
         
         feature_config = FeatureSelectionConfig()
         
-        setpoints_used = setpoints or SETPOINT_NAMES
+        setpoints_used = setpoints or []
         trained_setpoints = [s for s in setpoints_used if s in selected_features]
         
         return {
@@ -1170,7 +1170,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
         else:
             log.info("Using user-provided search_space")
         log.info(f"Equipment: {equipment_id}, Target: {target_column}")
-        log.info(f"Setpoints to optimize: {SETPOINT_NAMES}")
+        log.info(f"Setpoints to optimize: {list(search_space.keys())}")
         log.info("="*60)
         
         import json
@@ -1189,9 +1189,10 @@ def optimize_generic(current_conditions: Dict[str, Any],
             features_metadata = json.load(f)
         
         selected_features = features_metadata['selected_features']
-        setpoints = features_metadata['setpoints']
-        setpoints_used = setpoints or SETPOINT_NAMES
+        setpoints = features_metadata.get('setpoints', [])
+        setpoints_used = setpoints
         log.info(f"Loaded {len(selected_features)} selected features from training")
+        log.info(f"Setpoints from training: {setpoints_used}")
         log.info(f"Features: {selected_features}")
         
         trainer = GenericModelTrainer(equipment_id=equipment_id, target_column=target_column)
@@ -1223,7 +1224,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
             
             space = []
             setpoint_order = []
-            for sp in SETPOINT_NAMES:
+            for sp in setpoints_used:
                 if sp in search_space:
                     sp_values = search_space[sp]
                     space.append(Real(min(sp_values), max(sp_values), name=sp))
@@ -1397,7 +1398,7 @@ def optimize_generic(current_conditions: Dict[str, Any],
         log.info(f"Total evaluations: {total_tested}")
         log.info(f"Time elapsed: {elapsed_time:.2f} seconds")
         if optimization_method.lower() == 'bayes':
-            log.info(f"Efficiency: Bayesian optimization required {total_tested} evaluations vs {len(list(itertools.product(*[search_space[sp] for sp in SETPOINT_NAMES if sp in search_space])))} for grid search")
+            log.info(f"Efficiency: Bayesian optimization required {total_tested} evaluations vs {len(list(itertools.product(*[search_space[sp] for sp in setpoints_used if sp in search_space])))} for grid search")
         log.info("="*60)
         
         return {

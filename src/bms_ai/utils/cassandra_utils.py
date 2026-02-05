@@ -170,6 +170,71 @@ def fetch_mahu_data(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
 
+def fetch_cassandra_data(
+        building_id: str = DEFAULT_BUILDING_ID,
+        url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data",
+        zone: str = "",
+        equipment_id: str = "",
+        datapoints: List[str] = [],
+        system_type: str = "AHU",
+        from_date: str = "",
+        to_date: str = ""
+) -> List[Dict]:
+    cleaned_id = building_id.replace("-", "").lower()
+    location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
+
+    query=(
+        f"select * from {location_table_name} where "
+    )
+
+    if equipment_id:
+        query += f"equipment_id = '{equipment_id}' and "
+
+    if datapoints:
+        datapoint_list = ', '.join([f"'{f}'" for f in datapoints])
+        query += f"datapoint IN ({datapoint_list}) and "
+
+    if system_type:
+        query += f"system_type = '{system_type}' and "
+
+    if zone:
+        query += f"zone = '{zone}' and "
+
+    if from_date and to_date:
+        query += f"data_received_on >= '{from_date}' and data_received_on <= '{to_date}' "
+        
+    if not from_date and not to_date:
+        previous_week_day_in_UTC = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
+        query += f"data_received_on >= '{previous_week_day_in_UTC}' and " 
+        query += f"data_received_on <= '{pd.Timestamp.now(tz='UTC').strftime('%Y-%m-%d %H:%M:%S.%f%z')}'"
+
+    query += f"allow filtering;"
+
+    log.debug(f"Cassandra Query: {query}")
+
+    API_PAYLOAD = {"query": query}
+    try:
+        response = requests.post(url, json=API_PAYLOAD, timeout=60)
+        response.raise_for_status()
+        raw_api_response = response.json()
+        
+        data_list = []
+        if isinstance(raw_api_response, list):
+            data_list = raw_api_response
+        elif isinstance(raw_api_response, dict) and 'queryResponse' in raw_api_response:
+            data_list = raw_api_response.get('queryResponse', [])
+        
+        if not isinstance(data_list, list):
+            raise ValueError("API response data list format is invalid.")
+            
+        log.info(f"[A1] Total raw records fetched: {len(data_list)}")
+        return data_list
+    
+    except Exception as e:
+        log.error(f"Failed to fetch batch data from API: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
+
+    
 def fetch_all_ahu_historical_data(
     building_id: str = DEFAULT_BUILDING_ID,
     url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data"

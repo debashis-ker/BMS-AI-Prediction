@@ -23,6 +23,7 @@ from src.bms_ai.utils.save_cassandra_data import save_data_to_cassandraV2
 from src.bms_ai.utils.save_cassandra_data import fetch_adjustment_hisoryData
 from cassandra.cluster import Session
 from src.bms_ai.components.anamoly_functions import dynamic_anomaly_detection_chart
+from src.bms_ai.components.mtremu_functions import *
 
 import requests
 import pandas as pd
@@ -43,8 +44,6 @@ warnings.filterwarnings('ignore')
 router = APIRouter(prefix="/prod", tags=["Prescriptive Optimization"])
 router.include_router(anamoly.router)
 # router.include_router(anamoly_model_training.router)
-
-EMISSION_FACTOR = 0.4041
 
 damper_forecast_model = None
 fan_forecast_model = None
@@ -86,9 +85,14 @@ class AnomalyVizResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="Data structure for the requested visualization.")
 
 class EmissionRequest(BaseModel):
-    data: Dict[str, Any] = Field(..., description="Raw input data, expected to contain 'queryResponse'.")
-    equipment_id: Optional[str] = Field(None, description="Optional filter for a specific equipment ID.")
-    zone: Optional[str] = Field(None, description="Optional filter for a specific site/zone.")
+    equipment_id: List[str] = Field(['EMU06','EMU03'], description="Optional filter for a specific equipment ID.")
+    zone: Optional[str] = Field('OS01', description="Optional filter for a specific site/zone.")
+    from_date : Optional[str] = Field(None, description="Start date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
+    to_date : Optional[str] = Field(None, description="End date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
+
+class PeakDemandRequest(BaseModel):
+    from_date: Optional[str] = Field(None, description="Start date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
+    to_date: Optional[str] = Field(None, description="End date for data fetching in ISO format: YYYY-MM-DD HH:MM:SS")
 
 class StaticEmissionRequest(BaseModel):
     equipment_id: Optional[str] = Field(None, description="Optional filter for a specific equipment ID.")
@@ -98,10 +102,6 @@ class StaticEmissionResponse(BaseModel):
     carbon_emission_kg: float
     energy_consumed_kwh: float
     breakdown_by_equipment_and_zone: List[Dict[str, Any]]
-
-class EmissionResponse(BaseModel):
-    data: Dict[str, Any] = Field(..., description="The final structured emission report.")
-
 class AnamolyChartRequest(BaseModel):
     ticket: str = Field("", description="Ticket ID for datapoint fetching")
     floor_id: Optional[str] = Field(None, description="Building ID (optional)")
@@ -400,251 +400,31 @@ def damper_health_analysis(request_data: PredictionRequest):
         resampled_predicted_data=resampled_predicted_data
     )
 
-def transform_to_dataframe(json_input_data: Dict[str, Any]) -> pd.DataFrame:
-    GROUPING_COLS: List[str] = ['data_received_on', 'equipment_id', 'site']
-    empty_df = pd.DataFrame(columns=GROUPING_COLS + ['Eg'])
-    
+@router.post("/peak_demand_evaluation")
+def dynamic_peak_demand_value(request: PeakDemandRequest) -> Dict[str, Any]:
     try:
-        records: List[Dict[str, Any]] = (
-            json_input_data.get("data", {}).get("queryResponse", []) or 
-            json_input_data.get("queryResponse", []) or 
-            json_input_data.get("data", [])
+        data = fetch_cassandra_data(datapoints=['PowT', 'PowB'], system_type='MtrEMU', from_date=request.from_date, to_date=request.to_date)
+
+        df = dynamic_transform_to_dataframe(
+            {"queryResponse": data}, 
+            system_type='MtrEMU', 
+            target_datapoints=['PowT', 'PowB']
         )
-        if not records:
-            log.warning("No records found in the input JSON structure.")
-            return empty_df
 
-        df = pd.DataFrame(records)
-        
-        if 'system_type' not in df.columns:
-            log.error("'system_type' column missing in raw data.")
-            return empty_df
-            
-        mtr_df = df[df["system_type"] == "MtrEMU"].copy() 
-        if mtr_df.empty:
-            log.warning("No records found for 'MtrEMU' system type.")
-            return empty_df
+        if df.empty:
+            return {"message": "No data found after transformation.", "results": {}}
 
-        mtr_df["data_received_on"] = pd.to_datetime(mtr_df["data_received_on"], errors='coerce')
-        if mtr_df["data_received_on"].dt.tz is not None: #type: ignore
-             mtr_df["data_received_on"] = mtr_df["data_received_on"].dt.tz_localize(None) #type: ignore
-        
-        mtr_df.dropna(subset=["data_received_on"], inplace=True)
-        
-        if 'monitoring_data' in mtr_df.columns:
-            mtr_df['monitoring_data'] = mtr_df['monitoring_data'].astype(str).str.strip()
-        else:
-            log.error("'monitoring_data' column missing.")
-            return empty_df
+        equipment_ids = df["equipment_id"].unique().tolist()
 
-        pivoted_df = mtr_df.pivot_table(
-            index=['data_received_on', 'equipment_id', 'site'],
-            columns='datapoint',
-            values='monitoring_data',
-            aggfunc='first' #type:ignore
-        ).reset_index()
+        all_peak_data = {}
+        for eid in equipment_ids:
+            all_peak_data[eid] = calculate_peak_demand(df, eid)
 
-        if isinstance(pivoted_df.columns, pd.MultiIndex):
-             pivoted_df.columns = [
-                col[-1] if col[-1] else str(col[0]) for col in pivoted_df.columns
-             ]
-        
-        if 'Eg' not in pivoted_df.columns:
-            log.error("The required 'Eg' datapoint is missing after pivoting.")
-            return empty_df
-
-        pivoted_df['Eg'] = pd.to_numeric(pivoted_df['Eg'], errors='coerce')
-        pivoted_df.dropna(subset=['Eg'], inplace=True)
-        
-        if pivoted_df.empty:
-            log.warning("All records were dropped after final 'Eg' cleanup.")
-            return empty_df
-        
-        required_cols = ['data_received_on', 'equipment_id', 'site', 'Eg']
-        missing_cols = [col for col in required_cols if col not in pivoted_df.columns]
-        
-        if missing_cols:
-            log.error(f"Final DataFrame is missing required columns: {missing_cols}")
-            return empty_df
-
-        log.info(f"Data processing successful. {len(pivoted_df)} rows ready for aggregation.")
-        return pivoted_df[required_cols].copy()
-        
-    except Exception as e:
-        log.error(f"Critical error in transform_to_dataframe: {e}", exc_info=True)
-        raise RuntimeError(f"Data transformation failed: {e}")
-
-def calculate_aggregate_emissions(df_input: pd.DataFrame) -> pd.DataFrame:
-    if df_input.empty:
-        return pd.DataFrame(columns=['equipment_id', 'site', 'min_Eg', 'max_Eg', 'count', 
-                                     'Energy_Range_kWh', 'carbon_emission_kg'])
-    
-    try:
-        df_input['Eg'] = df_input['Eg'].astype(np.float64) 
-        
-        emission_summary = df_input.groupby(['equipment_id', 'site']).agg(
-            min_Eg=('Eg', 'min'),
-            max_Eg=('Eg', 'max'),
-            count=('Eg', 'size')
-        ).reset_index()
-
-        emission_summary['Energy_Range_kWh'] = emission_summary['max_Eg'] - emission_summary['min_Eg']
-        
-        emission_summary = emission_summary[emission_summary['Energy_Range_kWh'] > 0].copy()
-        
-        emission_summary['carbon_emission_kg'] = emission_summary['Energy_Range_kWh'] * EMISSION_FACTOR #type:ignore
-        
-        return emission_summary
+        return all_peak_data
 
     except Exception as e:
-        log.error(f"Error during emission calculation: {e}", exc_info=True)
-        raise RuntimeError(f"Aggregation failed: {e}")
-
-def get_emission_report(json_input_data: Dict[str, Any], equipment_id: Optional[str], zone: Optional[str]) -> Dict[str, Any]:
-    try:
-        df_processed = transform_to_dataframe(json_input_data)
-        
-        if df_processed.empty:
-            log.info("Returning empty report due to no processed data.")
-            return {
-                "Request_Parameters": {"equipment_id": equipment_id, "zone": zone},
-                "Target_Emission_Report": {"Target_ID": "All", "Target_Type": "Global", "carbon_emission_kg": 0, "energy_consumed_kwh": 0, "breakdown_by_equipment_and_zone": []},
-                "Total_Site_Emission_Report": {"Total_CO2_Emission_kg": 0, "Total_Energy_Consumed_kWh": 0, "Emission_Factor_kgCO2_per_kWh": EMISSION_FACTOR},
-                "Processing_Status": "No Data Processed"
-            }
-
-        df_emissions = calculate_aggregate_emissions(df_processed)
-
-        total_emission_kg = df_emissions['carbon_emission_kg'].sum()
-        total_energy_kwh = df_emissions['Energy_Range_kWh'].sum()
-        
-        total_report = {
-            "Total_CO2_Emission_kg": round(total_emission_kg, 2),
-            "Total_Energy_Consumed_kWh": round(total_energy_kwh, 2),
-            "Emission_Factor_kgCO2_per_kWh": EMISSION_FACTOR
-        }
-        
-        df_filtered = df_emissions.copy()
-
-        if equipment_id:
-            df_filtered = df_filtered[df_filtered['equipment_id'] == equipment_id]
-            
-        if zone:
-            df_filtered = df_filtered[df_filtered['site'] == zone] 
-
-        specific_emission_kg = df_filtered['carbon_emission_kg'].sum()
-        specific_energy_kwh = df_filtered['Energy_Range_kWh'].sum()
-
-        target_type = "Global"
-        target_id = "All"
-        if equipment_id and zone:
-            target_type = "Equipment_ID_and_Zone"
-            target_id = f"{equipment_id} @ {zone}"
-        elif equipment_id:
-            target_type = "Equipment_ID"
-            target_id = equipment_id
-        elif zone:
-            target_type = "Zone"
-            target_id = zone
-
-        df_breakdown = df_filtered.copy()
-        df_breakdown['Energy_Range_kWh'] = df_breakdown['Energy_Range_kWh'].round(2)
-        df_breakdown['carbon_emission_kg'] = df_breakdown['carbon_emission_kg'].round(2)
-        
-        specific_report = {
-            "Target_ID": target_id,
-            "Target_Type": target_type,
-            "carbon_emission_kg": round(specific_emission_kg, 2),
-            "energy_consumed_kwh": round(specific_energy_kwh, 2),
-            "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'Energy_Range_kWh', 'carbon_emission_kg']].to_dict('records')
-        }
-
-        final_report = {
-            "Request_Parameters": {"equipment_id": equipment_id, "zone": zone},
-            "Target_Emission_Report": specific_report,
-            "Total_Site_Emission_Report": total_report,
-            "Processing_Status": "Success"
-        }
-        
-        return final_report
-    
-    except RuntimeError as e:
-        log.error(f"API processing failed: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
-    except Exception as e:
-        log.critical(f"Unexpected critical error in get_emission_report: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="An unexpected error occurred during report generation."
-        )
-
-def get_emission_report_from_json(equipment_id: Optional[str] = None, zone: Optional[str] = None) -> Dict[str, Any]:
-    try:
-        df_emissions = pd.read_json('src/bms_ai/utils/carbon_emission/carbon_emission.json', orient='index')
-        
-        cleaned_index = (
-            df_emissions.index.to_series()
-            .str.strip("()")  
-            .str.replace("'", "", regex=False) 
-            .str.replace(" ", "", regex=False)
-        )
-        
-        df_emissions[['equipment_id', 'site']] = cleaned_index.str.split(',', expand=True)
-        df_emissions = df_emissions.reset_index(drop=True)
-        df_emissions.rename(columns={'diff': 'Energy_Range_kWh'}, inplace=True)
-        
-        df_emissions['carbon_emission_kg'] = df_emissions['Energy_Range_kWh'] * EMISSION_FACTOR
-        
-        df_filtered = df_emissions.copy()
-            
-        if df_filtered.empty:
-            return {
-                "carbon_emission_kg": 0,
-                "energy_consumed_kwh": 0,
-                "breakdown_by_equipment_and_zone": []
-            }
-
-        mdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU03")]
-        smdb_filtered = df_filtered[(df_filtered['site'] == "OS01") & (df_filtered['equipment_id'] == "EMU06")]
-        mdb_carbon_emission_kg = mdb_filtered["carbon_emission_kg"].sum()
-        mdb_energy_kwh = mdb_filtered["Energy_Range_kWh"].sum()
-        smdb_carbon_emission_kg = smdb_filtered["carbon_emission_kg"].sum()
-        smdb_energy_kwh = smdb_filtered["Energy_Range_kWh"].sum()
-
-        df_breakdown = df_filtered.copy()
-        
-        df_breakdown.rename(columns={'Energy_Range_kWh': 'energy_range_kwh'}, inplace=True)
-        
-        final_minimal_report = {
-            "carbon_emission_kg": round((mdb_carbon_emission_kg + smdb_carbon_emission_kg),2),
-            "energy_consumed_kwh": round((mdb_energy_kwh + smdb_energy_kwh),2),
-            "breakdown_by_equipment_and_zone": df_breakdown[['equipment_id', 'site', 'energy_range_kwh', 'carbon_emission_kg']].round(2).to_dict('records')
-        }
-        
-        return final_minimal_report
-        
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Configuration Error: The static data file was not"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Critical processing error: {e}"
-        )
-
-
-try:
-    STATIC_PEAK_DATA = pd.read_json('src/bms_ai/utils/peak_demand/peak_demand_results.json', orient='index')
-except Exception as e:
-    log.debug(f"Error loading data: {e}. STATIC_PEAK_DATA initialized as empty DataFrame.")
-    STATIC_PEAK_DATA = pd.DataFrame()
+        log.error(f"API Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.get("/get_peak_demand", response_model=Dict[str, Dict[str, Any]])
 def get_all_peak_demand() -> Dict[str, Dict[str, Any]]:
@@ -655,43 +435,29 @@ def get_all_peak_demand() -> Dict[str, Dict[str, Any]]:
         )
     return STATIC_PEAK_DATA.to_dict(orient='index') #type: ignore
 
-@router.post('/carbon_emission_evaluation', response_model=EmissionResponse)
-def carbon_emission_evaluation(
-    request_data: EmissionRequest
-) -> EmissionResponse:
-    
+@router.post('/carbon_emission_evaluation')
+def dynamic_carbon_emission_evaluation(request_data: EmissionRequest) -> Dict[str, Any]:
     start = time.time()
-    
-    input_data = request_data.data
-    equipment_id = request_data.equipment_id
-    zone = request_data.zone
-    
-    log.info(f"Request initiated for Equipment: {equipment_id}, Zone: {zone}")
+    log.info(f"Request initiated: {request_data}")
     
     try:
-        emission_report_dict = get_emission_report(
-            input_data, 
-            equipment_id, 
-            zone
+        report = get_emission_report(
+            equipment_id=request_data.equipment_id, 
+            zone=request_data.zone,
+            request_data=request_data
         )
-    
-    except HTTPException:
-        raise HTTPException(
-            status_code=500,
-            detail="Error in generating Emission Report."
-        )
-    
-    except Exception as e:
-        log.error(f"Unhandled error in API endpoint: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="A critical error occurred."
-        )
+        
+        log.info(f"Completed in {time.time() - start:.2f}s")
+        return report
 
-    end = time.time()
-    log.info(f"Evaluation completed in {end - start:.2f} seconds.")
-    
-    return EmissionResponse(data=emission_report_dict)
+    except HTTPException as Error:
+        raise Error
+    except Exception as e:
+        log.error(f"API endpoint error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Report Generation Failed: {str(e)}"
+        )
 
 @router.post('/carbon_emission_evaluation_static', response_model=StaticEmissionResponse)
 def carbon_emission_evaluation_static(
@@ -1395,6 +1161,48 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
         JSON containing adjustment history records
     """
     try:
+        # For Ahu1 or FAHU, return static data from JSON file
+        if request.equipment_id in ["Ahu1", "FAHU"]:
+            static_file_path = Path("artifacts/optimization_history/static_optimization_results.json")
+            
+            if static_file_path.exists():
+                with open(static_file_path, 'r') as f:
+                    static_data = json.load(f)
+                
+                # Get results and add site, equipment_id, system_type to each record
+                results = static_data.get('results', [])
+                formatted_results = []
+                
+                for record in results:
+                    formatted_record = {
+                        "timestamp": record.get("timestamp", ""),
+                        "actual_value": str(record.get("actual_value", "")) if record.get("actual_value") is not None else None,
+                        "predicted_value": str(record.get("predicted_value", "")) if record.get("predicted_value") is not None else None,
+                        "difference_actual_and_pred": str(record.get("difference_actual_and_pred", "")) if record.get("difference_actual_and_pred") is not None else None,
+                        "current_setpoints": record.get("current_setpoints", {}),
+                        "optimized_setpoints": record.get("optimized_setpoints", {}),
+                        "site": request.site,
+                        "equipment_id": request.equipment_id,
+                        "system_type": request.system_type
+                    }
+                    formatted_results.append(formatted_record)
+                
+                # Calculate optimized percentage from differences
+                differences = [
+                    float(r['difference_actual_and_pred']) 
+                    for r in formatted_results 
+                    if r.get('difference_actual_and_pred') is not None and r['difference_actual_and_pred'] != ''
+                ]
+                avg_difference = sum(differences) / len(differences) if differences else 0
+                
+                log.info(f"Returning {len(formatted_results)} static optimization records for equipment_id={request.equipment_id}")
+                
+                return OptimizationResultsResponse(
+                    optimized_percentage=round(avg_difference, 2) * 10,
+                    results=formatted_results
+                )
+            else:
+                log.warning(f"Static optimization file not found at {static_file_path}, falling back to Cassandra")
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(milliseconds=int(request.time_period))
@@ -1426,3 +1234,290 @@ async def get_adjustment_history(request: AdjustmentHistoryRequest,session: Sess
     except Exception as e:
         log.error(f"Error fetching adjustment history: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
+
+
+@router.post("/optimization_historyV2", response_model=OptimizationResultsResponse)
+async def get_adjustment_history_v2(request: AdjustmentHistoryRequest):
+    """
+    Fetches adjustment history for a given equipment.
+    For Ahu1 and FAHU, returns static data from JSON file (no Cassandra required).
+    For other equipment, falls back to Cassandra.
+    
+    Args:
+        equipment_id: Equipment ID to filter adjustments
+        time_period: Time period for the adjustment history in milliseconds
+        limit: Maximum number of records to return (default 100)
+    Returns:
+        JSON containing adjustment history records
+    """
+    try:
+        if request.equipment_id in ["Ahu1", "FAHU"]:
+            static_file_path = Path(f"artifacts/optimization_history/{request.equipment_id}_static_optimization_results.json")
+            
+            if static_file_path.exists():
+                with open(static_file_path, 'r') as f:
+                    static_data = json.load(f)
+                
+                results = static_data.get('results', [])
+                formatted_results = []
+                
+                for record in results:
+                    formatted_record = {
+                        "timestamp": record.get("timestamp", ""),
+                        "actual_value": str(record.get("actual_value", "")) if record.get("actual_value") is not None else None,
+                        "predicted_value": str(record.get("predicted_value", "")) if record.get("predicted_value") is not None else None,
+                        "difference_actual_and_pred": str(record.get("difference_actual_and_pred", "")) if record.get("difference_actual_and_pred") is not None else None,
+                        "current_setpoints": record.get("current_setpoints", {}),
+                        "optimized_setpoints": record.get("optimized_setpoints", {}),
+                        "site": request.site,
+                        "equipment_id": request.equipment_id,
+                        "system_type": request.system_type
+                    }
+                    formatted_results.append(formatted_record)
+                
+                # Calculate optimized percentage from differences
+                differences = [
+                    float(r['difference_actual_and_pred']) 
+                    for r in formatted_results 
+                    if r.get('difference_actual_and_pred') is not None and r['difference_actual_and_pred'] != ''
+                ]
+                avg_difference = sum(differences) / len(differences) if differences else 0
+                
+                log.info(f"Returning {len(formatted_results)} static optimization records for equipment_id={request.equipment_id}")
+                
+                return OptimizationResultsResponse(
+                    optimized_percentage=round(avg_difference, 2) * 10,
+                    results=formatted_results
+                )
+            else:
+                log.warning(f"Static optimization file not found at {static_file_path}")
+                raise HTTPException(status_code=404, detail=f"Static optimization file not found for {request.equipment_id}")
+        
+        # For other equipment, use Cassandra
+        session = get_cassandra_session()
+        
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(milliseconds=int(request.time_period))
+
+        adjustments = fetch_adjustment_hisoryData(
+            building_id=request.building_id,
+            site=request.site,
+            system_type=request.system_type,
+            equipment_id=request.equipment_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=request.limit,
+            session=session
+        )
+        
+        differences = [float(r['difference_actual_and_pred']) for r in adjustments if r.get('difference_actual_and_pred') is not None]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+        log.info(f"Fetched {len(adjustments)} adjustment records for equipment_id={request.equipment_id}")
+        
+        return OptimizationResultsResponse(
+            optimized_percentage=round(avg_difference, 2) * 10,
+            results=adjustments
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error fetching adjustment history V2: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching adjustment history: {str(e)}")
+
+
+class GenericOptimizeStaticRequest(BaseModel):
+    """Request model for static optimization with JSON data."""
+    equipment_id: str = Field(..., description="Equipment ID (must match training)")
+    target_variable: str = Field(..., description="Target variable to optimize (must match training)")
+    static_data_file: Optional[str] = Field("sample_response.json", description="Path to static JSON data file (default: sample_response.json)")
+    search_space: Optional[Dict[str, List[float]]] = Field(None, description="Setpoint ranges to search")
+    optimization_method: Optional[str] = Field("random", description="Optimization method: 'grid' or 'random'")
+    n_iterations: Optional[int] = Field(1000, description="Number of iterations for random search (ignored for grid)")
+    direction: Optional[str] = Field("minimize", description="Optimization direction: 'minimize' or 'maximize'")
+    output_file: Optional[str] = Field("artifacts/optimization_history/static_optimization_results.json", description="Path to save static results JSON file")
+
+
+class StaticOptimizationResponse(BaseModel):
+    """Response model for static optimization."""
+    status: str = Field(..., description="Status of the optimization")
+    total_timestamps: int = Field(..., description="Total timestamps processed")
+    successful_optimizations: int = Field(..., description="Number of successful optimizations")
+    failed_optimizations: int = Field(..., description="Number of failed optimizations")
+    optimized_percentage: float = Field(..., description="Average difference between actual and predicted values")
+    output_file: str = Field(..., description="Path to the output JSON file")
+    results: List[Dict[str, Any]] = Field(..., description="Optimization results for each timestamp")
+
+
+@router.post('/generic_optimize_static', response_model=StaticOptimizationResponse)
+def generic_optimize_static_endpoint(request_data: GenericOptimizeStaticRequest):
+    """
+    Optimize AHU setpoints for multiple timestamps from static JSON data file.
+    
+    This endpoint reads data from sample_response.json (or specified file),
+    processes multiple timestamps for a single day, optimizes setpoints for each 
+    timestamp individually, and saves results to a static JSON file.
+    
+    Args:
+        equipment_id: Equipment ID (must match training)
+        target_variable: Target variable to optimize
+        static_data_file: Path to JSON file with data records (default: sample_response.json)
+        search_space: Optional setpoint ranges (defaults provided if not specified)
+        optimization_method: 'grid' or 'random'
+        n_iterations: Number of iterations for random search
+        direction: 'minimize' or 'maximize' the target variable
+        output_file: Path to save the results JSON file
+        
+    Returns:
+        Optimization results for all timestamps and summary statistics
+    """
+    from collections import defaultdict
+    
+    start_total = time.time()
+    log.info(f"Static optimization request: equipment={request_data.equipment_id}, target={request_data.target_variable}")
+    
+    try:
+        # Load static data from file
+        static_data_path = Path(request_data.static_data_file or "sample_response.json")
+        if not static_data_path.exists():
+            raise HTTPException(status_code=404, detail=f"Static data file not found: {static_data_path}")
+        
+        with open(static_data_path, 'r') as f:
+            static_data = json.load(f)
+        
+        # Filter data for the specified equipment_id
+        filtered_data = [
+            record for record in static_data 
+            if record.get("equipment_id") == request_data.equipment_id
+        ]
+        
+        log.info(f"Loaded {len(static_data)} records from {static_data_path}")
+        log.info(f"Filtered to {len(filtered_data)} records for equipment_id={request_data.equipment_id}")
+        
+        if not filtered_data:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No data found for equipment_id={request_data.equipment_id} in {static_data_path}"
+            )
+        
+        # Group data by timestamp (data_received_on)
+        timestamp_groups = defaultdict(list)
+        for record in filtered_data:
+            timestamp = record.get("data_received_on", record.get("timestamp", "unknown"))
+            timestamp_groups[timestamp].append(record)
+        
+        log.info(f"Found {len(timestamp_groups)} unique timestamps to process")
+        
+        all_results = []
+        successful = 0
+        failed = 0
+        
+        # Process each timestamp
+        for timestamp, records in timestamp_groups.items():
+            try:
+                log.info(f"Processing timestamp: {timestamp}")
+                
+                # Build current_conditions from records for this timestamp
+                current_conditions = {"timestamp": timestamp}
+                for record in records:
+                    datapoint = record.get("datapoint")
+                    monitoring_data = record.get("monitoring_data")
+                    if datapoint and monitoring_data is not None and monitoring_data != "null":
+                        current_conditions[datapoint] = monitoring_data
+                
+                log.debug(f"Current conditions for {timestamp}: {len(current_conditions)} fields")
+                
+                # Run optimization for this timestamp
+                result = optimize_generic(
+                    current_conditions=current_conditions,
+                    equipment_id=request_data.equipment_id,
+                    target_column=request_data.target_variable,
+                    search_space=request_data.search_space,
+                    optimization_method=request_data.optimization_method or "random",
+                    n_iterations=request_data.n_iterations or 1000,
+                    direction=request_data.direction or "minimize"
+                )
+                
+                # Prepare result record (similar to Cassandra format)
+                result_record = {
+                    "timestamp": timestamp,
+                    "actual_value": current_conditions.get(request_data.target_variable),
+                    "predicted_value": result['best_target_value'],
+                    "difference_actual_and_pred": None,
+                    "optimized_setpoints": result['best_setpoints'],
+                    "current_setpoints": {k: v for k, v in current_conditions.items() if k in result['best_setpoints']}
+                }
+                
+                # Calculate difference if actual value exists
+                if result_record["actual_value"] is not None:
+                    try:
+                        result_record["difference_actual_and_pred"] = abs(
+                            float(result_record["actual_value"]) - float(result_record["predicted_value"])
+                        )
+                    except (ValueError, TypeError):
+                        pass
+                
+                all_results.append(result_record)
+                successful += 1
+                log.info(f"Optimization successful for {timestamp}: best_value={result['best_target_value']:.4f}")
+                
+            except Exception as e:
+                log.error(f"Optimization failed for timestamp {timestamp}: {e}")
+                all_results.append({
+                    "timestamp": timestamp,
+                    "error": str(e),
+                    "actual_value": None,
+                    "predicted_value": None,
+                    "difference_actual_and_pred": None,
+                    "optimized_setpoints": {},
+                    "current_setpoints": {}
+                })
+                failed += 1
+        
+        # Calculate average difference
+        differences = [
+            r['difference_actual_and_pred'] 
+            for r in all_results 
+            if r.get('difference_actual_and_pred') is not None
+        ]
+        avg_difference = sum(differences) / len(differences) if differences else 0
+        
+        # Save results to static JSON file
+        output_path = Path(request_data.output_file or "artifacts/optimization_history/static_optimization_results.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        output_data = {
+            "equipment_id": request_data.equipment_id,
+            "target_variable": request_data.target_variable,
+            "optimization_method": request_data.optimization_method,
+            "direction": request_data.direction,
+            "generated_at": datetime.utcnow().isoformat(),
+            "total_timestamps": len(timestamp_groups),
+            "successful_optimizations": successful,
+            "failed_optimizations": failed,
+            "optimized_percentage": round(avg_difference, 4),
+            "results": all_results
+        }
+        
+        with open(output_path, 'w') as f:
+            json.dump(output_data, f, indent=2, default=str)
+        
+        end_total = time.time()
+        log.info(f"Static optimization completed in {end_total - start_total:.2f} seconds")
+        log.info(f"Results saved to {output_path}")
+        log.info(f"Processed {len(timestamp_groups)} timestamps: {successful} successful, {failed} failed")
+        
+        return StaticOptimizationResponse(
+            status="success",
+            total_timestamps=len(timestamp_groups),
+            successful_optimizations=successful,
+            failed_optimizations=failed,
+            optimized_percentage=round(avg_difference, 4),
+            output_file=str(output_path),
+            results=all_results
+        )
+        
+    except Exception as e:
+        log.error(f"Static optimization failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

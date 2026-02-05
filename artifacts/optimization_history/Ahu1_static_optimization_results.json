@@ -1,0 +1,1259 @@
+{
+  "equipment_id": "Ahu1",
+  "target_variable": "FbVFD",
+  "optimization_method": "random",
+  "direction": "minimize",
+  "generated_at": "2026-01-07T11:06:04.241161",
+  "total_timestamps": 89,
+  "successful_optimizations": 89,
+  "failed_optimizations": 0,
+  "optimized_percentage": 0.1255,
+  "results": [
+    {
+      "timestamp": "2026-01-07T07:40:31.793 UTC",
+      "actual_value": "51.119998931884766",
+      "predicted_value": 51.26107100648241,
+      "difference_actual_and_pred": 0.14107207459764481,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "22",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T07:23:39.447 UTC",
+      "actual_value": "100.82999420166016",
+      "predicted_value": 100.83976760677879,
+      "difference_actual_and_pred": 0.009773405118636447,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T07:07:41.630 UTC",
+      "actual_value": "100.8699951171875",
+      "predicted_value": 101.47792763587262,
+      "difference_actual_and_pred": 0.6079325186851179,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 23.85
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T06:49:34.005 UTC",
+      "actual_value": "100.79999542236328",
+      "predicted_value": 100.80438850237115,
+      "difference_actual_and_pred": 0.004393080007872641,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T06:33:31.236 UTC",
+      "actual_value": "100.80999755859375",
+      "predicted_value": 100.83267958647377,
+      "difference_actual_and_pred": 0.02268202788002327,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T06:15:33.587 UTC",
+      "actual_value": "100.80999755859375",
+      "predicted_value": 100.1893250285287,
+      "difference_actual_and_pred": 0.6206725300650504,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T05:59:30.271 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.1262567403391931,
+      "difference_actual_and_pred": 0.15625673966864084,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T05:43:41.979 UTC",
+      "actual_value": "0.04999999701976776",
+      "predicted_value": -0.12006844225619297,
+      "difference_actual_and_pred": 0.17006843927596071,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T05:25:30.655 UTC",
+      "actual_value": "0.03999999910593033",
+      "predicted_value": -0.1268419520414,
+      "difference_actual_and_pred": 0.16684195114733033,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T05:09:25.538 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.14402342263141435,
+      "difference_actual_and_pred": 0.1740234219608621,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T04:51:55.751 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.1158422198879309,
+      "difference_actual_and_pred": 0.14584221921737867,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T04:35:57.734 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13483399465861515,
+      "difference_actual_and_pred": 0.1648339939880629,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T04:19:49.984 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.1345385835532467,
+      "difference_actual_and_pred": 0.16453858288269443,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T04:01:43.552 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.11144686850664433,
+      "difference_actual_and_pred": 0.14144686783609206,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T03:45:04.706 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.11158100158281602,
+      "difference_actual_and_pred": 0.14158100091226378,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T03:28:44.472 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13440674379967596,
+      "difference_actual_and_pred": 0.1644067431291237,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T03:10:40.342 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13487184378293524,
+      "difference_actual_and_pred": 0.16487184311238298,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T02:54:54.795 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13403276032607106,
+      "difference_actual_and_pred": 0.1640327596555188,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T02:36:41.015 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": 0.006575405101833781,
+      "difference_actual_and_pred": 0.023424594227613966,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 20.25
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T02:20:11.697 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13401521636816952,
+      "difference_actual_and_pred": 0.16401521569761726,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T02:03:59.727 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.11134342245324251,
+      "difference_actual_and_pred": 0.14134342178269027,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T01:48:03.804 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13436083285941816,
+      "difference_actual_and_pred": 0.1643608321888659,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T01:30:21.997 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13386849800791098,
+      "difference_actual_and_pred": 0.16386849733735873,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T01:14:36.728 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.13386849800791098,
+      "difference_actual_and_pred": 0.16386849733735873,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T00:56:26.689 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.12351087587521441,
+      "difference_actual_and_pred": 0.15351087520466217,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T00:40:05.333 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.12364180841637888,
+      "difference_actual_and_pred": 0.15364180774582664,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T00:23:42.620 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.15214399598030537,
+      "difference_actual_and_pred": 0.18214399530975312,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-07T00:05:23.683 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": -0.039902981595722954,
+      "difference_actual_and_pred": 0.0699029809251707,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T23:49:12.831 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": 0.045521200435156756,
+      "difference_actual_and_pred": 0.01552120110570901,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 24.75
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T23:33:36.913 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": 0.05220957628929755,
+      "difference_actual_and_pred": 0.022209576959849806,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 24.3
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T23:15:43.945 UTC",
+      "actual_value": "0.029999999329447746",
+      "predicted_value": 0.053883968665666596,
+      "difference_actual_and_pred": 0.02388396933621885,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 26.1
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T22:59:35.854 UTC",
+      "actual_value": "0.05999999865889549",
+      "predicted_value": -0.04039750130115365,
+      "difference_actual_and_pred": 0.10039749996004915,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T22:44:06.845 UTC",
+      "actual_value": "0.04999999701976776",
+      "predicted_value": -0.04494220361241221,
+      "difference_actual_and_pred": 0.09494220063217998,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "27",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T22:24:58.570 UTC",
+      "actual_value": "0.04999999701976776",
+      "predicted_value": -0.057164681878855886,
+      "difference_actual_and_pred": 0.10716467889862365,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T22:08:49.186 UTC",
+      "actual_value": "0.03999999910593033",
+      "predicted_value": -0.05697834257883196,
+      "difference_actual_and_pred": 0.0969783416847623,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T21:50:28.160 UTC",
+      "actual_value": "51.119998931884766",
+      "predicted_value": 51.04311437671656,
+      "difference_actual_and_pred": 0.07688455516820625,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T21:34:25.674 UTC",
+      "actual_value": "51.189998626708984",
+      "predicted_value": 51.04311437671656,
+      "difference_actual_and_pred": 0.146884249992425,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T21:18:35.005 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.0845264113624,
+      "difference_actual_and_pred": 0.07547343604971246,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T21:00:19.476 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.147331726896574,
+      "difference_actual_and_pred": 0.012668120515535009,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T20:43:54.547 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.234755791940614,
+      "difference_actual_and_pred": 0.07475594452850487,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 26.1
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T20:24:42.837 UTC",
+      "actual_value": "51.16999816894531",
+      "predicted_value": 51.147331726896574,
+      "difference_actual_and_pred": 0.022666442048738134,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T20:08:50.211 UTC",
+      "actual_value": "51.22999954223633",
+      "predicted_value": 51.147331726896574,
+      "difference_actual_and_pred": 0.08266781533975376,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T19:53:02.417 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.092427714333894,
+      "difference_actual_and_pred": 0.0675721330782153,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T19:36:37.117 UTC",
+      "actual_value": "51.119998931884766",
+      "predicted_value": 51.147331726896574,
+      "difference_actual_and_pred": 0.02733279501180874,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T19:20:00.533 UTC",
+      "actual_value": "51.13999938964844",
+      "predicted_value": 51.147331726896574,
+      "difference_actual_and_pred": 0.0073323372481368665,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T19:00:02.510 UTC",
+      "actual_value": "51.12999725341797",
+      "predicted_value": 51.22685448896912,
+      "difference_actual_and_pred": 0.09685723555114834,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 26.1
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T18:44:00.503 UTC",
+      "actual_value": "51.11000061035156",
+      "predicted_value": 51.086970568409996,
+      "difference_actual_and_pred": 0.023030041941566992,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T18:27:37.543 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.07069430725329,
+      "difference_actual_and_pred": 0.08930554015881853,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T18:11:14.299 UTC",
+      "actual_value": "51.11000061035156",
+      "predicted_value": 51.02551607178531,
+      "difference_actual_and_pred": 0.08448453856625093,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T17:54:39.499 UTC",
+      "actual_value": "51.16999816894531",
+      "predicted_value": 51.02551607178531,
+      "difference_actual_and_pred": 0.14448209716000093,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T17:38:22.782 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.02551607178531,
+      "difference_actual_and_pred": 0.1344837756267978,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T17:20:20.255 UTC",
+      "actual_value": "51.12999725341797",
+      "predicted_value": 51.02551607178531,
+      "difference_actual_and_pred": 0.10448118163265718,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T17:02:11.971 UTC",
+      "actual_value": "51.07999801635742",
+      "predicted_value": 51.05419586597227,
+      "difference_actual_and_pred": 0.025802150385153766,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T16:46:08.118 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.12922466848653,
+      "difference_actual_and_pred": 0.03077517892558035,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T16:29:30.014 UTC",
+      "actual_value": "51.12999725341797",
+      "predicted_value": 51.10054487429957,
+      "difference_actual_and_pred": 0.029452379118396266,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T16:12:48.397 UTC",
+      "actual_value": "51.11000061035156",
+      "predicted_value": 51.12922466848653,
+      "difference_actual_and_pred": 0.019224058134966526,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T15:56:34.292 UTC",
+      "actual_value": "51.11000061035156",
+      "predicted_value": 51.17683832078744,
+      "difference_actual_and_pred": 0.06683771043587683,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 26.55
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T15:40:11.064 UTC",
+      "actual_value": "51.15999984741211",
+      "predicted_value": 51.1263790273302,
+      "difference_actual_and_pred": 0.033620820081907254,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T15:19:39.715 UTC",
+      "actual_value": "51.13999938964844",
+      "predicted_value": 51.06999011804544,
+      "difference_actual_and_pred": 0.07000927160299852,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T15:03:49.998 UTC",
+      "actual_value": "51.13999938964844",
+      "predicted_value": 51.12299032464499,
+      "difference_actual_and_pred": 0.017009065003449564,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T14:47:33.662 UTC",
+      "actual_value": "51.13999938964844",
+      "predicted_value": 51.2075283496643,
+      "difference_actual_and_pred": 0.0675289600158635,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "20",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T14:15:03.079 UTC",
+      "actual_value": "58.22999954223633",
+      "predicted_value": 58.174683174879725,
+      "difference_actual_and_pred": 0.05531636735660328,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T13:58:44.559 UTC",
+      "actual_value": "58.2599983215332",
+      "predicted_value": 58.174683174879725,
+      "difference_actual_and_pred": 0.08531514665347828,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T13:40:02.881 UTC",
+      "actual_value": "58.2599983215332",
+      "predicted_value": 58.174683174879725,
+      "difference_actual_and_pred": 0.08531514665347828,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T13:22:03.820 UTC",
+      "actual_value": "58.29999923706055",
+      "predicted_value": 58.23424476617502,
+      "difference_actual_and_pred": 0.06575447088552977,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T13:05:59.009 UTC",
+      "actual_value": "58.2599983215332",
+      "predicted_value": 58.174683174879725,
+      "difference_actual_and_pred": 0.08531514665347828,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T12:49:40.141 UTC",
+      "actual_value": "57.05999755859375",
+      "predicted_value": 56.82938401166868,
+      "difference_actual_and_pred": 0.23061354692507052,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T12:33:15.556 UTC",
+      "actual_value": "53.369998931884766",
+      "predicted_value": 53.26483828053728,
+      "difference_actual_and_pred": 0.10516065134748231,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T12:15:16.413 UTC",
+      "actual_value": "51.959999084472656",
+      "predicted_value": 51.85133301880531,
+      "difference_actual_and_pred": 0.10866606566734305,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T11:59:06.390 UTC",
+      "actual_value": "51.12999725341797",
+      "predicted_value": 51.21516472668307,
+      "difference_actual_and_pred": 0.08516747326510199,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T11:43:15.726 UTC",
+      "actual_value": "51.12999725341797",
+      "predicted_value": 51.18430459191653,
+      "difference_actual_and_pred": 0.0543073384985604,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T11:28:43.759 UTC",
+      "actual_value": "63.41999816894531",
+      "predicted_value": 63.337019014397534,
+      "difference_actual_and_pred": 0.08297915454777893,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T11:12:30.878 UTC",
+      "actual_value": "100.81999969482422",
+      "predicted_value": 100.76753767163213,
+      "difference_actual_and_pred": 0.05246202319209203,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T10:56:27.435 UTC",
+      "actual_value": "100.83999633789062",
+      "predicted_value": 100.8276966583724,
+      "difference_actual_and_pred": 0.012299679518221751,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T10:39:40.467 UTC",
+      "actual_value": "100.80999755859375",
+      "predicted_value": 100.82506703818653,
+      "difference_actual_and_pred": 0.015069479592781931,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T10:19:56.739 UTC",
+      "actual_value": "100.79999542236328",
+      "predicted_value": 100.80814664591169,
+      "difference_actual_and_pred": 0.008151223548409803,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T10:04:02.226 UTC",
+      "actual_value": "100.83999633789062",
+      "predicted_value": 100.79825291311664,
+      "difference_actual_and_pred": 0.041743424773983406,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T09:47:59.396 UTC",
+      "actual_value": "100.82999420166016",
+      "predicted_value": 100.8133044138713,
+      "difference_actual_and_pred": 0.016689787788862986,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T09:32:08.779 UTC",
+      "actual_value": "100.8499984741211",
+      "predicted_value": 100.62663621427697,
+      "difference_actual_and_pred": 0.22336225984412295,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 26.1
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T09:15:33.271 UTC",
+      "actual_value": "100.82999420166016",
+      "predicted_value": 100.81471838501403,
+      "difference_actual_and_pred": 0.015275816646123985,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T08:59:15.640 UTC",
+      "actual_value": "100.79999542236328",
+      "predicted_value": 100.85149673501533,
+      "difference_actual_and_pred": 0.051501312652050046,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T08:41:15.904 UTC",
+      "actual_value": "100.77999877929688",
+      "predicted_value": 100.75738031611625,
+      "difference_actual_and_pred": 0.02261846318062055,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 19.35
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T08:25:09.281 UTC",
+      "actual_value": "100.7699966430664",
+      "predicted_value": 100.74611396506049,
+      "difference_actual_and_pred": 0.02388267800591848,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "18",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T08:09:07.281 UTC",
+      "actual_value": "69.45999908447266",
+      "predicted_value": 68.79281568232655,
+      "difference_actual_and_pred": 0.667183402146108,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T07:53:29.405 UTC",
+      "actual_value": "69.44999694824219",
+      "predicted_value": 68.79281568232655,
+      "difference_actual_and_pred": 0.6571812659156393,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T07:35:01.562 UTC",
+      "actual_value": "69.47000122070312",
+      "predicted_value": 68.76417178035705,
+      "difference_actual_and_pred": 0.7058294403460792,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T07:16:26.481 UTC",
+      "actual_value": "69.36000061035156",
+      "predicted_value": 68.70132979341355,
+      "difference_actual_and_pred": 0.6586708169380131,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.9
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T06:59:29.181 UTC",
+      "actual_value": "57.47999954223633",
+      "predicted_value": 57.48635896924711,
+      "difference_actual_and_pred": 0.006359427010778518,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.45
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    },
+    {
+      "timestamp": "2026-01-06T06:44:56.316 UTC",
+      "actual_value": "51.04999923706055",
+      "predicted_value": 50.90068003019785,
+      "difference_actual_and_pred": 0.14931920686269962,
+      "optimized_setpoints": {
+        "SpHuR": 60.0,
+        "SpTREff": 18.0
+      },
+      "current_setpoints": {
+        "SpTREff": "21",
+        "SpHuR": "60"
+      }
+    }
+  ]
+}
