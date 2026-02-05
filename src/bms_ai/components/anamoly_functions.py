@@ -5,7 +5,6 @@ import pandas as pd
 import joblib
 from fastapi import HTTPException
 from dateutil import parser, tz
-from sklearn.preprocessing import LabelEncoder
 from cassandra.cluster import Session, ConsistencyLevel
 from cassandra.query import SimpleStatement
 from src.bms_ai.logger_config import setup_logger
@@ -55,6 +54,43 @@ KNOWN_MODEL_FILE_NAMES = [
     'TempSu', 'Co2Avg', 'HuR1', 'HuRt',
     'FbVFDSf', 'FbVFDSf1', 'HumRt', 'HuSu'
 ]
+def add_open_meteo_weather(df, lat, lon):
+    """Fetches weather regressors required by the Prophet model."""
+    if df.empty: return df
+    
+    start_date = df[STANDARD_DATE_COLUMN].min().strftime('%Y-%m-%d')
+    end_date = df[STANDARD_DATE_COLUMN].max().strftime('%Y-%m-%d')
+    
+    base_url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat, "longitude": lon,
+        "start_date": start_date, "end_date": end_date,
+        "hourly": "temperature_2m,relative_humidity_2m",
+        "timezone": "auto"
+    }
+    
+    try:
+        response = requests.get(base_url, params=params, timeout=10)
+        data = response.json()
+        weather_df = pd.DataFrame({
+            'ds_weather': pd.to_datetime(data['hourly']['time']),
+            'outside_temp': data['hourly']['temperature_2m'],
+            'outside_humidity': data['hourly']['relative_humidity_2m']
+        })
+        
+        df = df.sort_values(STANDARD_DATE_COLUMN)
+        combined_df = pd.merge_asof(
+            df, weather_df.sort_values('ds_weather'), 
+            left_on=STANDARD_DATE_COLUMN, right_on='ds_weather', 
+            direction='nearest'
+        )
+        return combined_df.drop(columns=['ds_weather'])
+    except Exception as e:
+        log.error(f"Weather API failed: {e}. Using zero-regressors.")
+        df['outside_temp'] = 0.0
+        df['outside_humidity'] = 0.0
+        return df
+
 def wrap_data_list(data_list: List[Dict]) -> Dict[str, Any]:
     """Wraps the list of datapoint records into the dictionary structure expected by build_dynamic_features."""
     return {"success": True, "data": data_list, "count": len(data_list)}
@@ -160,7 +196,7 @@ def initialize_anomaly_detection_models(building_id: str,
 
     models_loaded_count = 0
     for model_key_in_file in all_model_keys_to_load:
-        model_file = f"artifacts/generic_anamoly_models/{model_key_in_file}_model.joblib"
+        model_file = f"artifacts/Anamoly_Prophet_Models/Model_Training_Pipeline/{model_key_in_file}_package.joblib"
         master_key = model_key_in_file
 
         if master_key is None: continue
@@ -194,81 +230,45 @@ def initialize_anomaly_detection_models(building_id: str,
     anamoly_model = MASTER_ANAMOLY_MODELS
 
 def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
-    """Runs the loaded model prediction pipeline on raw data for a specific asset and feature."""
-    if feature not in anamoly_model: #type:ignore
-        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for master feature '{feature}' is unavailable. Please check service initialization.")
+    """Runs Prophet inference and applies persistence filtering."""
+    if feature not in anamoly_model:
+        raise HTTPException(status_code=503, detail=f"Model for '{feature}' unavailable.")
 
-    try:
-        model_package = anamoly_model[feature].get(asset_code) #type:ignore
-        if model_package is None: 
-            log.warning(f"[{asset_code}/{feature}] No specific model found for this asset. Returning empty list.")
-            return []
+    model_package = anamoly_model[feature].get(asset_code)
+    if model_package is None: return []
 
-        model_features = model_package.get('feature_cols', [feature]) 
-    except KeyError as e:
-        log.warning(f"[{asset_code}/{feature}] Model package key error: {e}. Returning empty list.")
-        return [] 
+    df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
+    if df_wide.empty or feature not in df_wide.columns: return []
+
+    X_prophet = df_wide.rename(columns={STANDARD_DATE_COLUMN: 'ds', feature: 'y'})
     
     try:
-        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
-        if df_wide.empty: 
-            log.info(f"[{asset_code}/{feature}] Data pipeline returned empty DataFrame.")
-            return []
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal data pipeline failure for asset {asset_code}/{feature}: {e}")
+        forecast = model_package['model'].predict(X_prophet)
         
-    data_column = model_features[0] 
-    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
-    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
-    
-    if X_df.empty:
-        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
+        res = X_prophet[['ds', 'y']].merge(forecast[['ds', 'yhat_lower', 'yhat_upper']], on='ds')
+        res['is_outlier'] = (res['y'] > res['yhat_upper']) | (res['y'] < res['yhat_lower'])
+        
+        res['anomaly'] = res['is_outlier'].rolling(window=3).sum() == 3
+        res['Anomaly_Flag'] = res['anomaly'].map({True: -1, False: 1})
+        
+    except Exception as e:
+        log.error(f"Inference failed for {asset_code}/{feature}: {e}")
         return []
-        
-    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
 
-    try:
-        X_scaled = model_package['scaler'].transform(X_for_model)
-        predictions = model_package['model'].predict(X_scaled)
-    except Exception as e:
-        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Model prediction failed for asset {asset_code}/{feature}: {e}")
-
-    X_df['Anomaly_Flag'] = predictions
+    if feature == 'Co2RA':
+        res.loc[res['y'] > CO2RA_CEILING_THRESHOLD, 'Anomaly_Flag'] = -1
     
-    if feature == 'Co2RA' and data_column in X_df.columns:
-        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
-        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
-        X_df.loc[condition_high, 'Anomaly_Flag'] = -1
-        X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
-
-    if feature == 'FbVFD' and data_column in X_df.columns:
-        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
-        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
-        X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
-    
-    final_df = X_df.copy() 
-    if final_df.empty: return []
-    
-    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
-
-    physical_name = raw_data[0].get('datapoint', feature) if raw_data else feature
-
-    report_list = []
-    for _, row in final_df.iterrows():
-        record = {
-            "data_received_on": row['data_received_on_str'],
+    report = []
+    for _, row in res.iterrows():
+        report.append({
+            "data_received_on": row['ds'].strftime('%Y-%m-%d %H:%M:%S.%f'),
             "Anomaly_Flag": str(int(row['Anomaly_Flag'])),
-            # Use physical_name as the key instead of the master logical feature
-            physical_name: str(float(row[data_column]))
-        }
-        report_list.append(record)
-    return report_list
+            feature: str(float(row['y']))
+        })
+    return report
 
 def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_package: Dict[str, Any], feature_name: str) -> pd.DataFrame:
-    """Preprocesses raw data into a wide format DataFrame suitable for model prediction."""
+    """Preprocesses raw data into the format required for Prophet inference."""
     if not records: return pd.DataFrame()
     df = pd.DataFrame(records)
     
@@ -277,42 +277,23 @@ def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_
         df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
         df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
     
-    if 'site' in df.columns and 'equipment_name' in df.columns:
-        df['asset_code'] = df['site'].astype(str) + '_' + df['equipment_name'].astype(str)
-    elif 'asset_code' not in df.columns:
-        df['asset_code'] = asset_code 
-
     df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
-    df = df[df['asset_code'] == asset_code].copy()
-    df = df.dropna(subset=[STANDARD_DATE_COLUMN, 'monitoring_data'])
-    
-    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
-        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
-        
-    if df.empty: return pd.DataFrame()
+    if df[STANDARD_DATE_COLUMN].dt.tz is not None:
+        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None)
 
-    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
-    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
-    
-    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
-    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
-    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
-    
-    if 'asset_code' in result_df.columns:
-        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
+    df = add_open_meteo_weather(df, 25.33, 55.39) 
 
-    label_encoders = model_package.get('label_encoders', {})
+    aggregated = df.groupby([STANDARD_DATE_COLUMN, 'datapoint'])['monitoring_data'].agg('first')
+    result_df = aggregated.unstack(level='datapoint').reset_index()
     
-    for cat_col in ['site', 'equipment_id', 'weekday_name']:
-        if cat_col in result_df.columns and cat_col in label_encoders:
-            le: LabelEncoder = label_encoders[cat_col]
-            def transform_with_fallback(value):
-                try: return le.transform([value])[0] #type:ignore
-                except ValueError: return -1
-                except TypeError: return -1
-            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
-        else:
-             result_df[cat_col + '_encoded'] = -1 
+    weather = df[[STANDARD_DATE_COLUMN, 'outside_temp', 'outside_humidity']].drop_duplicates()
+    result_df = pd.merge(result_df, weather, on=STANDARD_DATE_COLUMN, how='left')
+
+    if 'scaler' in model_package:
+        reg_cols = ['outside_temp', 'outside_humidity']
+        if all(col in result_df.columns for col in reg_cols):
+            result_df[reg_cols] = model_package['scaler'].transform(result_df[reg_cols])
+            
     return result_df
 
 def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: str, search_tags: List[List[str]], ticket_id: str, software_id: str, account_id: str, system_type: Optional[str] = None, env: Optional[str] = "prod", ticket_type: Optional[str] = None):

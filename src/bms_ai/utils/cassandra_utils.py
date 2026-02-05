@@ -234,7 +234,6 @@ def fetch_cassandra_data(
         log.error(f"Failed to fetch batch data from API: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch batch data: {str(e)}")
 
-    
 def fetch_all_ahu_historical_data(
     building_id: str = DEFAULT_BUILDING_ID,
     url: str = f"{os.getenv('IKON_BASE_URL_PROD')}/bms-express-server/data"
