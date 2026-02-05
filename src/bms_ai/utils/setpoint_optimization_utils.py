@@ -37,7 +37,7 @@ def parse_time_str(t_str: str):
     return datetime.strptime(t_str, "%I:%M%p").time()
 
 
-def fetch_movie_schedule(ticket: str="11e3af98-d7ef-49a0-b50f-5a8939e5538c", ticket_type: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
+def fetch_movie_schedule(ticket: str="a31bcd65-8ccb-4e81-b4e5-3fc62c8112ce", ticket_type: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
     """
     Fetches movie schedule data from IKON service.
     Returns all instances data (list of schedule data from all cinemas).
@@ -168,8 +168,9 @@ def get_current_movie_occupancy_status(
                 continue
         
         if schedule is None:
-            log.error(f"No valid schedule instance found for current date {current_date}. Checked {len(schedule_data)} instances.")
-            return {}
+            log.warning(f"No valid schedule instance found for current date {current_date}. Using latest schedule [0] as fallback.")
+            schedule = schedule_data[0]
+            selected_instance_index = 0
     
     log.debug(f"Using schedule instance {selected_instance_index} for date {current_date}")
     

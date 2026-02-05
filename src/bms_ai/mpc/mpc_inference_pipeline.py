@@ -668,7 +668,7 @@ class MPCInferencePipeline:
                 is_occupied = occupancy.get('status') == 1
                 time_until_next = occupancy.get('time_until_next_movie')
                 is_precooling = False
-                if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next < 60:
+                if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next <= 60:
                     is_precooling = True
                 
                 default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
@@ -813,7 +813,7 @@ class MPCInferencePipeline:
         movie_name = occupancy.get('movie_name')
         if occupancy.get('status') == 0:
             time_until_next = occupancy.get('time_until_next_movie')
-            if isinstance(time_until_next, (int, float)) and time_until_next < 60:
+            if isinstance(time_until_next, (int, float)) and time_until_next <= 60:
                 is_precooling = True
                 movie_name = f"[PRE-COOLING] {occupancy.get('next_movie_name', 'Unknown')}"
         

@@ -84,7 +84,7 @@ class MPCOptimizeResponse(BaseModel):
     mode: Optional[str] = Field(None, description="Mode: occupied, pre_cooling, unoccupied")
     is_precooling: Optional[bool] = Field(None, description="True if in pre-cooling period")
     time_until_next_movie: Optional[int] = Field(None, description="Minutes until next movie")
-    outside_temp: Optional[float] = Field(None, description="Outdoor temperature (°C)")
+    outside_temp: Optional[float] = Field(None, description="Outdoor temperature (degC)")
     outside_humidity: Optional[float] = Field(None, description="Outdoor humidity (%)")
     fb_vfd: Optional[float] = Field(None, description="Fan speed (%)")
     fb_fad: Optional[float] = Field(None, description="Fresh air damper (%)")
@@ -229,7 +229,8 @@ async def get_last_optimization(
     query = f"""
         SELECT * FROM {table_name}
         WHERE equipment_id = '{equipment_id}' {status_filter}
-        LIMIT 1;
+        LIMIT 1
+        ALLOW FILTERING;
     """
     
     try:
@@ -279,31 +280,79 @@ async def get_last_optimization(
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
     status: str = "success",
-    limit: int = 100,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    limit: int = 500,
     session: Session = Depends(get_cassandra_session)
 ):
     """
     Get optimization history for an equipment.
     
+    By default, fetches records from the last 24 hours.
+    
     Args:
         equipment_id: Equipment identifier
         status: Filter by optimization status - 'success' (default), 'all' for all records
-        limit: Maximum number of records to return (default 100)
+        from_date: Start date in UTC ISO format (e.g., '2026-02-03T10:00:00'). Defaults to 24 hours ago.
+        to_date: End date in UTC ISO format (e.g., '2026-02-03T22:00:00'). Defaults to now.
+        limit: Maximum number of records to return (default 500, max 500)
         
     Returns:
         List of optimization results
     """
-    log.info(f"[MPC History] Fetching history for {equipment_id}, status={status}, limit={limit}")
+    # Apply safety limit
+    limit = min(limit, 500)
+    
+    # Calculate default date range (last 24 hours)
+    if not to_date:
+        end_time = datetime.utcnow()
+    else:
+        try:
+            end_time = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "success": False,
+                    "error": f"Invalid to_date format: {to_date}. Use ISO format (e.g., '2026-02-03T22:00:00')",
+                    "error_type": "INVALID_DATE_FORMAT"
+                }
+            )
+    
+    if not from_date:
+        start_time = end_time - timedelta(hours=24)
+    else:
+        try:
+            start_time = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "success": False,
+                    "error": f"Invalid from_date format: {from_date}. Use ISO format (e.g., '2026-02-03T10:00:00')",
+                    "error_type": "INVALID_DATE_FORMAT"
+                }
+            )
+    
+    log.info(f"[MPC History] Fetching history for {equipment_id}, status={status}, from={start_time}, to={end_time}, limit={limit}")
     
     config = InferenceConfig(equipment_id=equipment_id)
     table_name = config.table_name
     
     status_filter = "AND optimization_status IN ('success', 'bypassed')" if status != "all" else ""
     
+    # Format timestamps for Cassandra query
+    start_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    end_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
+    
     query = f"""
         SELECT * FROM {table_name}
-        WHERE equipment_id = '{equipment_id}' {status_filter}
-        LIMIT {limit};
+        WHERE equipment_id = '{equipment_id}'
+        AND timestamp_utc >= '{start_str}'
+        AND timestamp_utc <= '{end_str}'
+        {status_filter}
+        LIMIT {limit}
+        ALLOW FILTERING;
     """
     
     try:
