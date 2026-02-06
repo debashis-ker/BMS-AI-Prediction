@@ -14,6 +14,157 @@ log = setup_logger(__name__)
 SHARJAH_OFFSET = timezone(timedelta(hours=4))
 
 
+def get_screen_operating_window(
+    schedule: Dict[str, Any],
+    screen: str,
+    target_date: "datetime.date",
+    day_key: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Get the first movie start and last movie end for a given screen on a given day.
+    This defines the 'operating window' of the screen for that day.
+    
+    Also checks the previous day's schedule for overnight movies that spill into
+    target_date (e.g., a movie starting at 11:30 PM and ending at 1:30 AM).
+    
+    Args:
+        schedule: The schedule dict containing 'sessions'
+        screen: Screen name (e.g., "Screen 13")
+        target_date: The date to check
+        day_key: Day key for target_date (e.g., "thu")
+        
+    Returns:
+        Dict with 'first_movie_start' and 'last_movie_end' as datetime objects,
+        or None if no movies scheduled for that day on that screen.
+    """
+    day_map_reverse = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
+    day_map = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
+    
+    sessions = schedule.get('sessions', {})
+    all_starts = []
+    all_ends = []
+    
+    for session_key, session_data in sessions.items():
+        if session_data.get("screen", "").lower() != screen.lower():
+            continue
+        
+        day_sessions = session_data.get("sessions_by_day", {}).get(day_key, {})
+        if not day_sessions:
+            continue
+        
+        for time_range in day_sessions.values():
+            try:
+                parts = time_range.split("-")
+                if len(parts) != 2:
+                    continue
+                
+                start_time = parse_time_str(parts[0].strip())
+                end_time = parse_time_str(parts[1].strip())
+                
+                show_start = datetime.combine(target_date, start_time)
+                show_end = datetime.combine(target_date, end_time)
+                
+                if show_end <= show_start:
+                    show_end += timedelta(days=1)
+                
+                all_starts.append(show_start)
+                all_ends.append(show_end)
+            except Exception as e:
+                log.debug(f"Error parsing time range '{time_range}' for operating window: {e}")
+                continue
+    
+    prev_date = target_date - timedelta(days=1)
+    prev_day_key = day_map[prev_date.weekday()]
+    
+    for session_key, session_data in sessions.items():
+        if session_data.get("screen", "").lower() != screen.lower():
+            continue
+        
+        day_sessions = session_data.get("sessions_by_day", {}).get(prev_day_key, {})
+        if not day_sessions:
+            continue
+        
+        for time_range in day_sessions.values():
+            try:
+                parts = time_range.split("-")
+                if len(parts) != 2:
+                    continue
+                
+                start_time = parse_time_str(parts[0].strip())
+                end_time = parse_time_str(parts[1].strip())
+                
+                show_start = datetime.combine(prev_date, start_time)
+                show_end = datetime.combine(prev_date, end_time)
+                
+                if show_end <= show_start:
+                    show_end += timedelta(days=1)
+                
+                if show_end.date() == target_date:
+                    all_ends.append(show_end)
+            except Exception as e:
+                log.debug(f"Error parsing prev-day time range '{time_range}': {e}")
+                continue
+    
+    if not all_starts:
+        return None
+    
+    return {
+        'first_movie_start': min(all_starts),
+        'last_movie_end': max(all_ends)
+    }
+
+
+def get_next_day_first_movie_start(
+    schedule: Dict[str, Any],
+    screen: str,
+    target_date: "datetime.date"
+) -> Optional[datetime]:
+    """
+    Get the start time of the first movie on the NEXT day for a given screen.
+    Used to determine when the true unoccupied period ends.
+    
+    Args:
+        schedule: The schedule dict containing 'sessions'
+        screen: Screen name (e.g., "Screen 13")
+        target_date: The current date (next day = target_date + 1)
+        
+    Returns:
+        datetime of the first movie start on the next day, or None.
+    """
+    day_map = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
+    
+    next_date = target_date + timedelta(days=1)
+    next_day_key = day_map[next_date.weekday()]
+    
+    sessions = schedule.get('sessions', {})
+    earliest_start = None
+    
+    for session_key, session_data in sessions.items():
+        if session_data.get("screen", "").lower() != screen.lower():
+            continue
+        
+        day_sessions = session_data.get("sessions_by_day", {}).get(next_day_key, {})
+        if not day_sessions:
+            continue
+        
+        for time_range in day_sessions.values():
+            try:
+                parts = time_range.split("-")
+                if len(parts) != 2:
+                    continue
+                
+                start_time = parse_time_str(parts[0].strip())
+                show_start = datetime.combine(next_date, start_time)
+                
+                if earliest_start is None or show_start < earliest_start:
+                    earliest_start = show_start
+            except Exception as e:
+                log.debug(f"Error parsing time range for next day: {e}")
+                continue
+    
+    return earliest_start
+
+
 def parse_time_str(t_str: str):
     """
     Parse time string handling single-digit hours and flexible formats.
@@ -246,20 +397,49 @@ def get_current_movie_occupancy_status(
                 break
         
         if screen not in result:
+            # Get the operating window for this screen today
+            day_key = day_map[target_dt.date().weekday()]
+            operating_window = get_screen_operating_window(
+                schedule=schedule,
+                screen=screen,
+                target_date=target_dt.date(),
+                day_key=day_key
+            )
+            
             if upcoming_shows:
                 upcoming_shows.sort(key=lambda x: x["start"])
                 next_show = upcoming_shows[0]
                 time_until_next_seconds = (next_show["start"] - target_dt).total_seconds()
                 time_until_next_minutes = math.ceil(time_until_next_seconds / 60)
                 
-                result[screen] = {
-                    "status": 0,
-                    "time_until_next_movie": time_until_next_minutes,
-                    "next_movie_name": next_show["movie_name"]
-                }
+                # Check if we're within today's operating window (between first and last movie)
+                if (operating_window and
+                    operating_window['first_movie_start'] <= target_dt < operating_window['last_movie_end']):
+                    # Inter-show gap: maintain comfort, do NOT mark as unoccupied
+                    result[screen] = {
+                        "status": 0,
+                        "is_inter_show": True,
+                        "time_until_next_movie": time_until_next_minutes,
+                        "next_movie_name": next_show["movie_name"],
+                        "operating_window_start": operating_window['first_movie_start'].strftime("%H:%M"),
+                        "operating_window_end": operating_window['last_movie_end'].strftime("%H:%M")
+                    }
+                    log.info(f"Screen {screen}: INTER-SHOW gap (within operating window "
+                             f"{operating_window['first_movie_start'].strftime('%H:%M')}-"
+                             f"{operating_window['last_movie_end'].strftime('%H:%M')}), "
+                             f"next movie in {time_until_next_minutes} min")
+                else:
+                    # Outside operating window: true unoccupied (precool logic still applies downstream)
+                    result[screen] = {
+                        "status": 0,
+                        "is_inter_show": False,
+                        "time_until_next_movie": time_until_next_minutes,
+                        "next_movie_name": next_show["movie_name"]
+                    }
             else:
                 result[screen] = {
                     "status": 0,
+                    "is_inter_show": False,
                     "time_until_next_movie": "No upcoming shows"
                 }
     
@@ -452,9 +632,34 @@ def get_occupancy_status_for_timestamp(
         time_until_next_seconds = (next_show["start"] - timestamp_sharjah).total_seconds()
         time_until_next_minutes = math.ceil(time_until_next_seconds / 60)
         
-        return {
+        # Determine inter-show status using the best matching schedule
+        day_map_local = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
+        day_key = day_map_local[timestamp_sharjah.date().weekday()]
+        
+        # Use the first matching schedule to check operating window
+        best_schedule = matching_instances[0][1] if matching_instances else None
+        is_inter_show = False
+        operating_window = None
+        
+        if best_schedule:
+            operating_window = get_screen_operating_window(
+                schedule=best_schedule,
+                screen=screen,
+                target_date=timestamp_sharjah.date(),
+                day_key=day_key
+            )
+            if (operating_window and
+                operating_window['first_movie_start'] <= timestamp_sharjah < operating_window['last_movie_end']):
+                is_inter_show = True
+                log.info(f"Screen {screen}: INTER-SHOW gap at {timestamp_sharjah.strftime('%H:%M')} "
+                         f"(within operating window "
+                         f"{operating_window['first_movie_start'].strftime('%H:%M')}-"
+                         f"{operating_window['last_movie_end'].strftime('%H:%M')})")
+        
+        result_dict = {
             "status": 0,
             "movie_name": None,
+            "is_inter_show": is_inter_show,
             "time_until_next_movie": time_until_next_minutes,
             "next_movie_name": next_show["movie_name"],
             "next_movie_start": next_show["start"].strftime("%Y-%m-%d %H:%M:%S"),
@@ -462,10 +667,16 @@ def get_occupancy_status_for_timestamp(
             "timestamp_utc": timestamp_utc.strftime("%Y-%m-%d %H:%M:%S"),
             "instances_checked": [idx for idx, _ in matching_instances]
         }
+        if operating_window:
+            result_dict["operating_window_start"] = operating_window['first_movie_start'].strftime("%H:%M")
+            result_dict["operating_window_end"] = operating_window['last_movie_end'].strftime("%H:%M")
+        
+        return result_dict
     
     return {
         "status": 0,
         "movie_name": None,
+        "is_inter_show": False,
         "time_until_next_movie": None,
         "next_movie_name": None,
         "timestamp_sharjah": timestamp_sharjah.strftime("%Y-%m-%d %H:%M:%S"),

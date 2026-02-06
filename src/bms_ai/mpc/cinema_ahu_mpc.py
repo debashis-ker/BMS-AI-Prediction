@@ -39,7 +39,8 @@ class OccupancyMode(Enum):
     """Operational modes based on occupancy logic."""
     OCCUPIED = "occupied"           # Movie is playing (status=1)
     PRE_COOLING = "pre_cooling"     # status=0 AND time_until_next < 60 min
-    UNOCCUPIED = "unoccupied"       # status=0 AND time_until_next >= 60 min or null
+    INTER_SHOW = "inter_show"       # status=0 BUT within day's operating window (between first & last movie)
+    UNOCCUPIED = "unoccupied"       # status=0 AND outside operating window (after last movie today, before first movie tomorrow)
 
 
 @dataclass
@@ -191,11 +192,13 @@ class OccupancyInfo:
     time_remaining: Optional[int] = None        # Minutes remaining if movie playing
     time_until_next_movie: Optional[int] = None  # Minutes until next movie
     next_movie_name: Optional[str] = None
+    is_inter_show: bool = False                  # True if within day's operating window (between first & last movie)
     
     @classmethod
     def from_api_response(cls, response: Dict[str, Any]) -> 'OccupancyInfo':
         """Parse API response to OccupancyInfo."""
         status = response.get('status', 0)
+        is_inter_show = response.get('is_inter_show', False)
         
         if status == 1:
             time_remaining_val = response.get('time_remaining', 0)
@@ -208,7 +211,8 @@ class OccupancyInfo:
             return cls(
                 status=1,
                 movie_name=response.get('movie_name'),
-                time_remaining=time_remaining
+                time_remaining=time_remaining,
+                is_inter_show=False  # Movie is playing, not an inter-show gap
             )
         else:
             time_until_val = response.get('time_until_next_movie', '')
@@ -222,7 +226,8 @@ class OccupancyInfo:
             return cls(
                 status=0,
                 time_until_next_movie=time_until,
-                next_movie_name=response.get('next_movie_name')
+                next_movie_name=response.get('next_movie_name'),
+                is_inter_show=is_inter_show
             )
 
 
@@ -238,7 +243,9 @@ class OccupancyLogicHandler:
     Logic Requirements:
     1. OCCUPIED: status == 1 (movie playing)
     2. PRE_COOLING: status == 0 AND time_until_next_movie < 60 minutes
-    3. UNOCCUPIED: status == 0 AND (time_until_next_movie >= 60 OR null)
+    3. INTER_SHOW: status == 0 AND within day's operating window (between first & last movie)
+       - Maintains comfort, does NOT bypass optimization
+    4. UNOCCUPIED: status == 0 AND outside operating window (after last movie today, before first tomorrow)
     """
     
     def __init__(self, config: MPCConfig):
@@ -247,6 +254,14 @@ class OccupancyLogicHandler:
     def determine_mode(self, occupancy_info: OccupancyInfo) -> OccupancyMode:
         """
         Determine operational mode based on occupancy information.
+        
+        Modes:
+        1. OCCUPIED: Movie is currently playing (status=1)
+        2. PRE_COOLING: No movie but next movie starts within 60 min (precool ramp)
+        3. INTER_SHOW: No movie but within operating window (between first & last movie of the day).
+           Maintains comfort level (does NOT bypass optimization).
+        4. UNOCCUPIED: After last movie of today / before first movie of tomorrow.
+           Bypass optimization, force energy-saving setpoint.
         
         Args:
             occupancy_info: Parsed occupancy data from API
@@ -259,13 +274,16 @@ class OccupancyLogicHandler:
             
         time_until = occupancy_info.time_until_next_movie
         
-        if time_until is None:
-            return OccupancyMode.UNOCCUPIED
-            
-        if time_until < self.config.precool_threshold_minutes:
+        # Check precool first (within 60 min of next movie)
+        if time_until is not None and time_until < self.config.precool_threshold_minutes:
             return OccupancyMode.PRE_COOLING
-        else:
-            return OccupancyMode.UNOCCUPIED
+        
+        # Check if we're in an inter-show gap (within day's operating window)
+        if occupancy_info.is_inter_show:
+            return OccupancyMode.INTER_SHOW
+        
+        # Outside operating window = truly unoccupied
+        return OccupancyMode.UNOCCUPIED
     
     def get_mode_constraints(
         self, 
@@ -332,7 +350,8 @@ class OccupancyLogicHandler:
         return (sp_min, sp_max)
     
     def should_bypass_optimization(self, mode: OccupancyMode) -> bool:
-        """Check if optimization should be bypassed (unoccupied mode)."""
+        """Check if optimization should be bypassed (unoccupied mode only).
+        INTER_SHOW mode maintains comfort, so optimization continues."""
         return mode == OccupancyMode.UNOCCUPIED
     
     def get_precool_ramp_target(

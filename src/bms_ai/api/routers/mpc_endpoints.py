@@ -81,7 +81,7 @@ class MPCOptimizeResponse(BaseModel):
     setpoint_difference: Optional[float] = Field(None, description="Difference: optimized - actual")
     occupied: Optional[int] = Field(None, description="Occupancy status (0 or 1)")
     movie_name: Optional[str] = Field(None, description="Movie name or [PRE-COOLING] prefix")
-    mode: Optional[str] = Field(None, description="Mode: occupied, pre_cooling, unoccupied")
+    mode: Optional[str] = Field(None, description="Mode: occupied, pre_cooling, inter_show, unoccupied")
     is_precooling: Optional[bool] = Field(None, description="True if in pre-cooling period")
     time_until_next_movie: Optional[int] = Field(None, description="Minutes until next movie")
     outside_temp: Optional[float] = Field(None, description="Outdoor temperature (degC)")

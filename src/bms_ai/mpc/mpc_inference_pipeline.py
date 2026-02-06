@@ -668,11 +668,14 @@ class MPCInferencePipeline:
                 is_occupied = occupancy.get('status') == 1
                 time_until_next = occupancy.get('time_until_next_movie')
                 is_precooling = False
+                is_inter_show_fallback = occupancy.get('is_inter_show', False)
                 if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next <= 60:
                     is_precooling = True
                 
-                default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
-                mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else 'unoccupied')
+                # Inter-show and precooling both maintain comfort
+                needs_comfort = is_occupied or is_precooling or is_inter_show_fallback
+                default_setpoint = 24.0 if needs_comfort else 27.0
+                mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else ('inter_show' if is_inter_show_fallback else 'unoccupied'))
                 
                 log.warning(f"[MPCInference] No sensor lag data (TempSp1/SpTREff) - returning default setpoint {default_setpoint}°C (mode: {mode})")
                 
@@ -683,9 +686,9 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
+                    'target_temperature': 23.5 if needs_comfort else 27.0,
                     'setpoint_difference': None,
-                    'occupied': 1 if (is_occupied or is_precooling) else 0,
+                    'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
                     'mode': mode,
                     'is_precooling': is_precooling,
@@ -715,9 +718,9 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': 23.5 if (is_occupied or is_precooling) else 27.0,
+                    'target_temperature': 23.5 if needs_comfort else 27.0,
                     'setpoint_difference': None,
-                    'occupied': 1 if (is_occupied or is_precooling) else 0,
+                    'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
                     'mode': mode,
                     'is_precooling': is_precooling,
@@ -761,7 +764,8 @@ class MPCInferencePipeline:
             'movie_name': occupancy.get('movie_name'),
             'time_remaining': f"{occupancy.get('time_remaining')} minutes" if occupancy.get('time_remaining') else None,
             'time_until_next_movie': occupancy.get('time_until_next_movie'),
-            'next_movie_name': occupancy.get('next_movie_name')
+            'next_movie_name': occupancy.get('next_movie_name'),
+            'is_inter_show': occupancy.get('is_inter_show', False)
         }
         
         weather_forecast = [{
@@ -810,12 +814,15 @@ class MPCInferencePipeline:
             }
         
         is_precooling = False
+        is_inter_show = occupancy.get('is_inter_show', False)
         movie_name = occupancy.get('movie_name')
         if occupancy.get('status') == 0:
             time_until_next = occupancy.get('time_until_next_movie')
             if isinstance(time_until_next, (int, float)) and time_until_next <= 60:
                 is_precooling = True
                 movie_name = f"[PRE-COOLING] {occupancy.get('next_movie_name', 'Unknown')}"
+            elif is_inter_show:
+                movie_name = f"[INTER-SHOW] next: {occupancy.get('next_movie_name', 'Unknown')}"
         
         used_features = {
             'TempSp1': current_measurements['TempSp1'],
@@ -824,7 +831,7 @@ class MPCInferencePipeline:
             'SpTREff_lag_10m': current_measurements['SpTREff_lag_10m'],
             'outside_temp': weather['temperature'],
             'outside_humidity': weather['humidity'],
-            'occupied': 1 if occupancy.get('status') == 1 or is_precooling else 0,
+            'occupied': 1 if occupancy.get('status') == 1 or is_precooling or is_inter_show else 0,
             'hour_sin': np.sin(2 * np.pi * now_sharjah.hour / 24),
             'hour_cos': np.cos(2 * np.pi * now_sharjah.hour / 24),
             'day_sin': np.sin(2 * np.pi * now_sharjah.weekday() / 7),
@@ -833,7 +840,7 @@ class MPCInferencePipeline:
             'FbFAD': current_measurements['FbFAD']
         }
         
-        occupied = 1 if (occupancy.get('status') == 1 or is_precooling) else 0
+        occupied = 1 if (occupancy.get('status') == 1 or is_precooling or is_inter_show) else 0
         
         storage_record = {
             'equipment_id': equipment_id,
