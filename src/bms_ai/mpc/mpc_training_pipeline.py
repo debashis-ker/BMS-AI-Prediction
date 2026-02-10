@@ -70,7 +70,8 @@ class PipelineConfig:
                 'TempSp1',  
                 'SpTROcc', 
                 'FbFAD',    
-                'Co2RA'     
+                'Co2RA',
+                'HuR1'      # Space air humidity
             ]
 
 
@@ -359,7 +360,7 @@ class DataPreprocessor:
             'TempSp1', 'TempSp1_lag_10m', 'SpTREff', 'SpTREff_lag_10_min',
             'outside_temp', 'outside_humidity', 'occupied',
             'hour_sin', 'hour_cos', 'day_sin', 'day_cos',
-            'FbVFD', 'FbFAD', 'Co2RA', 'Target_Temp'
+            'FbVFD', 'FbFAD', 'Co2RA', 'HuR1', 'Target_Temp'
         ]
         
         missing = [f for f in required_features if f not in df.columns]

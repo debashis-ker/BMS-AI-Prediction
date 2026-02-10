@@ -75,7 +75,8 @@ class InferenceConfig:
                 'TempSu',    
                 'TempSp1',   
                 'FbFAD',     
-                'Co2RA'    
+                'Co2RA',
+                'HuR1'      # Space air humidity
             ]
 
 
@@ -379,7 +380,8 @@ class CassandraDataHandler:
             'outside_temp', 'outside_humidity', 'fb_vfd', 'fb_fad', 'co2_ra',
             'co2_load_category', 'co2_load_factor', 'optimization_status',
             'objective_value', 'used_features', 'next_tempsp1_lag', 'next_sptreff_lag',
-            'previous_setpoint', 'screen_id', 'timestamp_sharjah'
+            'previous_setpoint', 'screen_id', 'timestamp_sharjah',
+            'hur1', 'occupied_setpoint', 'unoccupied_setpoint'
         ]
         
         values = []
@@ -498,7 +500,9 @@ class MPCInferencePipeline:
         reason: str,
         sensor_data: Optional[Dict] = None,
         weather: Optional[Dict] = None,
-        occupancy: Optional[Dict] = None
+        occupancy: Optional[Dict] = None,
+        occupied_setpoint: Optional[float] = None,
+        unoccupied_setpoint: Optional[float] = None
     ) -> Dict[str, Any]:
         """Create a record for failed optimization to save to Cassandra."""
         return {
@@ -528,7 +532,10 @@ class MPCInferencePipeline:
             'next_tempsp1_lag': sensor_data.get('TempSp1') if sensor_data else None,
             'next_sptreff_lag': None,
             'previous_setpoint': None,
-            'screen_id': screen_id
+            'screen_id': screen_id,
+            'hur1': sensor_data.get('HuR1') if sensor_data else None,
+            'occupied_setpoint': occupied_setpoint,
+            'unoccupied_setpoint': unoccupied_setpoint
         }
     
     def run_inference(
@@ -537,7 +544,9 @@ class MPCInferencePipeline:
         screen_id: str = "Screen 13",
         ticket: str = "",
         building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
-        ticket_type: Optional[str] = None
+        ticket_type: Optional[str] = None,
+        occupied_setpoint: float = 21.0,
+        unoccupied_setpoint: float = 24.0
     ) -> Dict[str, Any]:
         """
         Run complete MPC inference pipeline.
@@ -548,11 +557,14 @@ class MPCInferencePipeline:
             ticket: Ticket for movie schedule API
             building_id: Building identifier
             ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
+            occupied_setpoint: Target SpTREff when occupied (from API)
+            unoccupied_setpoint: SpTREff when unoccupied (from API)
             
         Returns:
             Dict with optimization result and all saved data
         """
         log.info(f"[MPCInference] Starting inference for {equipment_id} / {screen_id}")
+        log.info(f"[MPCInference] Setpoints: occupied={occupied_setpoint}°C, unoccupied={unoccupied_setpoint}°C")
         
         if building_id:
             self.config.building_id = building_id
@@ -567,7 +579,9 @@ class MPCInferencePipeline:
                 screen_id=screen_id,
                 now_utc=now_utc,
                 now_sharjah=now_sharjah,
-                reason='MODEL_NOT_LOADED'
+                reason='MODEL_NOT_LOADED',
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             return {
@@ -577,6 +591,9 @@ class MPCInferencePipeline:
                 'saved_to_cassandra': True
             }
         
+        # Update MPC with user-provided setpoints from API
+        mpc_system.update_setpoints(occupied_setpoint, unoccupied_setpoint)
+        
         sensor_data = self.bms_fetcher.fetch_last_10_minutes(equipment_id)
         if sensor_data is None:
             fail_record = self._create_fail_record(
@@ -584,7 +601,9 @@ class MPCInferencePipeline:
                 screen_id=screen_id,
                 now_utc=now_utc,
                 now_sharjah=now_sharjah,
-                reason='SENSOR_DATA_FETCH_FAILED'
+                reason='SENSOR_DATA_FETCH_FAILED',
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             return {
@@ -605,7 +624,9 @@ class MPCInferencePipeline:
                 now_utc=now_utc,
                 now_sharjah=now_sharjah,
                 reason='WEATHER_FETCH_FAILED',
-                sensor_data=sensor_data
+                sensor_data=sensor_data,
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             return {
@@ -625,7 +646,9 @@ class MPCInferencePipeline:
                 now_sharjah=now_sharjah,
                 reason='SCHEDULE_DATA_UNAVAILABLE',
                 sensor_data=sensor_data,
-                weather=weather
+                weather=weather,
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             return {
@@ -674,7 +697,7 @@ class MPCInferencePipeline:
                 
                 # Inter-show and precooling both maintain comfort
                 needs_comfort = is_occupied or is_precooling or is_inter_show_fallback
-                default_setpoint = 24.0 if needs_comfort else 27.0
+                default_setpoint = occupied_setpoint if needs_comfort else unoccupied_setpoint
                 mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else ('inter_show' if is_inter_show_fallback else 'unoccupied'))
                 
                 log.warning(f"[MPCInference] No sensor lag data (TempSp1/SpTREff) - returning default setpoint {default_setpoint}°C (mode: {mode})")
@@ -686,7 +709,7 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': 23.5 if needs_comfort else 27.0,
+                    'target_temperature': occupied_setpoint if needs_comfort else unoccupied_setpoint,
                     'setpoint_difference': None,
                     'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
@@ -718,7 +741,7 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': 23.5 if needs_comfort else 27.0,
+                    'target_temperature': occupied_setpoint if needs_comfort else unoccupied_setpoint,
                     'setpoint_difference': None,
                     'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
@@ -752,7 +775,8 @@ class MPCInferencePipeline:
             'TempSu': sensor_data.get('TempSu', 18.0),
             'FbVFD': sensor_data.get('FbVFD', 50.0),
             'FbFAD': sensor_data.get('FbFAD', 50.0),
-            'Co2RA': sensor_data.get('Co2RA', 600.0)
+            'Co2RA': sensor_data.get('Co2RA', 600.0),
+            'HuR1': sensor_data.get('HuR1', 50.0)
         }
         
         log.debug(f"[MPCInference] Current measurements for MPC: {current_measurements}")
@@ -786,7 +810,10 @@ class MPCInferencePipeline:
         except Exception as e:
             log.error(f"[MPCInference] MPC optimization failed: {e}")
             
-            default_setpoint = 24.0 if (is_occupied or is_precooling) else 27.0
+            is_occupied_now = occupancy.get('status') == 1
+            time_until = occupancy.get('time_until_next_movie')
+            is_precooling_now = not is_occupied_now and isinstance(time_until, (int, float)) and time_until <= 60
+            default_setpoint = occupied_setpoint if (is_occupied_now or is_precooling_now) else unoccupied_setpoint
             fail_record = self._create_fail_record(
                 equipment_id=equipment_id,
                 screen_id=screen_id,
@@ -795,7 +822,9 @@ class MPCInferencePipeline:
                 reason=f'OPTIMIZATION_FAILED: {str(e)}',
                 sensor_data=sensor_data,
                 weather=weather,
-                occupancy=occupancy
+                occupancy=occupancy,
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             
@@ -837,7 +866,8 @@ class MPCInferencePipeline:
             'day_sin': np.sin(2 * np.pi * now_sharjah.weekday() / 7),
             'day_cos': np.cos(2 * np.pi * now_sharjah.weekday() / 7),
             'FbVFD': current_measurements['FbVFD'],
-            'FbFAD': current_measurements['FbFAD']
+            'FbFAD': current_measurements['FbFAD'],
+            'HuR1': current_measurements['HuR1']
         }
         
         occupied = 1 if (occupancy.get('status') == 1 or is_precooling or is_inter_show) else 0
@@ -848,7 +878,7 @@ class MPCInferencePipeline:
             'optimized_setpoint': mpc_result['optimal_setpoint'],
             'actual_sptreff': sensor_data.get('SpTREff'),
             'actual_tempsp1': sensor_data.get('TempSp1'),
-            'target_temperature': mpc_result.get('target_temperature', 23.5),
+            'target_temperature': mpc_result.get('target_temperature', occupied_setpoint),
             'setpoint_difference': mpc_result['optimal_setpoint'] - sensor_data.get('SpTREff', 0),
             'occupied': occupied,
             'movie_name': movie_name,
@@ -869,7 +899,10 @@ class MPCInferencePipeline:
             'next_sptreff_lag': mpc_result['optimal_setpoint'],
             'previous_setpoint': mpc_result['optimal_setpoint'],
             'screen_id': screen_id,
-            'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S")
+            'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
+            'hur1': sensor_data.get('HuR1'),
+            'occupied_setpoint': occupied_setpoint,
+            'unoccupied_setpoint': unoccupied_setpoint
         }
         
         save_success = self.cassandra_handler.save_optimization_result(storage_record)
@@ -906,7 +939,10 @@ class MPCInferencePipeline:
             'next_sptreff_lag': storage_record['next_sptreff_lag'],
             'previous_setpoint': storage_record['previous_setpoint'],
             'screen_id': storage_record['screen_id'],
-            'saved_to_cassandra': save_success
+            'saved_to_cassandra': save_success,
+            'hur1': storage_record.get('hur1'),
+            'occupied_setpoint': occupied_setpoint,
+            'unoccupied_setpoint': unoccupied_setpoint
         }
         
         log.info(f"[MPCInference] Inference complete: optimal_setpoint={response['optimized_setpoint']}, mode={response['mode']}")
@@ -924,7 +960,9 @@ def run_mpc_optimization(
     screen_id: str = "Screen 13",
     ticket: str = "",
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
-    ticket_type: Optional[str] = None
+    ticket_type: Optional[str] = None,
+    occupied_setpoint: float = 21.0,
+    unoccupied_setpoint: float = 24.0
 ) -> Dict[str, Any]:
     """
     Convenience function to run MPC optimization.
@@ -936,6 +974,8 @@ def run_mpc_optimization(
         ticket: Ticket for movie schedule API
         building_id: Building identifier
         ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
+        occupied_setpoint: Target SpTREff when occupied (from API)
+        unoccupied_setpoint: SpTREff when unoccupied (from API)
         
     Returns:
         Dict with optimization result
@@ -946,5 +986,7 @@ def run_mpc_optimization(
         screen_id=screen_id,
         ticket=ticket,
         building_id=building_id,
-        ticket_type=ticket_type
+        ticket_type=ticket_type,
+        occupied_setpoint=occupied_setpoint,
+        unoccupied_setpoint=unoccupied_setpoint
     )

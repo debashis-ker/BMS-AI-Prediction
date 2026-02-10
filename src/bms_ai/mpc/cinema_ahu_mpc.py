@@ -45,21 +45,28 @@ class OccupancyMode(Enum):
 
 @dataclass
 class MPCConfig:
-    """Configuration parameters for the MPC controller."""
+    """Configuration parameters for the MPC controller.
+    
+    User provides occupied_setpoint and unoccupied_setpoint.
+    
+    Hard floor: SpTREff >= occupied_setpoint (NEVER below)
+    Energy ceiling: SpTREff <= occupied_setpoint + energy_savings_band
+    TempSp1 comfort: occupied_setpoint ± comfort_band (soft constraint)
+    
+    The optimizer targets occupied_setpoint as the base, but can raise
+    SpTREff up to +energy_savings_band (default +2°C) to save energy
+    when conditions allow (low CO2, room already cool, mild weather).
+    """
     
     prediction_horizon: int = 6         
     control_horizon: int = 3           
     sample_time_minutes: int = 10      
     
-    # Setpoint Constraints (SpTREff)
-    sp_min_occupied: float = 23.0       
-    sp_max_occupied: float = 26.0       
-    sp_unoccupied: float = 27.0         
-    
-    # Temperature Safety Bounds (TempSp1 - Space Air Temperature)
-    temp_min_hard: float = 22.0         
-    temp_max_hard: float = 26.0    
-    temp_comfort_target: float = 23.5  
+    # User-Provided Setpoints (from API at inference time)
+    occupied_setpoint: float = 21.0       # Target SpTREff when occupied (°C) — HARD FLOOR
+    unoccupied_setpoint: float = 24.0     # SpTREff when unoccupied (°C)
+    comfort_band: float = 1.0             # ±comfort_band for TempSp1 soft constraints
+    energy_savings_band: float = 2.0      # SpTREff can go up to occupied_setpoint + this
     
     # Rate of Change Constraints
     delta_sp_max: float = 0.5           
@@ -69,12 +76,42 @@ class MPCConfig:
     
     # Objective Function Weights
     w_comfort: float = 100.0           
-    w_energy: float = 1.0               
+    w_energy: float = 25.0              # Energy savings weight (increased from 1.0)
     w_smoothness: float = 50.0         
     w_soft_constraint: float = 1000.0   
     
+    # Humidity Comfort Range
+    humidity_min: float = 30.0            # Minimum comfortable humidity (%)
+    humidity_max: float = 60.0            # Maximum comfortable humidity (%)
+    w_humidity: float = 10.0              # Humidity discomfort weight
+    
     # Model Parameters
     thermal_time_constant: float = 30.0  
+    
+    def __post_init__(self):
+        """Derive constraint bounds from user-provided setpoints.
+        
+        sp_min_occupied = occupied_setpoint (HARD FLOOR — never below)
+        sp_max_occupied = occupied_setpoint + energy_savings_band (energy ceiling)
+        """
+        self.sp_min_occupied = self.occupied_setpoint                          # Hard floor: never below
+        self.sp_max_occupied = self.occupied_setpoint + self.energy_savings_band  # Energy ceiling: +2°C
+        self.sp_unoccupied = self.unoccupied_setpoint
+        self.temp_comfort_target = self.occupied_setpoint
+        # TempSp1 soft constraints (room temperature comfort)
+        self.temp_min_hard = self.occupied_setpoint - self.comfort_band  # e.g., 20°C
+        self.temp_max_hard = self.occupied_setpoint + self.comfort_band  # e.g., 22°C
+    
+    def update_setpoints(self, occupied_setpoint: float, unoccupied_setpoint: float, 
+                         comfort_band: float = None, energy_savings_band: float = None):
+        """Dynamically update setpoints (e.g., from API at inference time)."""
+        self.occupied_setpoint = occupied_setpoint
+        self.unoccupied_setpoint = unoccupied_setpoint
+        if comfort_band is not None:
+            self.comfort_band = comfort_band
+        if energy_savings_band is not None:
+            self.energy_savings_band = energy_savings_band
+        self.__post_init__()
 
 
 @dataclass
@@ -99,6 +136,7 @@ class MPCState:
     FbVFD: float = 50.0                
     FbFAD: float = 50.0                 
     Co2RA: float = 600.0               
+    HuR1: float = 50.0                  # Space air humidity (%)
     
     def get_co2_load_category(self) -> str:
         """
@@ -169,6 +207,7 @@ class DisturbanceVector:
     day_cos: float                      # Cyclic day encoding (cos)
     time_until_event: Optional[int] = None  # Minutes until next movie (if applicable)
     co2_load_factor: float = 0.5        # CO2-based occupancy load (0.0-1.5)
+    indoor_humidity: float = 50.0       # Indoor humidity / HuR1 (%)
     
     def to_features(self) -> Dict[str, float]:
         """Convert to feature dictionary for model input."""
@@ -180,7 +219,8 @@ class DisturbanceVector:
             'hour_cos': self.hour_cos,
             'day_sin': self.day_sin,
             'day_cos': self.day_cos,
-            'co2_load_factor': self.co2_load_factor
+            'co2_load_factor': self.co2_load_factor,
+            'HuR1': self.indoor_humidity
         }
 
 
@@ -290,24 +330,25 @@ class OccupancyLogicHandler:
         mode: OccupancyMode,
         outside_temp: float = None,
         current_room_temp: float = None,
-        co2_load_factor: float = None
+        co2_load_factor: float = None,
+        indoor_humidity: float = None
     ) -> Tuple[float, float]:
         """
-        Get setpoint constraints based on operational mode, weather, and CO2 load.
+        Get setpoint constraints based on operational mode.
         
-        WEATHER + CO2 ADAPTIVE STRATEGY:
-        1. HOT outside (>25°C): Force setpoint to target (need max cooling)
-        2. MILD outside (20-25°C): Normal target ± 0.5°C
-        3. COLD outside (<20°C): Allow higher setpoint for energy savings
-           - BUT limit by CO2 (high occupancy = more cooling needed)
-        4. HIGH CO2 (>1000 ppm): Tighter cooling bounds (full cinema)
-        5. LOW CO2 (<600 ppm): Can relax setpoint (empty/few people)
+        HARD FLOOR: SpTREff >= occupied_setpoint (NEVER below)
+        ENERGY CEILING: SpTREff <= occupied_setpoint + energy_savings_band
+        
+        Adaptive adjustments narrow the ceiling (not the floor):
+        - High CO2 / hot weather / high humidity: tighter ceiling → less energy savings
+        - Low CO2 / mild weather / room already cool: wider ceiling → more energy savings
         
         Args:
             mode: Current operational mode
             outside_temp: Current outdoor temperature (optional)
             current_room_temp: Current room temperature (optional)
             co2_load_factor: CO2-based occupancy load 0.0-1.5 (optional)
+            indoor_humidity: Current indoor humidity % (optional)
             
         Returns:
             Tuple of (min_setpoint, max_setpoint)
@@ -315,34 +356,35 @@ class OccupancyLogicHandler:
         if mode == OccupancyMode.UNOCCUPIED:
             return (self.config.sp_unoccupied, self.config.sp_unoccupied)
         
-        target = self.config.temp_comfort_target  # 23.5
-        sp_min = self.config.sp_min_occupied      # 23.0
-        sp_max = target + 1.0                     # 24.5
+        target = self.config.occupied_setpoint       # Hard floor (e.g., 21°C)
+        sp_min = self.config.sp_min_occupied          # = occupied_setpoint (21°C)
+        sp_max = self.config.sp_max_occupied          # = occupied_setpoint + energy_savings_band (23°C)
         
-        if co2_load_factor is not None:
-            if co2_load_factor >= 1.0:  
-                sp_max = target + 0.5            
-            elif co2_load_factor <= 0.2:  
-                sp_max = target + 1.5             
+        # --- Narrow ceiling based on adverse conditions ---
         
-        if outside_temp is not None:
-            if outside_temp > 25.0:
-                sp_max = target + 0.5         
-                
-            elif outside_temp < 20.0:
-                sp_min = target                
-                
-                if co2_load_factor is not None and co2_load_factor >= 1.0:
-                    sp_max = target + 0.5      
-                elif outside_temp < 15.0:
-                    sp_max = target + 1.5         
-                else:
-                    sp_max = target + 1.0        
+        # High CO2 (full cinema) → limit energy savings, keep closer to target
+        if co2_load_factor is not None and co2_load_factor >= 1.0:
+            co2_reduction = min(1.0, (co2_load_factor - 1.0) * 2.0)  # 0-1 scale
+            sp_max = target + (sp_max - target) * (1.0 - co2_reduction * 0.7)
         
-        if current_room_temp is not None and current_room_temp > target + 1.0:
-            sp_min = target - 0.5               
-            sp_max = target                       
+        # Very hot outside → limit energy savings
+        if outside_temp is not None and outside_temp > 35.0:
+            heat_factor = min(1.0, (outside_temp - 35.0) / 10.0)
+            sp_max = target + (sp_max - target) * (1.0 - heat_factor * 0.5)
         
+        # High humidity → bias toward lower setpoint
+        if indoor_humidity is not None and indoor_humidity > 60.0:
+            humidity_adj = min(0.5, (indoor_humidity - 60.0) / 40.0)
+            sp_max = max(sp_min, sp_max - humidity_adj)
+        
+        # Room already warm → proportionally narrow ceiling
+        if current_room_temp is not None and current_room_temp > target + self.config.comfort_band:
+            overshoot = current_room_temp - (target + self.config.comfort_band)
+            # Gradual: 0.01°C over → keep ~99.5% band, 2°C over → snap to target
+            warm_factor = min(1.0, overshoot / 2.0)
+            sp_max = target + (sp_max - target) * (1.0 - warm_factor)
+        
+        # Ensure min never exceeds max
         if sp_min > sp_max:
             sp_min = target
             sp_max = target
@@ -453,7 +495,8 @@ class ThermalPredictionModel:
             'day_sin',              
             'day_cos',
             'FbVFD',              
-            'FbFAD'                
+            'FbFAD',
+            'HuR1'                  # Space air humidity
         ]
         
         available_features = [f for f in self.feature_names if f in df.columns]
@@ -558,7 +601,8 @@ class ThermalPredictionModel:
             'day_sin': disturbance.day_sin,
             'day_cos': disturbance.day_cos,
             'FbVFD': state.FbVFD,
-            'FbFAD': state.FbFAD
+            'FbFAD': state.FbFAD,
+            'HuR1': state.HuR1
         }
         
         X = np.array([[features.get(f, 0.0) for f in self.feature_names]])
@@ -596,7 +640,9 @@ class ThermalPredictionModel:
             SpTREff_lag_10m=initial_state.SpTREff_lag_10m,
             TempSu=initial_state.TempSu,
             FbVFD=initial_state.FbVFD,
-            FbFAD=initial_state.FbFAD
+            FbFAD=initial_state.FbFAD,
+            Co2RA=initial_state.Co2RA,
+            HuR1=initial_state.HuR1
         )
         
         for k in range(N_p):
@@ -614,7 +660,9 @@ class ThermalPredictionModel:
                 SpTREff_lag_10m=current_state.SpTREff,
                 TempSu=current_state.TempSu,
                 FbVFD=current_state.FbVFD,
-                FbFAD=current_state.FbFAD
+                FbFAD=current_state.FbFAD,
+                Co2RA=current_state.Co2RA,
+                HuR1=current_state.HuR1
             )
             current_state = new_state
         
@@ -681,7 +729,7 @@ class CinemaAHUMPC:
          ]
     
     KEY INSIGHT: SpTREff IS the setpoint the AHU PID controller tracks.
-    To achieve room temp of 23.5°C, we MUST set SpTREff ≈ 23.5°C.
+    To achieve room temp of occupied_setpoint, we MUST set SpTREff ≈ occupied_setpoint.
     
     Energy savings come from:
     - Raising target during unoccupied (bypass mode)
@@ -694,9 +742,9 @@ class CinemaAHUMPC:
     
     Control Strategy:
     -----------------
-    - OCCUPIED: Set SpTREff to achieve target (23.5°C)
-    - PRE_COOLING: Gradual ramp to target before movie starts
-    - UNOCCUPIED: Bypass optimization, force SpTREff = 27°C
+    - OCCUPIED: Set SpTREff to achieve occupied_setpoint (default 21°C), comfort band ±1°C
+    - PRE_COOLING: Gradual ramp to occupied_setpoint before movie starts
+    - UNOCCUPIED: Bypass optimization, force SpTREff = unoccupied_setpoint (default 24°C)
     """
     
     def __init__(
@@ -720,24 +768,28 @@ class CinemaAHUMPC:
         """
         Build the MPC objective function.
         
-        CORRECTED LOGIC (v2):
-        ---------------------
-        SpTREff IS the setpoint that the AHU PID controller tracks.
-        The room temperature will eventually converge to SpTREff.
+        ENERGY-AWARE LOGIC (v3):
+        ------------------------
+        SpTREff has a HARD FLOOR at occupied_setpoint (e.g., 21°C).
         
-        Therefore: To achieve target_temp=23.5°C, we MUST set SpTREff = 23.5°C
+        The optimizer can raise SpTREff above the floor (up to +energy_savings_band)
+        to save energy, when conditions are favorable:
+        - Room temp already below target → safe to relax setpoint
+        - Low CO2 → fewer people, less cooling needed
+        - Mild outside temp → less heat load
+        - Low humidity → comfortable even at higher setpoint
         
-        Energy savings during occupied mode are MINIMAL and come from:
-        - Not overcooling below target
-        - Smooth transitions (no aggressive hunting)
+        Energy savings reward: negative cost for raising SpTREff above floor.
+        Higher setpoint = less cooling = energy saved.
         
-        Major energy savings come from UNOCCUPIED mode (bypass to 27°C)
+        When conditions are adverse (high CO2, hot day, room warm),
+        the optimizer stays at or near the floor (occupied_setpoint).
         
         Args:
             initial_state: Current system state
             disturbance_forecast: Forecast disturbances over horizon
             mode: Current operational mode
-            target_temp: Target comfort temperature
+            target_temp: Target comfort temperature (= occupied_setpoint)
             
         Returns:
             Objective function callable
@@ -746,15 +798,64 @@ class CinemaAHUMPC:
         N_c = self.config.control_horizon
         
         avg_outside_temp = np.mean([d.outside_temp for d in disturbance_forecast])
-        is_hot_day = avg_outside_temp > 25.0
-        is_cold_day = avg_outside_temp < 20.0
-        room_is_warm = initial_state.TempSp1 > target_temp + 0.5
-        room_is_comfortable = initial_state.TempSp1 <= target_temp + 0.5
+        is_hot_day = avg_outside_temp > 30.0
+        is_mild_day = avg_outside_temp < 25.0
+        
+        # TempSp1 comfort bounds (room temperature)
+        comfort_max = target_temp + self.config.comfort_band   # e.g., 22°C
+        comfort_min = target_temp - self.config.comfort_band   # e.g., 20°C
+        
+        room_is_warm = initial_state.TempSp1 > comfort_max
+        room_is_cool = initial_state.TempSp1 < target_temp
+        room_is_comfortable = comfort_min <= initial_state.TempSp1 <= comfort_max
         
         co2_load = initial_state.get_co2_load_factor()
-        is_high_occupancy = co2_load >= 1.0      # CO2 > 1000 ppm (full cinema)
-        is_low_occupancy = co2_load <= 0.2       # CO2 < 600 ppm (nearly empty)
-        avg_co2_load = np.mean([d.co2_load_factor for d in disturbance_forecast])
+        is_high_occupancy = co2_load >= 1.0      # CO2 > 1000 ppm
+        is_low_occupancy = co2_load <= 0.3       # CO2 < 600 ppm
+        
+        # --- Compute energy savings potential (0.0 = no savings, 1.0 = max savings) ---
+        energy_potential = 0.0
+        
+        # Factor 1: Room temperature headroom (cool room → more savings)
+        if initial_state.TempSp1 < target_temp:
+            temp_headroom = min(1.0, (target_temp - initial_state.TempSp1) / 2.0)
+            energy_potential += 0.4 * temp_headroom
+        elif room_is_comfortable:
+            energy_potential += 0.1  # Small bonus if in comfort range
+        
+        # Factor 2: Low CO2 (few people → more savings)
+        if co2_load < 0.5:
+            co2_bonus = 1.0 - (co2_load / 0.5)  # 1.0 at zero CO2, 0.0 at 0.5
+            energy_potential += 0.3 * co2_bonus
+        
+        # Factor 3: Mild outside temperature (less heat load → more savings)
+        if avg_outside_temp < 25.0:
+            mild_bonus = min(1.0, (25.0 - avg_outside_temp) / 10.0)
+            energy_potential += 0.2 * mild_bonus
+        
+        # Factor 4: Low humidity (comfortable at higher temps)
+        if initial_state.HuR1 < 50.0:
+            humidity_bonus = min(1.0, (50.0 - initial_state.HuR1) / 20.0)
+            energy_potential += 0.1 * humidity_bonus
+        
+        energy_potential = min(1.0, energy_potential)
+        
+        # --- Penalties that reduce energy savings ---
+        if is_high_occupancy:
+            energy_potential *= 0.3  # Almost no savings when cinema is full
+        if is_hot_day:
+            energy_potential *= 0.3  # Limited savings on hot days
+        if room_is_warm:
+            # Proportional reduction: gradually reduce energy savings as room warms
+            # 22.01°C → keeps ~50% potential, 23°C → 0% potential
+            overshoot = initial_state.TempSp1 - comfort_max
+            energy_potential *= max(0.0, 1.0 - overshoot / 2.0)
+        if initial_state.HuR1 > self.config.humidity_max:  # > 60%
+            energy_potential *= 0.5  # Reduce savings when humid
+        
+        # Energy target: how high can setpoint go based on conditions
+        # Floor = target_temp (occupied_setpoint), ceiling = target_temp + energy_savings_band
+        energy_target = target_temp + energy_potential * self.config.energy_savings_band
         
         def objective(u_sequence: np.ndarray) -> float:
             """
@@ -772,9 +873,7 @@ class CinemaAHUMPC:
                 disturbance_forecast=disturbance_forecast
             )
             
-            # Initialize cost
             J = 0.0
-            
             prev_sp = self.previous_setpoint or initial_state.SpTREff
             
             for k in range(N_p):
@@ -783,64 +882,71 @@ class CinemaAHUMPC:
                 outside_k = disturbance_forecast[k].outside_temp
                 co2_k = disturbance_forecast[k].co2_load_factor
                 
-                effective_target = target_temp
+                # --- 1. SETPOINT TRACKING: pull SpTREff toward energy_target ---
+                # energy_target varies from target_temp (adverse) to target_temp+2 (favorable)
+                setpoint_error = (sp_k - energy_target) ** 2
+                J += self.config.w_comfort * setpoint_error
                 
-                if is_cold_day and room_is_comfortable and not is_high_occupancy:
-                    cold_bonus = min(1.0, (20.0 - avg_outside_temp) / 10.0)  
-                    occupancy_scale = max(0.0, 1.0 - co2_load)  
-                    effective_target = target_temp + cold_bonus * occupancy_scale * 0.5
+                # --- 2. HARD FLOOR PENALTY: SpTREff must NEVER go below target_temp ---
+                if sp_k < target_temp:
+                    floor_violation = (target_temp - sp_k)
+                    J += self.config.w_soft_constraint * 10.0 * (floor_violation ** 2)
                 
-                if is_high_occupancy:
-                    effective_target = min(effective_target, target_temp)
+                # --- 3. ENERGY SAVINGS REWARD: reward for raising above floor ---
+                if sp_k > target_temp:
+                    savings = sp_k - target_temp
+                    # Scale reward by energy_potential (conditions-based)
+                    J -= self.config.w_energy * energy_potential * savings * 5.0
                 
-                setpoint_error = (sp_k - effective_target) ** 2
-                J += self.config.w_comfort * 2.0 * setpoint_error
+                # --- 4. PREDICTED ROOM TEMP COMFORT ---
+                # Keep predicted TempSp1 within comfort band
+                if temp_k > comfort_max:
+                    comfort_violation = (temp_k - comfort_max) ** 2
+                    J += self.config.w_comfort * 2.0 * comfort_violation
+                elif temp_k < comfort_min:
+                    comfort_violation = (comfort_min - temp_k) ** 2
+                    J += self.config.w_comfort * 0.5 * comfort_violation
                 
-                temp_target = effective_target if (is_cold_day and not is_high_occupancy) else target_temp
-                predicted_comfort_error = (temp_k - temp_target) ** 2
-                J += self.config.w_comfort * 0.5 * predicted_comfort_error
+                # --- 5. ADVERSE CONDITIONS: extra penalty for high setpoint ---
+                if sp_k > target_temp:
+                    above_floor = sp_k - target_temp
+                    
+                    # Hot outside → penalize raising setpoint
+                    if outside_k > 30.0:
+                        heat_factor = (outside_k - 30.0) / 10.0
+                        J += self.config.w_comfort * heat_factor * (above_floor ** 2)
+                    
+                    # High CO2 → penalize raising setpoint
+                    if co2_k >= 0.8:
+                        co2_factor = (co2_k - 0.8) * 5.0
+                        J += self.config.w_comfort * co2_factor * (above_floor ** 2)
+                    
+                    # Room already warm → proportional penalty for raising setpoint
+                    if room_is_warm:
+                        overshoot = initial_state.TempSp1 - comfort_max
+                        # Gentle penalty for slight warmth, harsh for very warm
+                        room_penalty = (overshoot / 2.0) ** 2 * 5.0
+                        J += self.config.w_comfort * room_penalty * (above_floor ** 2)
                 
-                if sp_k > effective_target:
-                    above_target = sp_k - effective_target
-                    if is_hot_day:
-                        weather_multiplier = 3.0
-                    elif is_cold_day:
-                        weather_multiplier = 0.5
-                    else:
-                        weather_multiplier = 1.0
-                    occupancy_multiplier = 1.0 + co2_load  
-                    J += self.config.w_comfort * 3.0 * weather_multiplier * occupancy_multiplier * (above_target ** 2)
-                
-                # High CO2 = full cinema = people expect comfort
-                if (outside_k > 25.0 or is_high_occupancy) and sp_k > target_temp:
-                    heat_penalty = (sp_k - target_temp) * 10.0
-                    if outside_k > 25.0:
-                        heat_penalty *= (outside_k - 25.0) 
-                    if is_high_occupancy:
-                        heat_penalty *= (1.0 + co2_load)   
-                    J += self.config.w_comfort * heat_penalty
-                
-                if outside_k < 20.0 and room_is_comfortable and not is_high_occupancy:
-                    if sp_k > target_temp and sp_k <= target_temp + 1.0:
-                        cold_saving = (20.0 - outside_k) / 10.0  
-                        occupancy_bonus = max(0.0, 1.0 - co2_k)  
-                        energy_reward = cold_saving * occupancy_bonus * (sp_k - target_temp) * 5.0
-                        J -= self.config.w_energy * energy_reward  
-                
-                if room_is_warm and sp_k > target_temp:
-                    room_error = initial_state.TempSp1 - target_temp
-                    J += self.config.w_comfort * 5.0 * room_error * (sp_k - target_temp)
-                
+                # --- 6. SMOOTHNESS ---
                 if k < N_c:
                     delta_sp = sp_k - prev_sp
-                    smoothness_penalty = delta_sp ** 2
-                    J += self.config.w_smoothness * smoothness_penalty
+                    J += self.config.w_smoothness * (delta_sp ** 2)
                     prev_sp = sp_k
                 
+                # --- 7. TempSp1 SOFT CONSTRAINT VIOLATIONS ---
                 lower_violation = max(0, self.config.temp_min_hard - temp_k)
                 upper_violation = max(0, temp_k - self.config.temp_max_hard)
                 J += self.config.w_soft_constraint * (lower_violation ** 2)
                 J += self.config.w_soft_constraint * (upper_violation ** 2)
+                
+                # --- 8. HUMIDITY DISCOMFORT ---
+                if initial_state.HuR1 > self.config.humidity_max:
+                    hum_over = (initial_state.HuR1 - self.config.humidity_max) / 20.0
+                    J += self.config.w_humidity * (hum_over ** 2)
+                elif initial_state.HuR1 < self.config.humidity_min:
+                    hum_under = (self.config.humidity_min - initial_state.HuR1) / 20.0
+                    J += self.config.w_humidity * (hum_under ** 2)
             
             return J
         
@@ -952,7 +1058,8 @@ class CinemaAHUMPC:
                 day_sin=np.sin(2 * np.pi * day / 7),
                 day_cos=np.cos(2 * np.pi * day / 7),
                 time_until_event=occupancy_info.time_until_next_movie,
-                co2_load_factor=co2_load_factor  
+                co2_load_factor=co2_load_factor,
+                indoor_humidity=current_state.HuR1
             ))
         
         objective = self._build_objective(
@@ -967,13 +1074,16 @@ class CinemaAHUMPC:
             mode=mode,
             outside_temp=outside_temp,
             current_room_temp=current_state.TempSp1,
-            co2_load_factor=co2_load_factor 
+            co2_load_factor=co2_load_factor,
+            indoor_humidity=current_state.HuR1
         )
         bounds = [(sp_min, sp_max)] * N_c
         
         constraints = self._build_constraints(mode, sp_min, sp_max)
         
-        u0 = np.full(N_c, target_temp)
+        # Initial guess: midpoint of bounds to allow optimizer to explore energy savings
+        u0_value = (sp_min + sp_max) / 2.0
+        u0 = np.full(N_c, u0_value)
         u0 = np.clip(u0, sp_min, sp_max)
         
         result = minimize(
@@ -1001,11 +1111,11 @@ class CinemaAHUMPC:
             optimization_status = 'success'
         else:
             if outside_temp is not None and outside_temp < 20.0:
-                optimal_sp = sp_max
-            elif current_state.TempSp1 > target_temp + 0.5:
-                optimal_sp = max(sp_min, target_temp - 0.3)
+                optimal_sp = sp_max  # Mild weather fallback → energy savings
+            elif current_state.TempSp1 > target_temp + self.config.comfort_band:
+                optimal_sp = target_temp  # Room warm → floor setpoint
             else:
-                optimal_sp = target_temp
+                optimal_sp = (sp_min + sp_max) / 2.0  # Midpoint fallback
             
             optimal_sp = np.clip(optimal_sp, sp_min, sp_max)
             optimization_status = f'failed: {result.message}'
@@ -1065,6 +1175,22 @@ class CinemaAHUMPCSystem:
         self.thermal_model = ThermalPredictionModel(self.config)
         self.mpc: Optional[CinemaAHUMPC] = None
         self.is_initialized = False
+    
+    def update_setpoints(self, occupied_setpoint: float, unoccupied_setpoint: float, 
+                         comfort_band: float = None, energy_savings_band: float = None):
+        """
+        Dynamically update setpoints (e.g., from API at inference time).
+        
+        Args:
+            occupied_setpoint: Target SpTREff when occupied (°C) — HARD FLOOR
+            unoccupied_setpoint: SpTREff when unoccupied (°C)
+            comfort_band: ±comfort_band for TempSp1 (default: keep current)
+            energy_savings_band: SpTREff can go up to occupied_setpoint + this (default: keep current)
+        """
+        self.config.update_setpoints(occupied_setpoint, unoccupied_setpoint, comfort_band, energy_savings_band)
+        if self.mpc:
+            self.mpc.config = self.config
+            self.mpc.occupancy_handler.config = self.config
         
     def train(self, training_data: pd.DataFrame) -> Dict[str, float]:
         """
@@ -1117,7 +1243,8 @@ class CinemaAHUMPCSystem:
             TempSu=current_measurements.get('TempSu', 18.0),
             FbVFD=current_measurements.get('FbVFD', 50.0),
             FbFAD=current_measurements.get('FbFAD', 50.0),
-            Co2RA=current_measurements.get('Co2RA', 600.0)  
+            Co2RA=current_measurements.get('Co2RA', 600.0),
+            HuR1=current_measurements.get('HuR1', 50.0)
         )
         
         occupancy_info = OccupancyInfo.from_api_response(occupancy_api_response)

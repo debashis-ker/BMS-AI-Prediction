@@ -66,6 +66,8 @@ class MPCOptimizeRequest(BaseModel):
     system_type: str = Field("AHU", description="System type")
     equipment_id: str = Field("Ahu13", description="Equipment ID (e.g., 'Ahu13')")
     screen_id: str = Field("Screen 13", description="Screen ID for occupancy lookup (e.g., 'Screen 13')")
+    occupied_setpoint: float = Field(21.0, description="Target SpTREff when occupied (°C)")
+    unoccupied_setpoint: float = Field(24.0, description="SpTREff when unoccupied (°C)")
 
 
 class MPCOptimizeResponse(BaseModel):
@@ -101,6 +103,9 @@ class MPCOptimizeResponse(BaseModel):
     saved_to_cassandra: Optional[bool] = Field(None, description="Whether result was saved to Cassandra")
     error: Optional[str] = Field(None, description="Error message if failed")
     error_type: Optional[str] = Field(None, description="Error type if failed")
+    hur1: Optional[float] = Field(None, description="Space air humidity (%)")
+    occupied_setpoint: Optional[float] = Field(None, description="Occupied setpoint used for optimization")
+    unoccupied_setpoint: Optional[float] = Field(None, description="Unoccupied setpoint used for optimization")
 
 
 class MPCStatusResponse(BaseModel):
@@ -179,7 +184,9 @@ async def optimize_setpoint(
             screen_id=request.screen_id,
             ticket=request.ticket,
             building_id=request.building_id,
-            ticket_type=request.ticket_type
+            ticket_type=request.ticket_type,
+            occupied_setpoint=request.occupied_setpoint,
+            unoccupied_setpoint=request.unoccupied_setpoint
         )
         
         if result.get('success'):

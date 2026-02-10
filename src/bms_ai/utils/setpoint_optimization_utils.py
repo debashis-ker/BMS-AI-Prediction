@@ -188,7 +188,7 @@ def parse_time_str(t_str: str):
     return datetime.strptime(t_str, "%I:%M%p").time()
 
 
-def fetch_movie_schedule(ticket: str="a31bcd65-8ccb-4e81-b4e5-3fc62c8112ce", ticket_type: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
+def fetch_movie_schedule(ticket: str="8a95c9df-bc32-484f-bd6b-8c1c35f5da7d", ticket_type: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
     """
     Fetches movie schedule data from IKON service.
     Returns all instances data (list of schedule data from all cinemas).
@@ -688,7 +688,7 @@ def get_occupancy_status_for_timestamp(
 if __name__ == "__main__":
     print("Testing fetch_movie_schedule function...")
     schedule_data = fetch_movie_schedule()
-    
+    print(f"Fetched {len(schedule_data) if schedule_data else 0} schedule instances.")
     if schedule_data:
         print(f"\n✓ Fetched {len(schedule_data)} schedule instances")
         for idx, sched in enumerate(schedule_data):
