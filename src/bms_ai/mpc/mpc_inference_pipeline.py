@@ -378,8 +378,7 @@ class CassandraDataHandler:
             'outside_temp', 'outside_humidity', 'fb_vfd', 'fb_fad', 'co2_ra',
             'co2_load_category', 'co2_load_factor', 'optimization_status',
             'objective_value', 'used_features', 'next_tempsp1_lag', 'next_sptreff_lag',
-            'previous_setpoint', 'screen_id', 'timestamp_sharjah',
-            'hur1', 'occupied_setpoint', 'unoccupied_setpoint'
+            'previous_setpoint', 'screen_id', 'timestamp_sharjah'
         ]
         
         values = []
@@ -531,9 +530,11 @@ class MPCInferencePipeline:
             'next_sptreff_lag': None,
             'previous_setpoint': None,
             'screen_id': screen_id,
-            'hur1': sensor_data.get('HuR1') if sensor_data else None,
-            'occupied_setpoint': occupied_setpoint,
-            'unoccupied_setpoint': unoccupied_setpoint
+            'used_features': json.dumps({
+                'hur1': sensor_data.get('HuR1') if sensor_data else None,
+                'occupied_setpoint': occupied_setpoint,
+                'unoccupied_setpoint': unoccupied_setpoint
+            }) if sensor_data or occupied_setpoint is not None else None
         }
     
     def run_inference(
@@ -721,7 +722,11 @@ class MPCInferencePipeline:
                     'co2_load_factor': 0.0,
                     'optimization_status': 'fail: NO_SENSOR_LAG_DATA',
                     'objective_value': None,
-                    'used_features': None,
+                    'used_features': json.dumps({
+                        'hur1': sensor_data.get('HuR1'),
+                        'occupied_setpoint': occupied_setpoint,
+                        'unoccupied_setpoint': unoccupied_setpoint
+                    }),
                     'next_tempsp1_lag': None,
                     'next_sptreff_lag': default_setpoint,
                     'previous_setpoint': default_setpoint,
@@ -890,15 +895,17 @@ class MPCInferencePipeline:
             'co2_load_factor': mpc_result.get('co2_load_factor', 0.0),
             'optimization_status': mpc_result['optimization_status'],
             'objective_value': mpc_result.get('objective_value'),
-            'used_features': json.dumps(used_features),
+            'used_features': json.dumps({
+                **used_features,
+                'hur1': sensor_data.get('HuR1'),
+                'occupied_setpoint': occupied_setpoint,
+                'unoccupied_setpoint': unoccupied_setpoint
+            }),
             'next_tempsp1_lag': sensor_data.get('TempSp1'),
             'next_sptreff_lag': mpc_result['optimal_setpoint'],
             'previous_setpoint': mpc_result['optimal_setpoint'],
             'screen_id': screen_id,
-            'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
-            'hur1': sensor_data.get('HuR1'),
-            'occupied_setpoint': occupied_setpoint,
-            'unoccupied_setpoint': unoccupied_setpoint
+            'timestamp_sharjah': now_sharjah.strftime("%Y-%m-%d %H:%M:%S")
         }
         
         save_success = self.cassandra_handler.save_optimization_result(storage_record)
