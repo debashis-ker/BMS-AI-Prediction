@@ -287,7 +287,7 @@ class ModelTrainerSingle:
                             else:
                                 mlflow.sklearn.log_model(best_model, f"{name}_model")
                             
-                            log.info(f"{name} - Test RMSE: {test_rmse:.4f}, Test R²: {test_r2:.4f}")
+                            log.info(f"{name} - Test RMSE: {test_rmse:.4f}, Test R^2: {test_r2:.4f}")
                     
                     else:
                         # Without MLflow
@@ -319,7 +319,7 @@ class ModelTrainerSingle:
                         test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
                         test_r2 = r2_score(y_test, y_test_pred)
                         
-                        log.info(f"{name} - Test RMSE: {test_rmse:.4f}, Test R²: {test_r2:.4f}")
+                        log.info(f"{name} - Test RMSE: {test_rmse:.4f}, Test R^2: {test_r2:.4f}")
                     
                     tuned_models[name] = best_model
                     results[name] = {
@@ -356,7 +356,7 @@ class ModelTrainerSingle:
             
             log.info(f"\nBest Model: {best_name}")
             log.info(f"Test RMSE: {best_rmse:.4f}")
-            log.info(f"Test R²: {best_r2:.4f}")
+            log.info(f"Test R^2: {best_r2:.4f}")
             log.info(f"Best Parameters: {results[best_name]['best_params']}")
             
             return best_model, best_name, best_rmse, best_r2
@@ -401,7 +401,7 @@ class ModelTrainerSingle:
             with open(self.model_trainer_config.best_model_name_path, 'w') as f:
                 f.write(f"Best Model: {best_name}\n")
                 f.write(f"Test RMSE: {best_rmse:.4f}\n")
-                f.write(f"Test R²: {best_r2:.4f}\n")
+                f.write(f"Test R^2: {best_r2:.4f}\n")
                 f.write(f"Best Parameters: {results[best_name]['best_params']}\n")
             
             log.info("="*60)

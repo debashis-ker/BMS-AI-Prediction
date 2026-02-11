@@ -163,12 +163,12 @@ print("="*60)
 print(f"\nTrAvg (Indoor Temperature) Prediction:")
 print(f"  MSE: {mse_travg:.4f}")
 print(f"  MAE: {mae_travg:.4f}")
-print(f"  R² Score: {r2_travg:.4f}")
+print(f"  R^2 Score: {r2_travg:.4f}")
 
 print(f"\nHuAvg1 (Indoor Humidity) Prediction:")
 print(f"  MSE: {mse_huavg:.4f}")
 print(f"  MAE: {mae_huavg:.4f}")
-print(f"  R² Score: {r2_huavg:.4f}")
+print(f"  R^2 Score: {r2_huavg:.4f}")
 print("="*60)
 
 # Visualize predictions vs actual values
@@ -194,7 +194,7 @@ ax2.plot([y_test_actual[:, 0].min(), y_test_actual[:, 0].max()],
          'r--', linewidth=2, label='Perfect Prediction')
 ax2.set_xlabel('Actual TrAvg', fontsize=12)
 ax2.set_ylabel('Predicted TrAvg', fontsize=12)
-ax2.set_title(f'TrAvg Scatter Plot (R²={r2_travg:.4f})', fontsize=14, fontweight='bold')
+ax2.set_title(f'TrAvg Scatter Plot (R^2={r2_travg:.4f})', fontsize=14, fontweight='bold')
 ax2.legend()
 ax2.grid(True, alpha=0.3)
 
@@ -216,7 +216,7 @@ ax4.plot([y_test_actual[:, 1].min(), y_test_actual[:, 1].max()],
          'r--', linewidth=2, label='Perfect Prediction')
 ax4.set_xlabel('Actual HuAvg1', fontsize=12)
 ax4.set_ylabel('Predicted HuAvg1', fontsize=12)
-ax4.set_title(f'HuAvg1 Scatter Plot (R²={r2_huavg:.4f})', fontsize=14, fontweight='bold')
+ax4.set_title(f'HuAvg1 Scatter Plot (R^2={r2_huavg:.4f})', fontsize=14, fontweight='bold')
 ax4.legend()
 ax4.grid(True, alpha=0.3)
 

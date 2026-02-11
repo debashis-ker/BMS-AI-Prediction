@@ -834,7 +834,7 @@ class GenericModelTrainer:
                         'n_features': p
                     }
                     
-                    log.info(f"  Test R²: {test_r2:.4f}, Adjusted R²: {test_r2_adj:.4f}, RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}")
+                    log.info(f"  Test R^2: {test_r2:.4f}, Adjusted R^2: {test_r2_adj:.4f}, RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}")
                     log.info(f"  Features used: {p}")
                     
                     if test_r2_adj > best_score:
@@ -853,8 +853,8 @@ class GenericModelTrainer:
             self.model = best_model
             self.best_model_name = best_model_name
             
-            log.info(f"\nBest Model: {best_model_name} (Adjusted R²: {best_score:.4f})")
-            log.info(f"Standard R²: {all_results[best_model_name]['test_r2']:.4f}")
+            log.info(f"\nBest Model: {best_model_name} (Adjusted R^2: {best_score:.4f})")
+            log.info(f"Standard R^2: {all_results[best_model_name]['test_r2']:.4f}")
             
             json_path = os.path.join(
                 'artifacts',f'best_model_metrics.json'

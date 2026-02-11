@@ -66,8 +66,8 @@ class MPCOptimizeRequest(BaseModel):
     system_type: str = Field("AHU", description="System type")
     equipment_id: str = Field("Ahu13", description="Equipment ID (e.g., 'Ahu13')")
     screen_id: str = Field("Screen 13", description="Screen ID for occupancy lookup (e.g., 'Screen 13')")
-    occupied_setpoint: float = Field(21.0, description="Target SpTREff when occupied (°C)")
-    unoccupied_setpoint: float = Field(24.0, description="SpTREff when unoccupied (°C)")
+    occupied_setpoint: float = Field(21.0, description="Target SpTREff when occupied (degC)")
+    unoccupied_setpoint: float = Field(24.0, description="SpTREff when unoccupied (degC)")
 
 
 class MPCOptimizeResponse(BaseModel):
@@ -307,7 +307,6 @@ async def get_optimization_history(
     Returns:
         List of optimization results
     """
-    # Apply safety limit
     limit = min(limit, 500)
     
     # Calculate default date range (last 24 hours)
@@ -348,7 +347,6 @@ async def get_optimization_history(
     
     status_filter = "AND optimization_status IN ('success', 'bypassed')" if status != "all" else ""
     
-    # Format timestamps for Cassandra query
     start_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
     end_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
     

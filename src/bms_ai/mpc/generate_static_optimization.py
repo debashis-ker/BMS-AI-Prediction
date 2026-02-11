@@ -350,7 +350,7 @@ class StaticTestDataFetcher:
             )
             
             print(f"✓ Added weather data ({len(weather_df)} hourly records)")
-            print(f"  Temperature range: {weather_df['outside_temp'].min():.1f}°C to {weather_df['outside_temp'].max():.1f}°C")
+            print(f"  Temperature range: {weather_df['outside_temp'].min():.1f}degC to {weather_df['outside_temp'].max():.1f}degC")
             log.info("Added weather data successfully")
             return combined_df.drop(columns=['ds_weather'], errors='ignore')
             
@@ -533,8 +533,8 @@ class MPCOptimizationRunner:
                 unoccupied_setpoint=self.config.UNOCCUPIED_SETPOINT
             )
             print(f"✓ Model loaded from {self.config.MODEL_PATH}")
-            print(f"  Setpoints: occupied={self.config.OCCUPIED_SETPOINT}°C, "
-                  f"unoccupied={self.config.UNOCCUPIED_SETPOINT}°C, "
+            print(f"  Setpoints: occupied={self.config.OCCUPIED_SETPOINT}degC, "
+                  f"unoccupied={self.config.UNOCCUPIED_SETPOINT}degC, "
                   f"comfort=[{self.mpc_system.config.sp_min_occupied}, {self.mpc_system.config.sp_max_occupied}]")
             return True
         except Exception as e:
@@ -738,8 +738,8 @@ def generate_static_optimization_test():
     print(f"  - Occupied: {len(occupied_results)} ({len(occupied_results)/len(results_df)*100:.1f}%)")
     print(f"  - Unoccupied: {len(unoccupied_results)} ({len(unoccupied_results)/len(results_df)*100:.1f}%)")
     print(f"\nSetpoint Difference (Optimized - Actual):")
-    print(f"  - Mean: {avg_diff:.3f}°C")
-    print(f"  - Std: {std_diff:.3f}°C")
+    print(f"  - Mean: {avg_diff:.3f}degC")
+    print(f"  - Std: {std_diff:.3f}degC")
     print(f"\nOptimization Success Rate (occupied only): {success_rate:.1f}%")
     
     # Movie breakdown

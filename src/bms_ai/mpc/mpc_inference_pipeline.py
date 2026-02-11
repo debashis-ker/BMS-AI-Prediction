@@ -43,14 +43,12 @@ log = setup_logger(__name__)
 class InferenceConfig:
     """Configuration for MPC inference pipeline."""
     
-    # AHU Configuration
     equipment_id: str = "Ahu13"
     screen_id: str = "Screen 13"
     
    
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
     
-    # API Configuration
     bms_api_url: str = "https://ikoncloud.keross.com/bms-express-server/data"
     weather_api_url: str = "https://api.open-meteo.com/v1/forecast"
     
@@ -76,7 +74,7 @@ class InferenceConfig:
                 'TempSp1',   
                 'FbFAD',     
                 'Co2RA',
-                'HuR1'      # Space air humidity
+                'HuR1'     
             ]
 
 
@@ -231,7 +229,7 @@ class WeatherFetcher:
                 'humidity': current.get('relative_humidity_2m', 50.0)
             }
             
-            log.info(f"[WeatherFetcher] Current weather: {result['temperature']}°C, {result['humidity']}% RH")
+            log.info(f"[WeatherFetcher] Current weather: {result['temperature']}degC, {result['humidity']}% RH")
             return result
             
         except Exception as e:
@@ -564,7 +562,7 @@ class MPCInferencePipeline:
             Dict with optimization result and all saved data
         """
         log.info(f"[MPCInference] Starting inference for {equipment_id} / {screen_id}")
-        log.info(f"[MPCInference] Setpoints: occupied={occupied_setpoint}°C, unoccupied={unoccupied_setpoint}°C")
+        log.info(f"[MPCInference] Setpoints: occupied={occupied_setpoint}degC, unoccupied={unoccupied_setpoint}degC")
         
         if building_id:
             self.config.building_id = building_id
@@ -591,7 +589,6 @@ class MPCInferencePipeline:
                 'saved_to_cassandra': True
             }
         
-        # Update MPC with user-provided setpoints from API
         mpc_system.update_setpoints(occupied_setpoint, unoccupied_setpoint)
         
         sensor_data = self.bms_fetcher.fetch_last_10_minutes(equipment_id)
@@ -695,12 +692,11 @@ class MPCInferencePipeline:
                 if not is_occupied and isinstance(time_until_next, (int, float)) and time_until_next <= 60:
                     is_precooling = True
                 
-                # Inter-show and precooling both maintain comfort
                 needs_comfort = is_occupied or is_precooling or is_inter_show_fallback
                 default_setpoint = occupied_setpoint if needs_comfort else unoccupied_setpoint
                 mode = 'occupied' if is_occupied else ('pre_cooling' if is_precooling else ('inter_show' if is_inter_show_fallback else 'unoccupied'))
                 
-                log.warning(f"[MPCInference] No sensor lag data (TempSp1/SpTREff) - returning default setpoint {default_setpoint}°C (mode: {mode})")
+                log.warning(f"[MPCInference] No sensor lag data (TempSp1/SpTREff) - returning default setpoint {default_setpoint}degC (mode: {mode})")
                 
                 fail_record = {
                     'equipment_id': equipment_id,
@@ -780,7 +776,7 @@ class MPCInferencePipeline:
         }
         
         log.debug(f"[MPCInference] Current measurements for MPC: {current_measurements}")
-        log.debug(f"[MPCInference] Weather: temp={weather['temperature']}°C, humidity={weather['humidity']}%")
+        log.debug(f"[MPCInference] Weather: temp={weather['temperature']}degC, humidity={weather['humidity']}%")
         log.debug(f"[MPCInference] Occupancy: status={occupancy.get('status')}, movie={occupancy.get('movie_name')}, time_until_next={occupancy.get('time_until_next_movie')}")
         
         occupancy_response = {

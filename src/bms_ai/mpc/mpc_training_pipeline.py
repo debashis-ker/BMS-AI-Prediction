@@ -71,7 +71,7 @@ class PipelineConfig:
                 'SpTROcc', 
                 'FbFAD',    
                 'Co2RA',
-                'HuR1'      # Space air humidity
+                'HuR1'      
             ]
 
 
@@ -457,7 +457,7 @@ class MPCTrainingPipeline:
         log.info("STEP 1: FETCHING DATA FROM BMS API")
         log.info("=" * 60)
         
-        self.equipment_id = equipment_id  # Store for model naming
+        self.equipment_id = equipment_id  
         
         self.raw_data = self.data_fetcher.fetch_data(
             equipment_id=equipment_id,
@@ -561,34 +561,34 @@ class MPCTrainingPipeline:
         self.training_metrics = self.mpc_system.train(train_dataset)
         
         print(f"\n[Training Complete]")
-        print(f"  Train RMSE: {self.training_metrics['rmse']:.4f}°C")
-        print(f"  Train MAE: {self.training_metrics['mae']:.4f}°C")
-        print(f"  Train R²: {self.training_metrics['r2']:.4f}")
+        print(f"  Train RMSE: {self.training_metrics['rmse']:.4f}degC")
+        print(f"  Train MAE: {self.training_metrics['mae']:.4f}degC")
+        print(f"  Train R^2: {self.training_metrics['r2']:.4f}")
         log.info("Training Complete")
-        log.info(f"  Train RMSE: {self.training_metrics['rmse']:.4f}°C")
-        log.info(f"  Train MAE: {self.training_metrics['mae']:.4f}°C")
-        log.info(f"  Train R²: {self.training_metrics['r2']:.4f}")
+        log.info(f"  Train RMSE: {self.training_metrics['rmse']:.4f}degC")
+        log.info(f"  Train MAE: {self.training_metrics['mae']:.4f}degC")
+        log.info(f"  Train R^2: {self.training_metrics['r2']:.4f}")
         
         if self.test_data is not None:
             print("\nEvaluating on test set...")
             log.info("Evaluating on test set...")
             self.test_metrics = self._evaluate_on_test_set()
             print("\n[Test Set Performance]")
-            print(f"  Test RMSE: {self.test_metrics['rmse']:.4f}°C")
-            print(f"  Test MAE: {self.test_metrics['mae']:.4f}°C")
-            print(f"  Test R²: {self.test_metrics['r2']:.4f}")
+            print(f"  Test RMSE: {self.test_metrics['rmse']:.4f}degC")
+            print(f"  Test MAE: {self.test_metrics['mae']:.4f}degC")
+            print(f"  Test R^2: {self.test_metrics['r2']:.4f}")
             log.info("Test Set Performance:")
-            log.info(f"  Test RMSE: {self.test_metrics['rmse']:.4f}°C")
-            log.info(f"  Test MAE: {self.test_metrics['mae']:.4f}°C")
-            log.info(f"  Test R²: {self.test_metrics['r2']:.4f}")
+            log.info(f"  Test RMSE: {self.test_metrics['rmse']:.4f}degC")
+            log.info(f"  Test MAE: {self.test_metrics['mae']:.4f}degC")
+            log.info(f"  Test R^2: {self.test_metrics['r2']:.4f}")
             
             rmse_diff = abs(self.test_metrics['rmse'] - self.training_metrics['rmse'])
             if rmse_diff > 0.5:
-                print(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}°C")
-                log.warning(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}°C")
+                print(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}degC")
+                log.warning(f"Potential overfitting detected: RMSE difference = {rmse_diff:.4f}degC")
             else:
-                print(f"Model generalization good: RMSE difference = {rmse_diff:.4f}°C")
-                log.info(f"Model generalization good: RMSE difference = {rmse_diff:.4f}°C")
+                print(f"Model generalization good: RMSE difference = {rmse_diff:.4f}degC")
+                log.info(f"Model generalization good: RMSE difference = {rmse_diff:.4f}degC")
         
         return self.mpc_system
     
@@ -714,13 +714,13 @@ class MPCTrainingPipeline:
             
             print(f"\nTest Set Comparison Saved: {comparison_path}")
             print(f"  Samples compared: {len(comparison_df)}")
-            print(f"  Avg setpoint difference: {avg_diff:.3f}°C (Optimized - Actual)")
-            print(f"  Std deviation: {std_diff:.3f}°C")
+            print(f"  Avg setpoint difference: {avg_diff:.3f}degC (Optimized - Actual)")
+            print(f"  Std deviation: {std_diff:.3f}degC")
             print(f"  Energy savings potential: {energy_savings_potential:.1f}% of time")
             print(f"  (Higher optimized setpoint = less cooling = energy savings)\n")
             
             log.info(f"Test comparison saved: {comparison_path}")
-            log.info(f"Samples: {len(comparison_df)}, Avg diff: {avg_diff:.3f}°C, Savings potential: {energy_savings_potential:.1f}%")
+            log.info(f"Samples: {len(comparison_df)}, Avg diff: {avg_diff:.3f}degC, Savings potential: {energy_savings_potential:.1f}%")
     
     def save_model(self, filepath: Optional[str] = None, equipment_id: Optional[str] = None) -> str:
         """
@@ -824,7 +824,7 @@ class MPCTrainingPipeline:
                 self.validation_report = metadata.get('validation_report')
                 log.info(f"Loaded model trained at {metadata.get('trained_at')}")
                 if self.test_metrics:
-                    log.info(f"Test RMSE: {self.test_metrics['rmse']:.4f}°C, Test R²: {self.test_metrics['r2']:.4f}")
+                    log.info(f"Test RMSE: {self.test_metrics['rmse']:.4f}degC, Test R^2: {self.test_metrics['r2']:.4f}")
             except (AttributeError, pickle.UnpicklingError) as e:
                 log.warning(f"Could not load metadata (pickle compatibility issue): {e}")
                 log.warning("Model loaded successfully, but training metrics are not available.")
@@ -1037,8 +1037,8 @@ def load_trained_mpc(
     
 #     print(f"\nOptimization Result:")
 #     print(f"  Mode: {result['mode']}")
-#     print(f"  Optimal Setpoint: {result['optimal_setpoint']}°C")
-#     print(f"  Target Temperature: {result.get('target_temperature', 'N/A')}°C")
+#     print(f"  Optimal Setpoint: {result['optimal_setpoint']}degC")
+#     print(f"  Target Temperature: {result.get('target_temperature', 'N/A')}degC")
 #     print(f"  Status: {result['optimization_status']}")
     
 #     print("\n" + "=" * 70)
