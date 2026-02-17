@@ -235,3 +235,6 @@ artifacts/production_models/*
 artifacts/*.csv
 artifacts*.pkl
 artifacts*.joblib
+
+
+schedule_obj_dummy.json
