@@ -232,6 +232,7 @@ catboost_info/
 artifacts/generic_anamoly_models/*
 artifacts/generic_models/*
 artifacts/production_models/*
+artifacts/Anamoly_Prophet_Models/*
 artifacts/*.csv
 artifacts*.pkl
 artifacts*.joblib
