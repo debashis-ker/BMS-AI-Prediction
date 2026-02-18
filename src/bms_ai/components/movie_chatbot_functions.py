@@ -1,157 +1,342 @@
-import re
-from datetime import datetime, timezone
-from fastapi import HTTPException
+from datetime import datetime, timezone, timedelta
+from typing import Optional
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.utils.setpoint_optimization_utils import (
     fetch_movie_schedule, 
     get_occupancy_status_for_timestamp, 
     get_current_movie_occupancy_status,
     parse_time_str, 
+    get_screen_operating_window,
     SHARJAH_OFFSET
 )
 
 log = setup_logger(__name__)
 
-def convert_equipment_id(eid: str) -> str:
-    if eid.lower().startswith('ahu'):
-        return f"Screen {eid[3:]}"
-    return eid
+def format_utc(dt_obj):
+    return dt_obj.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + "Z"
 
-def identify_purpose(purpose: str) -> str:
-    p = purpose.lower()
-    mapping = {
-        "total_duration": ["duration", "how long", "runtime", "hours and minutes"],
-        "first_show": ["first", "earliest", "opening", "start of day"],
-        "last_show": ["last show", "final show", "latest show", "end of day"],
-        "movie_at_time": ["current", "now", "particular time", "show at", "playing at", "status"],
-        "movie_schedule": ["schedule", "timings", "timing", "shows", "list", "search", "next", "after", "at"]
-    }
+def format_bms_time(dt_obj):
+    return dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+
+def schedule_selector(schedule_data, current_date: Optional[datetime], instance_index: Optional[int] = None):
+    selected_instance_index = None
     
-    if any(x in p for x in ["duration", "how long", "runtime", "hours and minutes"]):
-        return "total_duration"
-
-    for key, keywords in mapping.items():
-        if any(x in p for x in keywords): return key
-    return "general_info"
-
-def cinema_query(purpose, ticket, ticket_type, equipment_id):
-    now_utc = datetime.now(timezone.utc)
-    query_text = purpose 
-    screen_name = convert_equipment_id(equipment_id)
-    intent_key = identify_purpose(purpose) 
-    
-    try:
-        schedule_data = fetch_movie_schedule(ticket=ticket, ticket_type=ticket_type)
-        if not schedule_data: raise HTTPException(status_code=404, detail="Schedule not found")
-
-        target_dt = now_utc.astimezone(SHARJAH_OFFSET).replace(tzinfo=None)
-        target_date, day_key = target_dt.date(), target_dt.strftime('%a').lower()
-
-        def get_time_occupancy():
-            time_match = re.search(r'(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)', query_text.lower())
-            if time_match:
-                try:
-                    q_utc = datetime.combine(target_date, parse_time_str(time_match.group(1).strip())).replace(tzinfo=SHARJAH_OFFSET).astimezone(timezone.utc)
-                    raw = get_occupancy_status_for_timestamp(schedule_data, screen_name, q_utc)
-                except: raw = {}
-            else:
-                raw = get_current_movie_occupancy_status(schedule_data, screens=[screen_name]).get(screen_name, {})
+    if instance_index is not None:
+        if instance_index < len(schedule_data):
+            schedule = schedule_data[instance_index]
+            selected_instance_index = instance_index
+            log.debug(f"Using provided instance_index={instance_index}")
+        else:
+            log.error(f"Invalid instance_index {instance_index} for schedule_data length {len(schedule_data)}")
+            return {}
+    else:
+        for idx, sched in enumerate(schedule_data):
+            end_date_str = sched.get('end_date', '')
+            start_date_str = sched.get('start_date', '')
             
-            return {
-                "occupancy_status": "Occupied" if raw.get("status") == 1 else "Unoccupied",
-                "movie_name": raw.get(("movie_name"),"No Movie is playing right now"),
-                "time_remaining_in_minutes": raw.get(("time_remaining"), "No Movie is playing right now")
-            }
-
-        def get_schedule_data():
-            sessions = []
-            for inst in schedule_data:
-                try:
-                    if not (datetime.strptime(inst.get('start_date',''), "%d/%m/%Y").date() <= target_date <= datetime.strptime(inst.get('end_date',''), "%d/%m/%Y").date()): continue
-                except: continue
-                for s_val in inst.get('sessions', {}).values():
-                    if s_val.get('screen', '').lower() == screen_name.lower():
-                        for tr in s_val.get('sessions_by_day', {}).get(day_key, {}).values():
-                            sessions.append({"movie_name": s_val.get("film_title"), "range": tr, "raw_start": parse_time_str(tr.split('-')[0])})
+            if not end_date_str:
+                log.debug(f"Instance {idx}: No end_date, skipping")
+                continue
             
-            if not sessions: return {"message": "No shows found for today."}
-            sessions.sort(key=lambda x: x['raw_start'])
-
-            if "next" in query_text.lower() or "after" in query_text.lower():
-                target_index = -1
-                for i, s in enumerate(sessions):
-                    clean_movie = s['movie_name'].split('(')[0].strip().lower()
-                    if clean_movie in query_text.lower() or s['movie_name'].lower() in query_text.lower():
-                        target_index = i
+            try:
+                end_date = datetime.strptime(end_date_str, "%d/%m/%Y").date()
+                start_date = datetime.strptime(start_date_str, "%d/%m/%Y").date() if start_date_str else None
                 
-                if target_index != -1 and target_index + 1 < len(sessions):
-                    next_s = sessions[target_index + 1]
-                    return {
-                        "next_show": next_s['movie_name'],
-                        "time": next_s['range'],
-                        "after_movie": sessions[target_index]['movie_name']
-                    }
-                elif target_index != -1:
-                    return {"message": f"{sessions[target_index]['movie_name']} is the last show of the day."}
-                
-            time_match = re.search(r'(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)', query_text.lower())
-            if "at" in query_text.lower() and time_match:
-                asked_time = parse_time_str(time_match.group(1).strip())
-                matches = [s for s in sessions if s['raw_start'] == asked_time]
-                
-                if matches:
-                    return {
-                        "movies_at_requested_time": [m['movie_name'] for m in matches],
-                        "showtime": time_match.group(1).strip(),
-                        "screen": screen_name
-                    }
+                if start_date and current_date >= start_date and current_date <= end_date: #type:ignore
+                    schedule = sched
+                    selected_instance_index = idx
+                    log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} ({start_date_str} to {end_date_str})")
+                    break
+                elif not start_date and current_date <= end_date: #type:ignore
+                    schedule = sched
+                    selected_instance_index = idx
+                    log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} (end: {end_date_str})")
+                    break
                 else:
-                    return {"message": f"No movies start exactly at {time_match.group(1).strip()} on this screen."}
-
-            movie_filtered = [
-                s for s in sessions 
-                if s['movie_name'].lower() in query_text.lower()
-            ] or sessions
-
-            if intent_key == "first_show":
-                s = movie_filtered[0]
-                return {
-                    "first_show_time": s['range'].split('-')[0].strip(), 
-                    "movie_name": s['movie_name'], 
-                    "date": str(target_date)
-                }
-            
-            if intent_key == "last_show":
-                s = movie_filtered[-1]
-                return {
-                    "last_show_time": s['range'].split('-')[0].strip(), 
-                    "movie_name": s['movie_name'], 
-                    "date": str(target_date)
-                }
-            
-            filtered = [s for s in sessions if s['movie_name'].lower() in query_text.lower()] or sessions
-            
-            if intent_key == "total_duration":
-                total = sum([((datetime.combine(target_date, parse_time_str(s['range'].split('-')[1])) - datetime.combine(target_date, parse_time_str(s['range'].split('-')[0]))).total_seconds()/60) % 1440 for s in filtered])
-                return {"total_daily_duration_minutes": int(total), "screen": screen_name}
-            
-            return {"screen": screen_name, "schedule_list": [s['range'] for s in filtered], "movie_names": list(set([s['movie_name'] for s in filtered]))}
-
-        handlers = {
-            "movie_at_time": get_time_occupancy,
-            "first_show": get_schedule_data,
-            "last_show": get_schedule_data,
-            "total_duration": get_schedule_data,
-            "movie_schedule": get_schedule_data
-        }
-
-        return {
-            "success" : True, "equipment_id" : equipment_id,
-            "timestamp_utc" : now_utc.isoformat(), "purpose": query_text,
-            "data": handlers.get(intent_key, lambda: {})()
-        }
-
-    except Exception as e:
-        log.error(f"Error: {e}")
-        return {"success":False, "equipment_id":equipment_id, "timestamp_utc":now_utc.isoformat(), "purpose": query_text, "data":{"error": str(e)}}
+                    log.debug(f"Instance {idx}: current_date {current_date} not in range {start_date_str} to {end_date_str}")
+            except Exception as e:
+                log.warning(f"Failed to parse dates for instance {idx}: {e}")
+                continue
+        
+        if schedule is None:
+            log.warning(f"No valid schedule instance found for current date {current_date}. Using latest schedule [0] as fallback.")
+            schedule = schedule_data[0]
+            selected_instance_index = 0
     
+    log.debug(f"Using schedule instance {selected_instance_index} for date {current_date}")
+
+    return schedule
+
+def total_duration_movies(purpose, schedule_data, screen_name, target_date, day_key):
+    if screen_name is None:
+        screens_to_process = [f"Screen {i}" for i in range(1, 17)]
+    else:
+        screens_to_process = [screen_name]
+
+    all_screens_data = []
+
+    for current_screen in screens_to_process:
+        sessions_today = []
+        
+        for s_val in schedule_data.get('sessions', {}).values():
+            if s_val.get('screen', '').lower() == current_screen.lower():
+                day_sessions = s_val.get('sessions_by_day', {}).get(day_key, {})
+                for time_range in day_sessions.values():
+                    sessions_today.append({"range": time_range})
+        
+        if sessions_today:
+            total = sum([
+                ((datetime.combine(target_date, parse_time_str(s['range'].split('-')[1])) - 
+                  datetime.combine(target_date, parse_time_str(s['range'].split('-')[0]))
+                 ).total_seconds() / 60) % 1440 
+                for s in sessions_today
+            ])
+            
+            all_screens_data.append({
+                "all_movies_total_duration_minutes": int(total), 
+                "screen": current_screen
+            })
+
+    return {
+        "success": "true",
+        "equipment_id": screen_name if screen_name else "All Screens",
+        "timestamp_utc": format_utc(datetime.now(timezone.utc)),
+        "purpose": purpose,
+        "data": all_screens_data
+    }
+
+def show_time(purpose, schedule_data, screen_name, target_date, day_key, keyword="first"):
+    if screen_name is None:
+        screens_to_process = [f"Screen {i}" for i in range(1, 17)]
+    else:
+        screens_to_process = [screen_name]
+
+    all_matches = []
+
+    for current_screen in screens_to_process:
+        window = get_screen_operating_window(schedule_data, current_screen, target_date, day_key)
+        
+        if not window:
+            continue 
+        
+        target_sessions = []
+        for s_val in schedule_data.get('sessions', {}).values():
+            if s_val.get('screen', '').lower() == current_screen.lower():
+                day_sessions = s_val.get('sessions_by_day', {}).get(day_key, {})
+                for time_range in day_sessions.values():
+                    try:
+                        parts = time_range.split("-")
+                        s_start = datetime.combine(target_date, parse_time_str(parts[0].strip()))
+                        s_end = datetime.combine(target_date, parse_time_str(parts[1].strip()))
+                        if s_end <= s_start: 
+                            s_end += timedelta(days=1)
+                        
+                        target_sessions.append({
+                            "start": s_start, 
+                            "end": s_end, 
+                            "movie": s_val.get("film_title")
+                        })
+                    except Exception:
+                        continue
+
+        if target_sessions:
+            if keyword == "first":
+                match = min(target_sessions, key=lambda x: x['start'])
+            else:
+                match = max(target_sessions, key=lambda x: x['end'])
+
+            all_matches.append({
+                "movie_name": match['movie'],
+                "movie timing": f"{format_bms_time(match['start'])} - {format_bms_time(match['end'])}" if match['start'] and match['end'] else None,
+                "screen": current_screen
+            })
+
+    if not all_matches:
+        return {"success": "false", "message": "No shows found for any screen today.", "purpose": purpose}
+
+    return {
+        "success": "true",
+        "equipment_id": screen_name if screen_name else "All Screens",
+        "timestamp_utc": format_utc(datetime.now(timezone.utc)),
+        "purpose": purpose,
+        "data": all_matches
+    }
+
+def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_date):
+    """
+    If screen_name is None, returns a list of timings for Screen 1 through Screen 16.
+    Otherwise, returns grouped timings for the specified screen.
+    """
+    if screen_name is None:
+        screens_to_process = [f"Screen {i}" for i in range(1, 17)]
+    else:
+        screens_to_process = [screen_name]
+
+    all_screens_timings = []
+
+    for current_screen in screens_to_process:
+        sessions_by_movie = {}
+        
+        for s_val in schedule_data.get('sessions', {}).values():
+            if s_val.get('screen', '').lower() == current_screen.lower():
+                film_title = s_val.get("film_title")
+                day_sessions = s_val.get('sessions_by_day', {}).get(day_key, {})
+                
+                if day_sessions:
+                    if film_title not in sessions_by_movie:
+                        sessions_by_movie[film_title] = []
+                    
+                    for time_range in day_sessions.values():
+                        try:
+                            start_str, end_str = time_range.split(' - ')
+                            
+                            start_time_obj = parse_time_str(start_str)
+                            end_time_obj = parse_time_str(end_str)
+                            
+                            start_dt = datetime.combine(target_date, start_time_obj)
+                            end_dt = datetime.combine(target_date, end_time_obj)
+                            
+                            if end_dt <= start_dt:
+                                end_dt += timedelta(days=1)
+                            
+                            formatted_range = f"{format_bms_time(start_dt)} - {format_bms_time(end_dt)}"
+                            sessions_by_movie[film_title].append(formatted_range)
+                        except:
+                            continue
+        
+        if sessions_by_movie:
+            all_screens_timings.append(
+                {
+                    "screen": current_screen,
+                    "movie_timing": sessions_by_movie
+                })
+
+    if screen_name is None:
+        return {
+            "success": "true",
+            "equipment_id": "All Screens",
+            "timestamp_utc": format_utc(datetime.now(timezone.utc)),
+            "purpose" : purpose,
+            "data": all_screens_timings}
+    
+    return {
+        "success": "true",
+        "equipment_id": screen_name,
+        "timestamp_utc": format_utc(datetime.now(timezone.utc)),
+        "purpose" : purpose,
+        "data": [all_screens_timings[0]]} if all_screens_timings else {"message": "No shows found", "screen": screen_name}
+
+def current_cinema_name(purpose, schedule_list, screen_name):
+    now_utc = datetime.now(timezone.utc)
+    screens_to_check = [screen_name] if screen_name else None
+    
+    occupancy_dict = get_current_movie_occupancy_status(schedule_list, screens=screens_to_check)
+    
+    all_screens_data = []
+    for name, data in occupancy_dict.items():
+        detailed_status = get_occupancy_status_for_timestamp(schedule_list, name, now_utc)
+        cinema_start_time = detailed_status.get("show_start_time")
+        cinema_end_time = detailed_status.get("show_end_time")
+        
+        curr_name = data.get("movie_name")
+        
+        screen_info = {
+            "screen": name,
+            "status": "Occupied" if data.get("status") == 1 else "Unoccupied",
+            "current_cinema_name": detailed_status.get("movie_name"),
+            "current_cinema_timing" : f"{format_bms_time(cinema_start_time)} - {format_bms_time(cinema_end_time)}" if cinema_start_time and cinema_end_time else None,
+            "time_until_next_show_in_minutes": data.get("time_until_next_movie"),
+
+            "next_movie_name": data.get("next_movie_name"),
+            "next_movie_time": detailed_status.get("next_movie_start")
+        }
+        
+        if curr_name:
+            screen_info["current_cinema_name"] = curr_name
+            
+        all_screens_data.append(screen_info)
+
+    return {
+        "success": "true",
+        "equipment_id": screen_name if screen_name else "All Screens",
+        "timestamp_utc": format_bms_time(now_utc),
+        "purpose": purpose,
+        "data": all_screens_data
+    }
+
+def cinema_name_by_time_and_screen(purpose, particular_time, schedule_list, screen_name):
+    if isinstance(particular_time, str):
+        try:
+            parsed_dt = datetime.fromisoformat(particular_time.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                now_sharjah = datetime.now(SHARJAH_OFFSET)
+                parsed_dt = datetime.combine(now_sharjah.date(), parse_time_str(particular_time)).replace(tzinfo=SHARJAH_OFFSET)
+            except: parsed_dt = datetime.now(timezone.utc)
+        particular_time = parsed_dt
+    
+    particular_time = particular_time or datetime.now(timezone.utc)
+    screens_to_process = [f"Screen {i}" for i in range(1, 17)] if screen_name is None else [screen_name]
+    results = []
+
+    for current_screen in screens_to_process:
+        cinema = get_occupancy_status_for_timestamp(schedule_list, current_screen, particular_time)
+        curr_name = cinema.get("movie_name")
+        next_name = cinema.get('next_movie_name')
+        show_start = cinema.get("show_start_time")
+        show_end = cinema.get("show_end_time")
+        
+        screen_data = {
+            "screen": current_screen,
+            "status": "Occupied" if cinema.get("status") == 1 else "Unoccupied",
+            "movie_name" : curr_name,
+            "movie_timing": f"{show_start} - {show_end}" if show_start and show_end else None,
+            "next_movie_name": next_name,
+            "next_movie_timing": cinema.get("next_movie_start")
+        }
+
+        if curr_name:
+            screen_data["current_cinema_name"] = curr_name
+        
+        results.append(screen_data)
+
+    return {
+        "success": "true",
+        "equipment_id": screen_name if screen_name else "All Screens",
+        "timestamp_utc": format_utc(particular_time),
+        "purpose": purpose,
+        "data": results
+    }
+
+def cinema_query(purpose: str, ticket: str, ticket_type: str, screen_name: Optional[str] = None, particular_time: Optional[str] = None):
+    now_utc = datetime.now(timezone.utc)
+    
+    schedule_list = fetch_movie_schedule(ticket=ticket, ticket_type=ticket_type)
+    if not schedule_list:
+        return {"error": "Schedule not found", "success": False}
+    
+    target_dt = now_utc.astimezone(SHARJAH_OFFSET).replace(tzinfo=None)
+    target_date = target_dt.date()
+    day_key = target_date.strftime('%a').lower()
+
+    schedule_data = schedule_selector(schedule_list, current_date=target_date) #type:ignore
+
+    if purpose == "total_duration_movies": 
+        return total_duration_movies(purpose,schedule_data, screen_name, target_date, day_key)
+        
+    if purpose == "first_show_time": 
+        return show_time(purpose,schedule_data, screen_name, target_date, day_key, keyword="first")
+        
+    elif purpose == "last_show_time": 
+        return show_time(purpose,schedule_data, screen_name, target_date, day_key, keyword="last")
+        
+    elif purpose == "get_all_cinema_timings": 
+        return total_cinema_timings(purpose,schedule_data, screen_name, day_key, target_date)
+    
+    elif purpose == "current_cinema_name": 
+        return current_cinema_name(purpose,schedule_list, screen_name)
+        
+    elif purpose == "cinema_name_by_time_and_screen": 
+        return cinema_name_by_time_and_screen(purpose,particular_time, schedule_list, screen_name)
+    
+    return {"error": "Invalid purpose", "success": False}
