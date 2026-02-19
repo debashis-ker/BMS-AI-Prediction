@@ -98,7 +98,7 @@ def total_duration_movies(purpose, schedule_data, screen_name, target_date, day_
             })
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose": purpose,
@@ -155,7 +155,7 @@ def show_time(purpose, schedule_data, screen_name, target_date, day_key, keyword
         return {"success": "false", "message": "No shows found for any screen today.", "purpose": purpose}
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose": purpose,
@@ -213,14 +213,14 @@ def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_da
 
     if screen_name is None:
         return {
-            "success": "true",
+            "success": True,
             "equipment_id": "All Screens",
             "timestamp_utc": format_utc(datetime.now(timezone.utc)),
             "purpose" : purpose,
             "data": all_screens_timings}
     
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name,
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose" : purpose,
@@ -228,38 +228,45 @@ def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_da
 
 def current_cinema_name(purpose, schedule_list, screen_name):
     now_utc = datetime.now(timezone.utc)
+    
+    sharjah_dt = now_utc.astimezone(SHARJAH_OFFSET)
+    selected_schedule = schedule_selector(schedule_list, current_date=sharjah_dt.date()) #type:ignore
+    
+    active_schedule_list = [selected_schedule]
+    
     screens_to_check = [screen_name] if screen_name else None
     
-    occupancy_dict = get_current_movie_occupancy_status(schedule_list, screens=screens_to_check)
+    occupancy_dict = get_current_movie_occupancy_status(active_schedule_list, screens=screens_to_check)
     
     all_screens_data = []
     for name, data in occupancy_dict.items():
-        detailed_status = get_occupancy_status_for_timestamp(schedule_list, name, now_utc)
+        detailed_status = get_occupancy_status_for_timestamp(active_schedule_list, name, now_utc)
+        
+        curr_name = data.get("movie_name") or detailed_status.get("movie_name")
+        next_name = data.get("next_movie_name") or detailed_status.get("next_movie_name")
+        
+        if not curr_name and not next_name:
+            continue
+
         cinema_start_time = detailed_status.get("show_start_time")
         cinema_end_time = detailed_status.get("show_end_time")
-        
-        curr_name = data.get("movie_name")
         
         screen_info = {
             "screen": name,
             "status": "Occupied" if data.get("status") == 1 else "Unoccupied",
-            "current_cinema_name": detailed_status.get("movie_name"),
-            "current_cinema_timing" : f"{format_bms_time(cinema_start_time)} - {format_bms_time(cinema_end_time)}" if cinema_start_time and cinema_end_time else None,
+            "current_cinema_name": curr_name,
+            "current_cinema_timing": f"{cinema_start_time} - {cinema_end_time}" if cinema_start_time and cinema_end_time else None,
             "time_until_next_show_in_minutes": data.get("time_until_next_movie"),
-
-            "next_movie_name": data.get("next_movie_name"),
+            "next_movie_name": next_name,
             "next_movie_time": detailed_status.get("next_movie_start")
         }
-        
-        if curr_name:
-            screen_info["current_cinema_name"] = curr_name
             
         all_screens_data.append(screen_info)
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
-        "timestamp_utc": format_bms_time(now_utc),
+        "timestamp_utc": format_utc(now_utc),
         "purpose": purpose,
         "data": all_screens_data
     }
@@ -276,32 +283,38 @@ def cinema_name_by_time_and_screen(purpose, particular_time, schedule_list, scre
         particular_time = parsed_dt
     
     particular_time = particular_time or datetime.now(timezone.utc)
+
+    check_date = particular_time.astimezone(SHARJAH_OFFSET).date()
+    selected_schedule = schedule_selector(schedule_list, current_date=check_date) #type:ignore
+    
+    active_schedule_list = [selected_schedule]
+
     screens_to_process = [f"Screen {i}" for i in range(1, 17)] if screen_name is None else [screen_name]
     results = []
 
     for current_screen in screens_to_process:
-        cinema = get_occupancy_status_for_timestamp(schedule_list, current_screen, particular_time)
+        cinema = get_occupancy_status_for_timestamp(active_schedule_list, current_screen, particular_time)
+        
         curr_name = cinema.get("movie_name")
         next_name = cinema.get('next_movie_name')
         show_start = cinema.get("show_start_time")
         show_end = cinema.get("show_end_time")
         
+        if not curr_name and not next_name:
+            continue
+
         screen_data = {
             "screen": current_screen,
             "status": "Occupied" if cinema.get("status") == 1 else "Unoccupied",
-            "movie_name" : curr_name,
+            "current_cinema_name": curr_name,
             "movie_timing": f"{show_start} - {show_end}" if show_start and show_end else None,
             "next_movie_name": next_name,
-            "next_movie_timing": cinema.get("next_movie_start")
+            "next_movie_time": cinema.get("next_movie_start")
         }
-
-        if curr_name:
-            screen_data["current_cinema_name"] = curr_name
-        
         results.append(screen_data)
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(particular_time),
         "purpose": purpose,
@@ -310,6 +323,8 @@ def cinema_name_by_time_and_screen(purpose, particular_time, schedule_list, scre
 
 def cinema_query(purpose: str, ticket: str, ticket_type: str, screen_name: Optional[str] = None, particular_time: Optional[str] = None):
     now_utc = datetime.now(timezone.utc)
+
+    screen_name = f"screen {screen_name}" if screen_name else None
     
     schedule_list = fetch_movie_schedule(ticket=ticket, ticket_type=ticket_type)
     if not schedule_list:

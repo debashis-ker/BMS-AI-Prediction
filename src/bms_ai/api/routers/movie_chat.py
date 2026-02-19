@@ -10,7 +10,7 @@ router = APIRouter(prefix="/movie_chat", tags=["Movie Chatbot"])
 
 class CinemaChatRequest(BaseModel):
     purpose: str = Field(..., description="Query")
-    screen: Optional[str] = Field(default=None, description="Equipment ID")
+    screen: Optional[int] = Field(default=None, description="Equipment ID")
     particular_time : Optional[str] = Field(default="", description="Time")
     ticket: str = Field(default="", description="Ticket")
     ticket_type: Optional[str] = Field(None, description="Ticket Type")
