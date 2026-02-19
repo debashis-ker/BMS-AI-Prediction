@@ -26,6 +26,7 @@ from cassandra.cluster import Session
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.mpc.mpc_training_pipeline import MPCTrainingPipeline
 from src.bms_ai.mpc.cinema_ahu_mpc import CinemaAHUMPCSystem, MPCConfig
+from src.bms_ai.mpc.ahu_configs import get_ahu_config, get_required_datapoints, get_sensor_rename_map, OPTIMIZABLE_AHU_IDS
 from src.bms_ai.utils.setpoint_optimization_utils import (
     fetch_movie_schedule,
     get_current_movie_occupancy_status,
@@ -67,15 +68,14 @@ class InferenceConfig:
     
     def __post_init__(self):
         if self.required_datapoints is None:
-            self.required_datapoints = [
-                'SpTREff',  
-                'FbVFD',    
-                'TempSu',    
-                'TempSp1',   
-                'FbFAD',     
-                'Co2RA',
-                'HuR1'     
-            ]
+            try:
+                self.required_datapoints = get_required_datapoints(self.equipment_id)
+            except KeyError:
+                # Fallback for equipment_ids not in ahu_configs registry
+                self.required_datapoints = [
+                    'SpTREff', 'FbVFD', 'TempSu', 'TempSp1',
+                    'FbFAD', 'Co2RA', 'HuR1'
+                ]
 
 
 # =============================================================================
@@ -286,7 +286,7 @@ class OccupancyFetcher:
             schedule_data=schedule_data,
             screens=[screen_id],
             for_which_time=0, 
-            instance_index=0  
+            instance_index=None  
         )
         
         if screen_id not in status:
@@ -612,6 +612,15 @@ class MPCInferencePipeline:
             }
         
         log.debug(f"[MPCInference] Sensor data (10-min average) for {equipment_id}: {sensor_data}")
+        
+        # ── Apply rename map to standardise raw BACnet names ──────────
+        try:
+            rename_map = get_sensor_rename_map(equipment_id)
+        except KeyError:
+            rename_map = {}
+        if rename_map and sensor_data:
+            sensor_data = {rename_map.get(k, k): v for k, v in sensor_data.items()}
+            log.debug(f"[MPCInference] Applied rename_map for {equipment_id}: {rename_map}")
         
         weather = self.weather_fetcher.fetch_current_weather()
         if weather is None:

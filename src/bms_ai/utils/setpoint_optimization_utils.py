@@ -216,7 +216,6 @@ def fetch_movie_schedule(ticket: str="8a95c9df-bc32-484f-bd6b-8c1c35f5da7d", tic
         print(f"Found {len(instances)} instances for Schedule Archival with Utility Bill task.")
         log.debug(f"Found {len(instances)} instances for Schedule Archival with Utility Bill task.")
         
-        # Extract all instances data
         all_instances = []
         for idx, instance in enumerate(instances):
             instance_data = instance.get('data', {})
