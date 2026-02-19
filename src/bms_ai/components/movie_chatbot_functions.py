@@ -98,7 +98,7 @@ def total_duration_movies(purpose, schedule_data, screen_name, target_date, day_
             })
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose": purpose,
@@ -155,7 +155,7 @@ def show_time(purpose, schedule_data, screen_name, target_date, day_key, keyword
         return {"success": "false", "message": "No shows found for any screen today.", "purpose": purpose}
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose": purpose,
@@ -213,14 +213,14 @@ def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_da
 
     if screen_name is None:
         return {
-            "success": "true",
+            "success": True,
             "equipment_id": "All Screens",
             "timestamp_utc": format_utc(datetime.now(timezone.utc)),
             "purpose" : purpose,
             "data": all_screens_timings}
     
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name,
         "timestamp_utc": format_utc(datetime.now(timezone.utc)),
         "purpose" : purpose,
@@ -264,9 +264,9 @@ def current_cinema_name(purpose, schedule_list, screen_name):
         all_screens_data.append(screen_info)
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
-        "timestamp_utc": format_bms_time(now_utc),
+        "timestamp_utc": format_utc(now_utc),
         "purpose": purpose,
         "data": all_screens_data
     }
@@ -314,7 +314,7 @@ def cinema_name_by_time_and_screen(purpose, particular_time, schedule_list, scre
         results.append(screen_data)
 
     return {
-        "success": "true",
+        "success": True,
         "equipment_id": screen_name if screen_name else "All Screens",
         "timestamp_utc": format_utc(particular_time),
         "purpose": purpose,
@@ -323,6 +323,8 @@ def cinema_name_by_time_and_screen(purpose, particular_time, schedule_list, scre
 
 def cinema_query(purpose: str, ticket: str, ticket_type: str, screen_name: Optional[str] = None, particular_time: Optional[str] = None):
     now_utc = datetime.now(timezone.utc)
+
+    screen_name = f"screen {screen_name}" if screen_name else None
     
     schedule_list = fetch_movie_schedule(ticket=ticket, ticket_type=ticket_type)
     if not schedule_list:
