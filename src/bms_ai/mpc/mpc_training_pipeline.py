@@ -329,11 +329,16 @@ class DataPreprocessor:
         result_df = result_df.sort_values(date_col).set_index(date_col)
         result_df = result_df.resample(self.config.resample_interval).mean().ffill()
         
-        # Apply AHU-specific rename map to standardise column names
         if rename_map:
-            # Only rename columns that actually exist in the DataFrame
             cols_to_rename = {k: v for k, v in rename_map.items() if k in result_df.columns}
             if cols_to_rename:
+                # For dual-sensor AHUs the target name may already exist as an
+                # individual sensor column (e.g. TempSp1 exists alongside TrAvg).
+                conflicting = [v for v in cols_to_rename.values() if v in result_df.columns]
+                if conflicting:
+                    result_df = result_df.drop(columns=conflicting)
+                    log.info(f"[Preprocessor] Dropped conflicting columns before rename: {conflicting}")
+                    print(f"[Preprocessor] Dropped conflicting columns before rename: {conflicting}")
                 result_df = result_df.rename(columns=cols_to_rename)
                 log.info(f"[Preprocessor] Applied rename_map: {cols_to_rename}")
                 print(f"[Preprocessor] Applied rename_map: {cols_to_rename}")

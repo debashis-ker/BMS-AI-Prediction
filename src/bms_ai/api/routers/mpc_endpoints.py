@@ -59,7 +59,6 @@ for _ahu_id in OPTIMIZABLE_AHU_IDS:
         _mpc_models_loaded[_ahu_id] = False
         log.error(f"Error loading MPC Model for {_ahu_id} at startup: {e}")
 
-# Legacy convenience flag – True when at least one model is loaded
 _mpc_model_loaded = any(_mpc_models_loaded.values())
 
 
@@ -182,7 +181,7 @@ async def optimize_setpoint(
             status_code=503,
             detail={
                 "success": False,
-                "error": f"MPC model not loaded for {request.equipment_id}. Please contact administrator.",
+                "error": f"MPC model not loaded for {request.equipment_id}.",
                 "error_type": "MODEL_NOT_LOADED"
             }
         )

@@ -2,24 +2,24 @@
 AHU Sensor Configurations for MPC Training & Inference
 ========================================================
 
-Maps each AHU (Ahu1–Ahu16) to its actual BACnet datapoint names and defines
+Maps each AHU (Ahu1-Ahu16) to its actual BACnet datapoint names and defines
 how raw sensor names translate to the standardised feature names expected by
 the MPC pipeline (TempSp1, Co2RA, HuR1, SpTREff, FbVFD, FbFAD, TempSu, etc.)
 
 Key differences across AHUs:
     ─────────────────────────────────────────────────────────────────
-    Group A  (Ahu1–Ahu5)   Dual space sensors  → use averages (TrAvg, Co2Avg, HuAvg1)
-    Group B  (Ahu6–Ahu13)  Single sensors       → use directly  (TempSp1, Co2RA, HuR1)
-    Group C  (Ahu14)       Unique naming         → AvgTmp, AvgHu, no onboard CO2
-    Group D  (Ahu15)       Single sensors (avg-labelled) → TempSp1, Co2RA, HuR1
-    Group E  (Ahu16)       TempSp (no '1')       → TempSp, Co2RA, HuR1
+    Group A  (Ahu1-Ahu5)   Dual space sensors  -> use averages (TrAvg, Co2Avg, HuAvg1)
+    Group B  (Ahu6-Ahu13)  Single sensors       -> use directly  (TempSp1, Co2RA, HuR1)
+    Group C  (Ahu14)       Unique naming         -> AvgTmp, AvgHu, no onboard CO2
+    Group D  (Ahu15)       Single sensors (avg-labelled) -> TempSp1, Co2RA, HuR1
+    Group E  (Ahu16)       TempSp (no '1')       -> TempSp, Co2RA, HuR1
     ─────────────────────────────────────────────────────────────────
 
 Controller mapping:
-    OS01 (2122753)  → Ahu1, Ahu2, Ahu3
-    OS02 (2122754)  → Ahu4, Ahu5, Ahu14, Ahu15, Ahu16
-    OS04 (2122756)  → Ahu6, Ahu7, Ahu8, Ahu13
-    OS05 (2122757)  → Ahu9, Ahu10, Ahu11, Ahu12
+    OS01 (2122753)  -> Ahu1, Ahu2, Ahu3
+    OS02 (2122754)  -> Ahu4, Ahu5, Ahu14, Ahu15, Ahu16
+    OS04 (2122756)  -> Ahu6, Ahu7, Ahu8, Ahu13
+    OS05 (2122757)  -> Ahu9, Ahu10, Ahu11, Ahu12
 """
 
 from __future__ import annotations
@@ -52,24 +52,24 @@ class AHUSensorConfig:
     # ── raw datapoint names as they appear in the BMS API ──────────
     space_temp_sensor : str
         Raw datapoint for space air temperature.
-        Ahu1-Ahu5 → "TrAvg" (average of dual sensors)
-        Ahu6-Ahu13 → "TempSp1"
-        Ahu14      → "AvgTmp"
-        Ahu15      → "TempSp1" (already averaged)
-        Ahu16      → "TempSp"
+        Ahu1-Ahu5 -> "TrAvg" (average of dual sensors)
+        Ahu6-Ahu13 -> "TempSp1"
+        Ahu14      -> "AvgTmp"
+        Ahu15      -> "TempSp1" (already averaged)
+        Ahu16      -> "TempSp"
     co2_sensor : str
         Raw datapoint for CO₂ level.
-        Ahu1-Ahu3,Ahu5 → "Co2Avg"
-        Ahu4            → "Co2Avg" (raw sensor is Co2RA1)
-        Ahu6-Ahu13      → "Co2RA"
-        Ahu14           → None (no onboard CO₂; external SpaceT14)
-        Ahu15-Ahu16     → "Co2RA" (already averaged)
+        Ahu1-Ahu3,Ahu5 -> "Co2Avg"
+        Ahu4            -> "Co2Avg" (raw sensor is Co2RA1)
+        Ahu6-Ahu13      -> "Co2RA"
+        Ahu14           -> None (no onboard CO₂; external SpaceT14)
+        Ahu15-Ahu16     -> "Co2RA" (already averaged)
     humidity_sensor : str
         Raw datapoint for space air humidity.
-        Ahu1-Ahu5  → "HuAvg1"
-        Ahu6-Ahu13 → "HuR1"
-        Ahu14      → "AvgHu"
-        Ahu15-Ahu16 → "HuR1"
+        Ahu1-Ahu5  -> "HuAvg1"
+        Ahu6-Ahu13 -> "HuR1"
+        Ahu14      -> "AvgHu"
+        Ahu15-Ahu16 -> "HuR1"
 
     # ── additional raw sensors (identical naming across AHUs) ──────
     setpoint_eff_sensor : str
@@ -99,7 +99,7 @@ class AHUSensorConfig:
     controller: str
     device_id: int
 
-    # Primary sensors → these are what the model uses (standardised names)
+    # Primary sensors -> these are what the model uses (standardised names)
     space_temp_sensor: str          # maps to feature "TempSp1"
     co2_sensor: Optional[str]       # maps to feature "Co2RA"
     humidity_sensor: str            # maps to feature "HuR1"
@@ -183,7 +183,7 @@ class AHUSensorConfig:
     @property
     def sensor_rename_map(self) -> Dict[str, str]:
         """
-        Mapping from *raw BACnet datapoint name* → *standardised feature name*
+        Mapping from *raw BACnet datapoint name* -> *standardised feature name*
         expected by the MPC model.
 
         The pipeline should use this after pivoting so that every AHU's
@@ -405,14 +405,14 @@ AHU14 = AHUSensorConfig(
     screen_id="Screen 14",
     controller="OS02",
     device_id=2122754,
-    space_temp_sensor="AvgTmp",       # "Average Value Of Space Temperature"
-    co2_sensor=None,                  # No onboard CO2 – external SpaceT14 on OS05
-    humidity_sensor="AvgHu",          # "Average Value of Space Humidity"
-    co2_missing=True,  # No CO2 sensor at all in BACnet for Ahu14
-    optimization_enabled=False,  # Cannot run MPC without CO2 sensor
+    space_temp_sensor="AvgTmp",         # "Average Value Of Space Temperature"
+    co2_sensor=None,                    # No onboard CO2 – external SpaceT14 on OS05
+    humidity_sensor="AvgHu",            # "Average Value of Space Humidity"
+    co2_missing=True,                   # No CO2 sensor at all in BACnet for Ahu14
+    optimization_enabled=False,         # Cannot run MPC without CO2 sensor
 )
 
-# ── Group D: Ahu15 – single sensors labelled as "average" ─────────
+#  Group D: Ahu15 – single sensors labelled as "average" 
 
 AHU15 = AHUSensorConfig(
     equipment_id="Ahu15",
@@ -424,15 +424,15 @@ AHU15 = AHUSensorConfig(
     humidity_sensor="HuR1",           # description says "Average" but name is HuR1
 )
 
-# ── Group E: Ahu16 – uses TempSp (without '1') ────────────────────
+#  Group E: Ahu16 – uses TempSp (without '1')
 
 AHU16 = AHUSensorConfig(
     equipment_id="Ahu16",
     screen_id="Screen 16",
     controller="OS02",
     device_id=2122754,
-    space_temp_sensor="TempSp",       # NOT TempSp1 — unique to Ahu16
-    co2_sensor="Co2RA",               # description says "Average"
+    space_temp_sensor="TempSp",       
+    co2_sensor="Co2RA",               
     humidity_sensor="HuR1",
 )
 
@@ -460,10 +460,8 @@ AHU_CONFIGS: Dict[str, AHUSensorConfig] = {
     "Ahu16": AHU16,
 }
 
-# Convenience list of all equipment IDs (Ahu17 corridor excluded)
 ALL_AHU_IDS: List[str] = list(AHU_CONFIGS.keys())
 
-# AHUs eligible for MPC optimization (excludes Ahu14 etc.)
 OPTIMIZABLE_AHU_IDS: List[str] = [
     ahu_id for ahu_id, cfg in AHU_CONFIGS.items()
     if cfg.optimization_enabled
@@ -484,12 +482,10 @@ def get_ahu_config(equipment_id: str) -> AHUSensorConfig:
     Raises:
         ValueError: If the AHU is not found in the registry.
     """
-    # Try exact match first
     cfg = AHU_CONFIGS.get(equipment_id)
     if cfg:
         return cfg
 
-    # Case-insensitive fallback
     key_lower = equipment_id.lower()
     for k, v in AHU_CONFIGS.items():
         if k.lower() == key_lower:
@@ -511,7 +507,7 @@ def get_required_datapoints(equipment_id: str) -> List[str]:
 
 def get_sensor_rename_map(equipment_id: str) -> Dict[str, str]:
     """
-    Convenience: return the raw→standardised column rename map for an AHU.
+    Convenience: return the raw->standardised column rename map for an AHU.
     """
     return get_ahu_config(equipment_id).sensor_rename_map
 

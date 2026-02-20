@@ -31,6 +31,7 @@ from pathlib import Path
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.mpc.mpc_training_pipeline import MPCTrainingPipeline, PipelineConfig
 from src.bms_ai.mpc.cinema_ahu_mpc import OccupancyInfo
+from src.bms_ai.mpc.ahu_configs import get_ahu_config, get_required_datapoints, get_sensor_rename_map
 from src.bms_ai.utils.setpoint_optimization_utils import (
     fetch_movie_schedule,
     get_occupancy_status_for_timestamp,
@@ -44,53 +45,68 @@ log = setup_logger(__name__)
 # =============================================================================
 
 class StaticTestConfig:
-    """Configuration for static test data generation."""
+    """Configuration for static test data generation.
     
-    # Time range (UTC)
-    START_DATE_UTC = "2026-01-15 07:00:00"
-    END_DATE_UTC = "2026-01-27 00:00:00"
+    Pass equipment_id to auto-resolve datapoints, screen, rename_map, and
+    output paths from the AHU sensor config registry.
+    """
     
-    # Sampling interval
-    SAMPLE_INTERVAL_MINUTES = 10
-    
-    # AHU Configuration
-    EQUIPMENT_ID = "Ahu13"
-    SCREEN_NAME = "Screen 13"
-    
-    # API Configuration
-    BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
-    API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
-    
-    # Weather API (Sharjah coordinates)
-    LATITUDE = 25.33
-    LONGITUDE = 55.39
-    
-    # Ticket for movie schedule API
-    SCHEDULE_TICKET = "617c3f14-dfa3-4f84-9e67-9c134b178833"
-    
-    # Setpoints
-    OCCUPIED_SETPOINT = 21.0
-    UNOCCUPIED_SETPOINT = 24.0
-    
-    # Required datapoints
-    REQUIRED_DATAPOINTS = [
-        'SpTREff',   # Effective setpoint
-        'FbVFD',     # Fan speed feedback
-        'TempSu',    # Supply air temperature
-        'TempSp1',   # Space air temperature
-        'SpTROcc',   # Occupied setpoint
-        'FbFAD',     # Fresh air damper feedback
-        'Co2RA',     # CO2 level
-        'HuR1'       # Space air humidity
-    ]
-    
-    # Output paths
-    OUTPUT_DIR = "artifacts/ahu13_mpc"
-    OUTPUT_FILENAME = "static_optimization_proportional.csv"
-    SCHEDULE_CACHE_FILENAME = "schedule_cache.json"
-    
-    # Model path
-    MODEL_PATH = "artifacts/ahu13_mpc/mpc_model.joblib"
+    def __init__(
+        self,
+        equipment_id: str = "Ahu13",
+        start_date_utc: str = "2026-01-15 07:00:00",
+        end_date_utc: str = "2026-01-27 00:00:00",
+        schedule_ticket: str = "617c3f14-dfa3-4f84-9e67-9c134b178833",
+        occupied_setpoint: float = 21.0,
+        unoccupied_setpoint: float = 24.0,
+        output_filename: str = "static_optimization_energy_aware.csv",
+    ):
+        
+        self.START_DATE_UTC = start_date_utc
+        self.END_DATE_UTC = end_date_utc
+        
+        
+        self.SAMPLE_INTERVAL_MINUTES = 10
+        
+        
+        self.EQUIPMENT_ID = equipment_id
+        try:
+            ahu_cfg = get_ahu_config(equipment_id)
+            self.SCREEN_NAME = ahu_cfg.screen_id
+            self.REQUIRED_DATAPOINTS = get_required_datapoints(equipment_id)
+            self.RENAME_MAP = get_sensor_rename_map(equipment_id)
+        except (KeyError, ValueError):
+            
+            self.SCREEN_NAME = f"Screen {equipment_id.replace('Ahu', '')}"
+            self.REQUIRED_DATAPOINTS = [
+                'SpTREff', 'FbVFD', 'TempSu', 'TempSp1',
+                'SpTROcc', 'FbFAD', 'Co2RA', 'HuR1'
+            ]
+            self.RENAME_MAP = {}
+        
+       
+        self.BUILDING_ID = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
+        self.API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
+        
+        
+        self.LATITUDE = 25.33
+        self.LONGITUDE = 55.39
+        
+        
+        self.SCHEDULE_TICKET = schedule_ticket
+        
+        
+        self.OCCUPIED_SETPOINT = occupied_setpoint
+        self.UNOCCUPIED_SETPOINT = unoccupied_setpoint
+        
+        
+        ahu_folder = f"{equipment_id.lower()}_mpc"
+        self.OUTPUT_DIR = f"artifacts/{ahu_folder}"
+        self.OUTPUT_FILENAME = output_filename
+        self.SCHEDULE_CACHE_FILENAME = "schedule_cache.json"
+        
+        
+        self.MODEL_PATH = f"artifacts/{ahu_folder}/mpc_model.joblib"
 
 
 # =============================================================================
@@ -111,12 +127,12 @@ class ScheduleCache:
                 with open(self.cache_path, 'r') as f:
                     cached_data = json.load(f)
                     
-                # Check cache age (max 24 hours)
+                
                 cached_at = cached_data.get('cached_at', '')
                 if cached_at:
                     cache_time = datetime.fromisoformat(cached_at)
                     if datetime.now() - cache_time < timedelta(hours=24):
-                        print(f"✓ Loaded schedule from cache ({self.cache_path})")
+                        print(f" Loaded schedule from cache ({self.cache_path})")
                         log.info(f"Loaded schedule from cache: {self.cache_path}")
                         return cached_data.get('schedule_data', [])
                         
@@ -137,7 +153,7 @@ class ScheduleCache:
         with open(self.cache_path, 'w') as f:
             json.dump(cache_data, f, indent=2)
         
-        print(f"✓ Schedule cached to {self.cache_path}")
+        print(f" Schedule cached to {self.cache_path}")
         log.info(f"Schedule cached to {self.cache_path}")
 
 
@@ -161,7 +177,6 @@ class StaticTestDataFetcher:
         print("STEP 1: FETCHING BMS SENSOR DATA")
         print("=" * 60)
         
-        # Build query
         cleaned_id = self.config.BUILDING_ID.replace("-", "").lower()
         location_table_name = f"datapoint_live_monitoring_{cleaned_id}"
         
@@ -194,7 +209,7 @@ class StaticTestDataFetcher:
             else:
                 raise ValueError("Invalid API response format")
             
-            print(f"✓ Fetched {len(data_list)} raw records")
+            print(f" Fetched {len(data_list)} raw records")
             log.info(f"Fetched {len(data_list)} raw records from BMS API")
             
             # Parse and pivot data
@@ -281,21 +296,34 @@ class StaticTestDataFetcher:
             aggfunc='mean'
         ).reset_index()
         
-        # Resample to 10-minute intervals
+        
         pivot_df = pivot_df.set_index('data_received_on')
         pivot_df = pivot_df.resample(f'{self.config.SAMPLE_INTERVAL_MINUTES}min').mean()
         pivot_df = pivot_df.reset_index()
         
-        # Forward fill missing values
+        
         pivot_df = pivot_df.ffill().bfill()
         
-        # Add lagged features
+        
+        rename_map = getattr(self.config, 'RENAME_MAP', {})
+        if rename_map:
+            cols_to_rename = {k: v for k, v in rename_map.items() if k in pivot_df.columns}
+            if cols_to_rename:
+                
+                conflicting = [v for v in cols_to_rename.values() if v in pivot_df.columns]
+                if conflicting:
+                    pivot_df = pivot_df.drop(columns=conflicting)
+                    print(f"  Dropped conflicting columns before rename: {conflicting}")
+                pivot_df = pivot_df.rename(columns=cols_to_rename)
+                print(f"  Applied rename_map: {cols_to_rename}")
+        
+        
         if 'TempSp1' in pivot_df.columns:
             pivot_df['TempSp1_lag_10m'] = pivot_df['TempSp1'].shift(1).fillna(pivot_df['TempSp1'])
         if 'SpTREff' in pivot_df.columns:
             pivot_df['SpTREff_lag_10m'] = pivot_df['SpTREff'].shift(1).fillna(pivot_df['SpTREff'])
         
-        print(f"✓ Parsed into {len(pivot_df)} rows with {len(pivot_df.columns)} columns")
+        print(f"Parsed into {len(pivot_df)} rows with {len(pivot_df.columns)} columns")
         return pivot_df
     
     def fetch_weather_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -349,7 +377,7 @@ class StaticTestDataFetcher:
                 direction='nearest'
             )
             
-            print(f"✓ Added weather data ({len(weather_df)} hourly records)")
+            print(f" Added weather data ({len(weather_df)} hourly records)")
             print(f"  Temperature range: {weather_df['outside_temp'].min():.1f}degC to {weather_df['outside_temp'].max():.1f}degC")
             log.info("Added weather data successfully")
             return combined_df.drop(columns=['ds_weather'], errors='ignore')
@@ -381,7 +409,7 @@ class StaticTestDataFetcher:
                 return []
         
         # Print schedule summary
-        print(f"✓ Schedule data loaded with {len(schedule_data)} instances:")
+        print(f" Schedule data loaded with {len(schedule_data)} instances:")
         for idx, sched in enumerate(schedule_data):
             print(f"  [{idx}] {sched.get('cinema_name', 'Unknown')} - "
                   f"{sched.get('start_date', '')} to {sched.get('end_date', '')}")
@@ -421,7 +449,7 @@ class StaticTestDataFetcher:
         occupied_count = 0
         precooling_count = 0
         
-        print(f"Processing {total_rows} timestamps for Screen 13...")
+        print(f"Processing {total_rows} timestamps for {self.config.SCREEN_NAME}...")
         
         for idx, row in df.iterrows():
             # data_received_on is in UTC (from Cassandra)
@@ -471,7 +499,7 @@ class StaticTestDataFetcher:
                         precooling_count += 1
         
         occupancy_rate = (occupied_count / total_rows) * 100
-        print(f"✓ Occupancy detection complete:")
+        print(f" Occupancy detection complete:")
         print(f"  Total timestamps: {total_rows}")
         print(f"  Occupied timestamps: {occupied_count} (includes {precooling_count} pre-cooling periods)")
         print(f"  Occupancy rate: {occupancy_rate:.1f}%")
@@ -532,7 +560,7 @@ class MPCOptimizationRunner:
                 occupied_setpoint=self.config.OCCUPIED_SETPOINT,
                 unoccupied_setpoint=self.config.UNOCCUPIED_SETPOINT
             )
-            print(f"✓ Model loaded from {self.config.MODEL_PATH}")
+            print(f" Model loaded from {self.config.MODEL_PATH}")
             print(f"  Setpoints: occupied={self.config.OCCUPIED_SETPOINT}degC, "
                   f"unoccupied={self.config.UNOCCUPIED_SETPOINT}degC, "
                   f"comfort=[{self.mpc_system.config.sp_min_occupied}, {self.mpc_system.config.sp_max_occupied}]")
@@ -657,7 +685,7 @@ class MPCOptimizationRunner:
                 fail_count += 1
                 continue
         
-        print(f"\n✓ Optimization complete:")
+        print(f"\n Optimization complete:")
         print(f"  Success: {success_count}")
         print(f"  Bypassed (unoccupied): {bypass_count}")
         print(f"  Failed: {fail_count}")
@@ -669,14 +697,40 @@ class MPCOptimizationRunner:
 # MAIN EXECUTION
 # =============================================================================
 
-def generate_static_optimization_test():
-    """Main function to generate static optimization test data."""
+def generate_static_optimization_test(
+    equipment_id: str = "Ahu13",
+    start_date_utc: str = "2026-01-15 07:00:00",
+    end_date_utc: str = "2026-01-27 00:00:00",
+    schedule_ticket: str = "617c3f14-dfa3-4f84-9e67-9c134b178833",
+    occupied_setpoint: float = 21.0,
+    unoccupied_setpoint: float = 24.0,
+    output_filename: str = "static_optimization_energy_aware.csv",
+):
+    """Main function to generate static optimization test data.
+    
+    Args:
+        equipment_id: AHU identifier (e.g. 'Ahu1', 'Ahu6', 'Ahu13')
+        start_date_utc: Start date in UTC
+        end_date_utc: End date in UTC
+        schedule_ticket: Ticket for movie schedule API
+        occupied_setpoint: Target setpoint when occupied (degC)
+        unoccupied_setpoint: Setpoint when unoccupied (degC)
+        output_filename: Name of the output CSV file
+    """
     print("\n" + "=" * 70)
-    print("  STATIC OPTIMIZATION TEST DATA GENERATOR")
+    print(f"  STATIC OPTIMIZATION TEST — {equipment_id}")
     print("  Cinema AHU MPC with Real Movie Schedule")
     print("=" * 70)
     
-    config = StaticTestConfig()
+    config = StaticTestConfig(
+        equipment_id=equipment_id,
+        start_date_utc=start_date_utc,
+        end_date_utc=end_date_utc,
+        schedule_ticket=schedule_ticket,
+        occupied_setpoint=occupied_setpoint,
+        unoccupied_setpoint=unoccupied_setpoint,
+        output_filename=output_filename,
+    )
     
     # Step 1-4: Fetch and prepare data
     fetcher = StaticTestDataFetcher(config)
@@ -718,7 +772,7 @@ def generate_static_optimization_test():
     output_path = os.path.join(config.OUTPUT_DIR, config.OUTPUT_FILENAME)
     
     results_df.to_csv(output_path, index=False)
-    print(f"✓ Results saved to {output_path}")
+    print(f" Results saved to {output_path}")
     
     # Print summary statistics
     print("\n" + "=" * 70)
@@ -756,4 +810,13 @@ def generate_static_optimization_test():
 
 
 if __name__ == "__main__":
-    generate_static_optimization_test()
+    # generate_static_optimization_test()
+    results = generate_static_optimization_test(
+    equipment_id='Ahu6',     
+    start_date_utc='2026-02-13 00:00:00',
+    end_date_utc='2026-02-20 00:00:00',
+    schedule_ticket='953762de-5d52-4ce4-a120-3ab942ef2fbd',
+    output_filename='static_optimization_verification.csv',
+    occupied_setpoint=21.0,
+    unoccupied_setpoint=24.0
+)
