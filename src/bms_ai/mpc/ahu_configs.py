@@ -10,7 +10,7 @@ Key differences across AHUs:
     ─────────────────────────────────────────────────────────────────
     Group A  (Ahu1-Ahu5)   Dual space sensors  -> use averages (TrAvg, Co2Avg, HuAvg1)
     Group B  (Ahu6-Ahu13)  Single sensors       -> use directly  (TempSp1, Co2RA, HuR1)
-    Group C  (Ahu14)       Unique naming         -> AvgTmp, AvgHu, no onboard CO2
+    Group C  (Ahu14)       Unique naming         -> AvgTmp, AvgCo2, AvgHu
     Group D  (Ahu15)       Single sensors (avg-labelled) -> TempSp1, Co2RA, HuR1
     Group E  (Ahu16)       TempSp (no '1')       -> TempSp, Co2RA, HuR1
     ─────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ class AHUSensorConfig:
         Ahu1-Ahu3,Ahu5 -> "Co2Avg"
         Ahu4            -> "Co2Avg" (raw sensor is Co2RA1)
         Ahu6-Ahu13      -> "Co2RA"
-        Ahu14           -> None (no onboard CO₂; external SpaceT14)
+        Ahu14           -> "AvgCo2" (available from 2026-02-19)
         Ahu15-Ahu16     -> "Co2RA" (already averaged)
     humidity_sensor : str
         Raw datapoint for space air humidity.
@@ -186,7 +186,7 @@ class AHUSensorConfig:
         Example:
             Ahu1:  {"TrAvg": "TempSp1", "Co2Avg": "Co2RA", "HuAvg1": "HuR1"}
             Ahu13: {}  (names already match)
-            Ahu14: {"AvgTmp": "TempSp1", "AvgHu": "HuR1"}
+            Ahu14: {"AvgTmp": "TempSp1", "AvgCo2": "Co2RA", "AvgHu": "HuR1"}
             Ahu16: {"TempSp": "TempSp1"}
         """
         rename = {}
@@ -399,10 +399,8 @@ AHU14 = AHUSensorConfig(
     controller="OS02",
     device_id=2122754,
     space_temp_sensor="AvgTmp",        
-    co2_sensor=None,                    
+    co2_sensor="AvgCo2",               # CO2 available from 2026-02-19
     humidity_sensor="AvgHu",            
-    co2_missing=True,                   
-    optimization_enabled=False,         
 )
 
 

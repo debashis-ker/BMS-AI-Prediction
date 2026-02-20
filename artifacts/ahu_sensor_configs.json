@@ -790,7 +790,7 @@
     "has_dual_sensors": false,
     "sensors": {
       "space_temp": "AvgTmp",
-      "co2": null,
+      "co2": "AvgCo2",
       "humidity": "AvgHu",
       "setpoint_eff": "SpTREff",
       "vfd_feedback": "FbVFD",
@@ -805,6 +805,7 @@
     },
     "rename_map": {
       "AvgTmp": "TempSp1",
+      "AvgCo2": "Co2RA",
       "AvgHu": "HuR1"
     },
     "required_datapoints": [
@@ -814,6 +815,7 @@
       "SpTROcc",
       "TempSu",
       "AvgTmp",
+      "AvgCo2",
       "AvgHu"
     ],
     "model_features": [
@@ -834,10 +836,8 @@
       "HuR1",
       "Target_Temp"
     ],
-    "missing_sensors": [
-      "Co2RA"
-    ],
-    "optimization_enabled": false
+    "missing_sensors": [],
+    "optimization_enabled": true
   },
   "Ahu15": {
     "equipment_id": "Ahu15",
