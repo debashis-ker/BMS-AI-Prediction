@@ -71,7 +71,6 @@ class InferenceConfig:
             try:
                 self.required_datapoints = get_required_datapoints(self.equipment_id)
             except KeyError:
-                # Fallback for equipment_ids not in ahu_configs registry
                 self.required_datapoints = [
                     'SpTREff', 'FbVFD', 'TempSu', 'TempSp1',
                     'FbFAD', 'Co2RA', 'HuR1'
@@ -613,7 +612,6 @@ class MPCInferencePipeline:
         
         log.debug(f"[MPCInference] Sensor data (10-min average) for {equipment_id}: {sensor_data}")
         
-        # ── Apply rename map to standardise raw BACnet names ──────────
         try:
             rename_map = get_sensor_rename_map(equipment_id)
         except KeyError:

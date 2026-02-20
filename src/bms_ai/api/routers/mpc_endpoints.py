@@ -44,7 +44,6 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/mpc", tags=["MPC Optimization"])
 
-# Per-AHU model-loaded status
 _mpc_models_loaded: Dict[str, bool] = {}
 
 for _ahu_id in OPTIMIZABLE_AHU_IDS:

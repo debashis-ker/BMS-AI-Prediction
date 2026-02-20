@@ -99,7 +99,7 @@ class AHUSensorConfig:
     controller: str
     device_id: int
 
-    # Primary sensors -> these are what the model uses (standardised names)
+    
     space_temp_sensor: str          # maps to feature "TempSp1"
     co2_sensor: Optional[str]       # maps to feature "Co2RA"
     humidity_sensor: str            # maps to feature "HuR1"
@@ -111,20 +111,16 @@ class AHUSensorConfig:
     supply_temp_sensor: str = "TempSu"
     occupancy_setpoint_sensor: str = "SpTROcc"
 
-    # Dual-sensor AHUs
     has_dual_sensors: bool = False
     individual_temp_sensors: List[str] = field(default_factory=list)
     individual_co2_sensors: List[str] = field(default_factory=list)
     individual_humidity_sensors: List[str] = field(default_factory=list)
 
-    # Missing-sensor flags  (True when a BACnet datapoint does not exist)
-    supply_temp_missing: bool = False   # True if NO supply-temp sensor at all
-    co2_missing: bool = False           # Ahu14 has no onboard CO2
+    supply_temp_missing: bool = False   
+    co2_missing: bool = False           
 
-    # Optimization flag
-    optimization_enabled: bool = True   # False for AHUs that cannot run MPC (e.g. Ahu14)
+    optimization_enabled: bool = True   
 
-    # ── helper properties ──────────────────────────────────────────
 
     @property
     def required_datapoints(self) -> List[str]:
@@ -133,19 +129,17 @@ class AHUSensorConfig:
         the BMS API for this AHU.  Skips sensors flagged as missing.
         """
         points = [
-            self.setpoint_eff_sensor,   # SpTREff
-            self.vfd_feedback_sensor,   # FbVFD
-            self.fad_feedback_sensor,   # FbFAD
-            self.occupancy_setpoint_sensor,  # SpTROcc
+            self.setpoint_eff_sensor,  
+            self.vfd_feedback_sensor,   
+            self.fad_feedback_sensor,   
+            self.occupancy_setpoint_sensor,  
         ]
-        # Supply temp (skip if missing)
         if not self.supply_temp_missing:
-            points.append(self.supply_temp_sensor)  # TempSu
+            points.append(self.supply_temp_sensor) 
 
-        # Space temperature
         if self.has_dual_sensors and self.individual_temp_sensors:
             points.extend(self.individual_temp_sensors)
-            points.append(self.space_temp_sensor)  # the average
+            points.append(self.space_temp_sensor)  
         else:
             points.append(self.space_temp_sensor)
 
@@ -164,7 +158,7 @@ class AHUSensorConfig:
         else:
             points.append(self.humidity_sensor)
 
-        return list(dict.fromkeys(points))  # deduplicate, preserve order
+        return list(dict.fromkeys(points))  
 
     @property
     def missing_sensors(self) -> List[str]:
@@ -243,7 +237,7 @@ class AHUSensorConfig:
 # AHU REGISTRY  (Ahu1 – Ahu16, skip Ahu17 corridor)
 # =============================================================================
 
-# ── Group A: Dual sensors + averages (Ahu1–Ahu5) ──────────────────
+# Group A: Dual sensors + averages (Ahu1–Ahu5) 
 
 AHU1 = AHUSensorConfig(
     equipment_id="Ahu1",
@@ -298,8 +292,8 @@ AHU4 = AHUSensorConfig(
     humidity_sensor="HuAvg1",
     has_dual_sensors=True,
     individual_temp_sensors=["TempSp1", "TempSp2"],
-    individual_co2_sensors=["Co2RA1", "Co2RA2"],  # Ahu4 uses Co2RA1 (not Co2RA)
-    individual_humidity_sensors=["HuR2"],  # HuR1 NOT present in BACnet for Ahu4, only HuR2
+    individual_co2_sensors=["Co2RA1", "Co2RA2"],  
+    individual_humidity_sensors=["HuR2"],  
 )
 
 AHU5 = AHUSensorConfig(
@@ -398,30 +392,28 @@ AHU13 = AHUSensorConfig(
     humidity_sensor="HuR1",
 )
 
-# ── Group C: Ahu14 – unique naming, no onboard CO2 sensor ─────────
 
 AHU14 = AHUSensorConfig(
     equipment_id="Ahu14",
     screen_id="Screen 14",
     controller="OS02",
     device_id=2122754,
-    space_temp_sensor="AvgTmp",         # "Average Value Of Space Temperature"
-    co2_sensor=None,                    # No onboard CO2 – external SpaceT14 on OS05
-    humidity_sensor="AvgHu",            # "Average Value of Space Humidity"
-    co2_missing=True,                   # No CO2 sensor at all in BACnet for Ahu14
-    optimization_enabled=False,         # Cannot run MPC without CO2 sensor
+    space_temp_sensor="AvgTmp",        
+    co2_sensor=None,                    
+    humidity_sensor="AvgHu",            
+    co2_missing=True,                   
+    optimization_enabled=False,         
 )
 
-#  Group D: Ahu15 – single sensors labelled as "average" 
 
 AHU15 = AHUSensorConfig(
     equipment_id="Ahu15",
     screen_id="Screen 15",
     controller="OS02",
     device_id=2122754,
-    space_temp_sensor="TempSp1",      # description says "Average" but name is TempSp1
-    co2_sensor="Co2RA",               # description says "Average" but name is Co2RA
-    humidity_sensor="HuR1",           # description says "Average" but name is HuR1
+    space_temp_sensor="TempSp1",      
+    co2_sensor="Co2RA",               
+    humidity_sensor="HuR1",          
 )
 
 #  Group E: Ahu16 – uses TempSp (without '1')
