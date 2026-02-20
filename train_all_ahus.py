@@ -7,14 +7,12 @@ import traceback
 import time
 import sys
 
-# Ensure output is flushed immediately
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
 from src.bms_ai.mpc.mpc_training_pipeline import train_mpc_from_scratch
 from src.bms_ai.mpc.generate_static_optimization import generate_static_optimization_test
 
-# ── Configuration ──────────────────────────────────────────────────────
 AHUS_TO_TRAIN = [
     "Ahu2", "Ahu3", "Ahu4", "Ahu5",
     "Ahu7", "Ahu8", "Ahu9", "Ahu10",
@@ -28,7 +26,6 @@ STATIC_OPT_START = "2026-01-23 00:00:00"
 STATIC_OPT_END = "2026-01-31 00:00:00"
 SCHEDULE_TICKET = "ac40ff65-0950-4f2b-9dec-15ec2fe7018c"
 
-# ── Results tracking ───────────────────────────────────────────────────
 results = {}
 
 for ahu_id in AHUS_TO_TRAIN:
@@ -37,7 +34,6 @@ for ahu_id in AHUS_TO_TRAIN:
     print("=" * 80)
     start_time = time.time()
 
-    # ── Phase 1: Train ─────────────────────────────────────────────────
     try:
         print(f"\n>>> TRAINING {ahu_id} ({TRAINING_FROM} to {TRAINING_TO})")
         model = train_mpc_from_scratch(
@@ -53,9 +49,8 @@ for ahu_id in AHUS_TO_TRAIN:
         print(f">>> {ahu_id} TRAINING FAILED: {e}")
         traceback.print_exc()
         results[ahu_id] = {"train": "FAILED", "error": str(e)}
-        continue  # skip static opt if training failed
+        continue  
 
-    # ── Phase 2: Static Optimization ───────────────────────────────────
     try:
         print(f"\n>>> STATIC OPTIMIZATION {ahu_id} ({STATIC_OPT_START} to {STATIC_OPT_END})")
         opt_result = generate_static_optimization_test(
@@ -79,7 +74,6 @@ for ahu_id in AHUS_TO_TRAIN:
         "time_sec": round(elapsed, 1),
     }
 
-# ── Final Summary ──────────────────────────────────────────────────────
 print("\n" + "=" * 80)
 print("  FINAL SUMMARY")
 print("=" * 80)
