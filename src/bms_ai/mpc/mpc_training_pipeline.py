@@ -28,6 +28,7 @@ from .cinema_ahu_mpc import (
     MPCState,
     OccupancyInfo
 )
+from .ahu_configs import get_ahu_config, get_required_datapoints, get_sensor_rename_map, OPTIMIZABLE_AHU_IDS
 from ..logger_config import setup_logger
 
 log = setup_logger(__name__)
@@ -62,6 +63,8 @@ class PipelineConfig:
     validation_enabled: bool = True      
     
     def __post_init__(self):
+        # required_datapoints will be resolved per-AHU at fetch time
+        # This default is only used when no equipment_id is provided
         if self.required_datapoints is None:
             self.required_datapoints = [
                 'SpTREff',  
@@ -73,6 +76,17 @@ class PipelineConfig:
                 'Co2RA',
                 'HuR1'      
             ]
+
+    def resolve_for_ahu(self, equipment_id: str) -> None:
+        """
+        Resolve required_datapoints from AHU sensor config registry.
+        This overrides the default datapoints with AHU-specific ones.
+        """
+        try:
+            self.required_datapoints = get_required_datapoints(equipment_id)
+            log.info(f"[PipelineConfig] Resolved {len(self.required_datapoints)} datapoints for {equipment_id}")
+        except ValueError:
+            log.warning(f"[PipelineConfig] AHU '{equipment_id}' not in registry, using default datapoints")
 
 
 # =============================================================================
@@ -252,7 +266,8 @@ class DataPreprocessor:
     def preprocess(
         self, 
         records: List[Dict[str, Any]],
-        add_weather: bool = True
+        add_weather: bool = True,
+        rename_map: Optional[Dict[str, str]] = None
     ) -> pd.DataFrame:
         """
         Full preprocessing pipeline for MPC training data.
@@ -263,6 +278,7 @@ class DataPreprocessor:
         3. Add weather data
         4. Pivot datapoints to columns
         5. Resample to regular intervals
+        5b. Apply sensor rename map (AHU-specific → standardised names)
         6. Add time features (cyclic encoding)
         7. Add lagged features
         8. Add target variable
@@ -271,6 +287,9 @@ class DataPreprocessor:
         Args:
             records: Raw data records from API
             add_weather: Whether to fetch and add weather data
+            rename_map: Optional dict mapping raw BACnet names → standardised
+                        names (e.g. {"TrAvg": "TempSp1", "Co2Avg": "Co2RA"}).
+                        Obtained from AHUSensorConfig.sensor_rename_map.
             
         Returns:
             Preprocessed DataFrame ready for MPC training
@@ -309,6 +328,20 @@ class DataPreprocessor:
         
         result_df = result_df.sort_values(date_col).set_index(date_col)
         result_df = result_df.resample(self.config.resample_interval).mean().ffill()
+        
+        if rename_map:
+            cols_to_rename = {k: v for k, v in rename_map.items() if k in result_df.columns}
+            if cols_to_rename:
+                # For dual-sensor AHUs the target name may already exist as an
+                # individual sensor column (e.g. TempSp1 exists alongside TrAvg).
+                conflicting = [v for v in cols_to_rename.values() if v in result_df.columns]
+                if conflicting:
+                    result_df = result_df.drop(columns=conflicting)
+                    log.info(f"[Preprocessor] Dropped conflicting columns before rename: {conflicting}")
+                    print(f"[Preprocessor] Dropped conflicting columns before rename: {conflicting}")
+                result_df = result_df.rename(columns=cols_to_rename)
+                log.info(f"[Preprocessor] Applied rename_map: {cols_to_rename}")
+                print(f"[Preprocessor] Applied rename_map: {cols_to_rename}")
         
         result_df['hour'] = result_df.index.hour
         result_df['day_of_week'] = result_df.index.dayofweek
@@ -459,6 +492,9 @@ class MPCTrainingPipeline:
         
         self.equipment_id = equipment_id  
         
+        # Resolve AHU-specific datapoints from config registry
+        self.pipeline_config.resolve_for_ahu(equipment_id)
+        
         self.raw_data = self.data_fetcher.fetch_data(
             equipment_id=equipment_id,
             from_date=from_date,
@@ -494,9 +530,18 @@ class MPCTrainingPipeline:
         if data is None:
             raise ValueError("No data to preprocess. Call fetch_data() first.")
         
+        # Get the AHU-specific rename map (if AHU is known)
+        rename_map = None
+        if self.equipment_id:
+            try:
+                rename_map = get_sensor_rename_map(self.equipment_id)
+            except ValueError:
+                log.warning(f"[Pipeline] No rename map for '{self.equipment_id}', using raw names")
+        
         self.preprocessed_data = self.preprocessor.preprocess(
             records=data,
-            add_weather=add_weather
+            add_weather=add_weather,
+            rename_map=rename_map
         )
         
         self.validation_report = self.preprocessor.validate_data(self.preprocessed_data)

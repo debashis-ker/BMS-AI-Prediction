@@ -24,6 +24,7 @@ from src.bms_ai.mpc.mpc_inference_pipeline import (
     MPCInferencePipeline,
     InferenceConfig
 )
+from src.bms_ai.mpc.ahu_configs import get_ahu_config, OPTIMIZABLE_AHU_IDS
 
 import requests
 import pandas as pd
@@ -43,16 +44,21 @@ warnings.filterwarnings('ignore')
 
 router = APIRouter(prefix="/mpc", tags=["MPC Optimization"])
 
-_mpc_model_loaded = False
+_mpc_models_loaded: Dict[str, bool] = {}
 
-try:
-    _mpc_model_loaded = MPCInferencePipeline.load_model_on_startup(equipment_id="Ahu13")
-    if _mpc_model_loaded:
-        log.info("MPC Model for Ahu13 loaded successfully at startup")
-    else:
-        log.warning("Failed to load MPC Model for Ahu13 at startup")
-except Exception as e:
-    log.error(f"Error loading MPC Model at startup: {e}")
+for _ahu_id in OPTIMIZABLE_AHU_IDS:
+    try:
+        _loaded = MPCInferencePipeline.load_model_on_startup(equipment_id=_ahu_id)
+        _mpc_models_loaded[_ahu_id] = _loaded
+        if _loaded:
+            log.info(f"MPC Model for {_ahu_id} loaded successfully at startup")
+        else:
+            log.warning(f"Failed to load MPC Model for {_ahu_id} at startup (model file may not exist yet)")
+    except Exception as e:
+        _mpc_models_loaded[_ahu_id] = False
+        log.error(f"Error loading MPC Model for {_ahu_id} at startup: {e}")
+
+_mpc_model_loaded = any(_mpc_models_loaded.values())
 
 
 class MPCOptimizeRequest(BaseModel):
@@ -111,9 +117,10 @@ class MPCOptimizeResponse(BaseModel):
 class MPCStatusResponse(BaseModel):
     """Response model for MPC status endpoint."""
     mpc_model_loaded: bool
-    equipment_id: str
-    model_path: str
+    equipment_id: Optional[str] = None
+    model_path: Optional[str] = None
     status: str
+    models: Optional[Dict[str, bool]] = None
 
 
 # =============================================================================
@@ -121,17 +128,28 @@ class MPCStatusResponse(BaseModel):
 # =============================================================================
 
 @router.get("/status", response_model=MPCStatusResponse)
-async def get_mpc_status():
+async def get_mpc_status(equipment_id: Optional[str] = None):
     """
     Get MPC system status.
     
-    Returns information about the loaded MPC model and system readiness.
+    If equipment_id is provided, returns status for that AHU.
+    Otherwise returns overall status with all models.
     """
+    if equipment_id:
+        loaded = _mpc_models_loaded.get(equipment_id, False)
+        return MPCStatusResponse(
+            mpc_model_loaded=loaded,
+            equipment_id=equipment_id,
+            model_path=f"artifacts/{equipment_id.lower()}_mpc/mpc_model.joblib",
+            status="ready" if loaded else "model_not_loaded"
+        )
+    
+    loaded_count = sum(1 for v in _mpc_models_loaded.values() if v)
+    total_count = len(_mpc_models_loaded)
     return MPCStatusResponse(
         mpc_model_loaded=_mpc_model_loaded,
-        equipment_id="Ahu13",
-        model_path="artifacts/ahu13/mpc_model.joblib",
-        status="ready" if _mpc_model_loaded else "model_not_loaded"
+        status=f"{loaded_count}/{total_count} models loaded",
+        models=_mpc_models_loaded
     )
 
 
@@ -156,13 +174,13 @@ async def optimize_setpoint(
     """
     log.info(f"[MPC Optimize] Request for {request.equipment_id} / {request.screen_id}")
     
-    if not _mpc_model_loaded:
-        log.error("[MPC Optimize] MPC model not loaded")
+    if not _mpc_models_loaded.get(request.equipment_id, False):
+        log.error(f"[MPC Optimize] MPC model not loaded for {request.equipment_id}")
         raise HTTPException(
             status_code=503,
             detail={
                 "success": False,
-                "error": "MPC model not loaded. Please contact administrator.",
+                "error": f"MPC model not loaded for {request.equipment_id}.",
                 "error_type": "MODEL_NOT_LOADED"
             }
         )

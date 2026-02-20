@@ -236,6 +236,7 @@ artifacts/Anamoly_Prophet_Models/*
 artifacts/*.csv
 artifacts*.pkl
 artifacts*.joblib
+artifacts/optimization_history/*
 
 
 schedule_obj_dummy.json
