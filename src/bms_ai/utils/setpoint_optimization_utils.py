@@ -276,6 +276,13 @@ def get_current_movie_occupancy_status(
     now_sharjah = datetime.now(SHARJAH_OFFSET).replace(tzinfo=None)
     target_dt = now_sharjah + timedelta(minutes=for_which_time)
     current_date = target_dt.date()
+    current_hour_sharjah = target_dt.hour
+    
+    # Schedule boundary rule (Sharjah time):
+    # A schedule with end_date == today is only valid BEFORE 6:00 AM.
+    # A schedule with start_date == today becomes active AT or AFTER 6:00 AM.
+    # This ensures a clean daily handover at 6 AM Sharjah time.
+    SCHEDULE_CUTOVER_HOUR = 6
     
     schedule = None
     selected_instance_index = None
@@ -301,12 +308,41 @@ def get_current_movie_occupancy_status(
                 end_date = datetime.strptime(end_date_str, "%d/%m/%Y").date()
                 start_date = datetime.strptime(start_date_str, "%d/%m/%Y").date() if start_date_str else None
                 
-                if start_date and current_date >= start_date and current_date <= end_date:
+                if start_date:
+                    # Apply 6 AM cutover logic for boundary dates
+                    if current_date > start_date and current_date < end_date:
+                        # Strictly inside the range — always valid
+                        pass
+                    elif current_date == start_date and current_date == end_date:
+                        # Single-day schedule: valid before 6 AM only if ending today,
+                        # but since start==end, treat as active after 6 AM (new schedule)
+                        if current_hour_sharjah < SCHEDULE_CUTOVER_HOUR:
+                            log.debug(f"Instance {idx}: start==end=={current_date}, before 6 AM Sharjah — skipping (old schedule still active)")
+                            continue
+                    elif current_date == end_date:
+                        # Today is the end_date: only valid BEFORE 6 AM Sharjah
+                        if current_hour_sharjah >= SCHEDULE_CUTOVER_HOUR:
+                            log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah — schedule expired")
+                            continue
+                    elif current_date == start_date:
+                        # Today is the start_date: only valid AT or AFTER 6 AM Sharjah
+                        if current_hour_sharjah < SCHEDULE_CUTOVER_HOUR:
+                            log.debug(f"Instance {idx}: start_date is today but it's before 6 AM Sharjah — not yet active")
+                            continue
+                    elif current_date < start_date or current_date > end_date:
+                        log.debug(f"Instance {idx}: current_date {current_date} not in range {start_date_str} to {end_date_str}")
+                        continue
+                    
                     schedule = sched
                     selected_instance_index = idx
                     log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} ({start_date_str} to {end_date_str})")
                     break
                 elif not start_date and current_date <= end_date:
+                    # No start_date — valid as long as we haven't passed the end_date
+                    # Apply same 6 AM rule for end_date boundary
+                    if current_date == end_date and current_hour_sharjah >= SCHEDULE_CUTOVER_HOUR:
+                        log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah — schedule expired (no start_date)")
+                        continue
                     schedule = sched
                     selected_instance_index = idx
                     log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} (end: {end_date_str})")
@@ -318,7 +354,7 @@ def get_current_movie_occupancy_status(
                 continue
         
         if schedule is None:
-            log.warning(f"No valid schedule instance found for current date {current_date}. Using latest schedule [0] as fallback.")
+            log.warning(f"No valid schedule instance found for current date {current_date} (Sharjah hour={current_hour_sharjah}). Using latest schedule [0] as fallback.")
             schedule = schedule_data[0]
             selected_instance_index = 0
     

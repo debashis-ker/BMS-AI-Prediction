@@ -307,7 +307,6 @@ async def get_optimization_history(
     status: str = "success",
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    limit: int = 500,
     session: Session = Depends(get_cassandra_session)
 ):
     """
@@ -320,12 +319,10 @@ async def get_optimization_history(
         status: Filter by optimization status - 'success' (default), 'all' for all records
         from_date: Start date in UTC ISO format (e.g., '2026-02-03T10:00:00'). Defaults to 24 hours ago.
         to_date: End date in UTC ISO format (e.g., '2026-02-03T22:00:00'). Defaults to now.
-        limit: Maximum number of records to return (default 500, max 500)
         
     Returns:
         List of optimization results
     """
-    limit = min(limit, 500)
     
     # Calculate default date range (last 24 hours)
     if not to_date:
@@ -358,7 +355,7 @@ async def get_optimization_history(
                 }
             )
     
-    log.info(f"[MPC History] Fetching history for {equipment_id}, status={status}, from={start_time}, to={end_time}, limit={limit}")
+    log.info(f"[MPC History] Fetching history for {equipment_id}, status={status}, from={start_time}, to={end_time}")
     
     config = InferenceConfig(equipment_id=equipment_id)
     table_name = config.table_name
@@ -374,7 +371,6 @@ async def get_optimization_history(
         AND timestamp_utc >= '{start_str}'
         AND timestamp_utc <= '{end_str}'
         {status_filter}
-        LIMIT {limit}
         ALLOW FILTERING;
     """
     
