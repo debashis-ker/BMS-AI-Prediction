@@ -1,0 +1,176 @@
+from typing import Dict, Any
+import os
+import warnings
+from openai import OpenAI
+from dotenv import load_dotenv
+import json
+from src.bms_ai.logger_config import setup_logger
+
+load_dotenv()
+
+log = setup_logger(__name__)
+
+warnings.filterwarnings('ignore')
+
+try:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        log.warning("OPENAI_API_KEY not found in environment variables. ChatGPT features will be limited.")
+        client = None
+    else:
+        client = OpenAI(api_key=openai_api_key)
+        log.info("OpenAI client initialized successfully")
+except Exception as e:
+    log.error(f"Failed to initialize OpenAI client: {e}")
+    client = None
+
+from typing import Dict, List
+
+def get_overall_setpoint_optimization_summary(data_input: Dict) -> Dict:
+    """
+    Analyzes historical optimization data to produce a performance summary,
+    including detailed write counts and session timelines for occupied/unoccupied modes.
+    """
+    results = data_input.get("results", []) if isinstance(data_input, dict) else data_input
+
+    if not results:
+        return {"message": "No data available for the selected period."}
+
+    sorted_data = sorted(results, key=lambda x: x.get('timestamp_utc', ''))
+    total_records = len(sorted_data)
+
+    occupied_temps = []
+    unoccupied_temps = []
+    actual_optimization_events = [r for r in sorted_data if r.get("optimization_status") != "bypassed"]
+    optimization_count = len(actual_optimization_events)
+
+    occupied_ranges, unoccupied_ranges = [], []
+    current_occ_range = None
+
+    for r in sorted_data:
+        ts = r.get('timestamp_utc')
+        mode = (r.get('mode') or "").lower()
+        temp = r.get('actual_tempsp1')
+
+        if mode == "occupied":
+            if temp is not None: occupied_temps.append(temp)
+        elif mode == "unoccupied":
+            if temp is not None: unoccupied_temps.append(temp)
+
+        status = "Occupied" if mode == "occupied" else "Unoccupied"
+        if current_occ_range is None or status != current_occ_range["status"]:
+            if current_occ_range:
+                target_list = occupied_ranges if current_occ_range["status"] == "Occupied" else unoccupied_ranges
+                target_list.append(current_occ_range)
+            current_occ_range = {"start": ts, "end": ts, "status": status}
+        else:
+            current_occ_range["end"] = ts
+
+    if current_occ_range:
+        (occupied_ranges if current_occ_range["status"] == "Occupied" else unoccupied_ranges).append(current_occ_range)
+
+    occ_count = len([r for r in sorted_data if r.get("mode") == "occupied"])
+    occ_situation = {
+        "total_write_count_occupied": occ_count,
+        "occupied_session_timeline": [f"{r['start']} to {r['end']}" for r in occupied_ranges] if occupied_ranges else None,
+        "range_of_occupied_temperature": f"{round(min(occupied_temps), 2)}°C to {round(max(occupied_temps), 2)}°C" if occupied_temps else None
+    }
+    if occ_count == 0:
+        occ_situation["reason"] = "room is unoccupied for all the time"
+
+    unocc_count = len([r for r in sorted_data if r.get("mode") == "unoccupied"])
+    unocc_situation = {
+        "total_write_count_unoccupied": unocc_count,
+        "unoccupied_session_timeline": [f"{r['start']} to {r['end']}" for r in unoccupied_ranges],
+        "range_of_unoccupied_temperature": f"{round(min(unoccupied_temps), 2)}°C to {round(max(unoccupied_temps), 2)}°C" if unoccupied_temps else None
+    }
+    if unocc_count == 0:
+        unocc_situation["reason"] = "room is occupied for all the time"
+
+    last_feat = sorted_data[-1].get('used_features', {}) if sorted_data else {}
+    eval_map = {
+        'Outside Temperature': last_feat.get("outside_temp"),
+        'Outside Humidity': last_feat.get("outside_humidity"),
+        'Occupied Temperature': last_feat.get("occupied_setpoint"),
+        'Unoccupied Temperature': last_feat.get("unoccupied_setpoint"),
+        'Fan Speed Feedback': last_feat.get("FbVFD"),
+        'Fresh Air Damper Feedback': last_feat.get("FbFAD"),
+        'Screen Occupancy': last_feat.get("occupied"),
+        'Space Air Temperature': last_feat.get("TempSp1"),
+        'Return Air Humidity': last_feat.get("HuR1") or last_feat.get("hur1"),
+        'Time-of-day Patterns': last_feat.get("hour_sin") or last_feat.get("day_sin")
+    }
+    active_params = [k for k, v in eval_map.items() if v is not None]
+
+    occupancy_percentage = (occ_count / total_records) * 100 if total_records > 0 else 0
+    avg_occ_temp = sum(occupied_temps) / len(occupied_temps) if occupied_temps else 0
+
+    return {
+        "success": True,
+        "equipment_id": data_input.get("equipment_id", "") if isinstance(data_input, dict) else "",
+        "data": {
+            "summary_title": "Setpoint Optimization Summary",
+            "start_date": data_input.get("start_date", "") if isinstance(data_input, dict) else "",
+            "end_date": data_input.get("end_date", "") if isinstance(data_input, dict) else "",
+            "occupancy_percentage": f"{round(occupancy_percentage, 1)}%",
+            "average_occupied_temperature": f"{round(avg_occ_temp, 1)}°C" if avg_occ_temp else None,
+            "optimized_count": optimization_count,
+            "write_counts": {
+                "total_write_count": total_records,
+                "occupied_situation": occ_situation,
+                "unoccupied_situation": unocc_situation
+            },
+            "evaluation_parameters": active_params if active_params else None
+        }
+    }
+def generate_optimization_summary_response(optimization_data: Dict[str, Any]) -> str:
+    """
+    Specifically handles data from get_overall_setpoint_optimization_summary 
+    to provide a high-level executive summary with using the AI narrator.
+    """
+    if not client:
+        return "Optimization summary is available, but the AI narrator is not configured."
+
+    try:
+        system_prompt = """Role: Automated Data Analysis Engine.
+
+Task: Generate a non technical data summary based on the provided JSON input. 
+
+Operational Constraints:
+1. Tone: Neutral, clinical, and strictly objective. 
+2. Prohibited Terminology: Do not use "saved," "saving," "energy," "maintained," "achieved," "recorded," "comfort," "efficiency," "guest," or any words implying intent, feeling, or effort.
+3. Content: Every sentence must include at least two numerical values or specific data keys.
+4. Data Handling: If a value is null/None, state: "Value unavailable due to zero occupancy."
+5. Formatting: Do not use bold (**) markdown. Replace all underscores (_) with spaces in the output.
+6. Conciseness: Provide only raw data correlations. No introductory or concluding filler.
+
+Analysis Logic:
+- Correlate optimized_count with the specific from_date and to_date range.
+- Map the occupancy_percentage against the evaluation_parameters used for the logic trigger.
+- Report average_occupied_temperature and average_precooling_temperature as static setpoint states.
+- Don't mention external factors, skip the line of external factors.
+
+"""
+        user_prompt = f"""Below is the Setpoint Optimization Report for the equipment:
+{json.dumps(optimization_data, indent=2)}
+
+Format as JSON:
+{{
+    "answer": "your executive summary here",
+}}
+"""
+
+        response = client.chat.completions.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+
+        gpt_res = json.loads(response.choices[0].message.content)
+        return gpt_res.get("answer")
+
+    except Exception as e:
+        return "Error generating summary."

@@ -20,7 +20,7 @@ from src.bms_ai.mpc.mpc_inference_pipeline import (
     InferenceConfig
 )
 from src.bms_ai.mpc.ahu_configs import get_ahu_config, OPTIMIZABLE_AHU_IDS
-
+from src.bms_ai.components.setpoint_optimization_summarizer_functions import get_overall_setpoint_optimization_summary, generate_optimization_summary_response
 import requests
 import pandas as pd
 import joblib
@@ -117,6 +117,13 @@ class MPCStatusResponse(BaseModel):
     status: str
     models: Optional[Dict[str, bool]] = None
 
+class MPCHistoryRequest(BaseModel):
+    """Request model for MPC History endpoint."""
+    equipment_id: str = Field(default="Ahu13", description="Equipment ID for which to fetch historical setpoint optimization data.")
+    status: str = Field(default="success", description="Filter by status: 'success', 'failed', or both.")
+    summary_needed : bool = Field(default=False, description="Whether to return summary data.")
+    from_date: Optional[str] = Field(default=None, description="Start date for filtering.")
+    to_date: Optional[str] = Field(default=None, description="End date for filtering")
 
 # =============================================================================
 # ENDPOINTS
@@ -296,13 +303,9 @@ async def get_last_optimization(
         )
 
 
-@router.get("/history/{equipment_id}")
+@router.post("/history/")
 async def get_optimization_history(
-    equipment_id: str = "Ahu13",
-    status: str = "success",
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-    need_summary : bool = False,
+    request: MPCHistoryRequest,
     session: Session = Depends(get_cassandra_session)
 ):
     """
@@ -320,6 +323,12 @@ async def get_optimization_history(
         List of optimization results
     """
     
+    equipment_id = request.equipment_id
+    to_date = request.to_date
+    from_date = request.from_date
+    status = request.status
+    summary_needed = request.summary_needed
+
     # Calculate default date range (last 24 hours)
     if not to_date:
         end_time = datetime.utcnow()
@@ -387,13 +396,27 @@ async def get_optimization_history(
                 record['timestamp_utc'] = record['timestamp_utc'].isoformat()
             
             results.append(record)
-        
-        return {
+
+        response =  {
             "success": True,
             "equipment_id": equipment_id,
+            "start_date": start_time.strftime('%Y-%m-%d %H:%M:%S'), 
+            "end_date": end_time.strftime('%Y-%m-%d %H:%M:%S'),     
             "count": len(results),
             "results": results
         }
+        
+        if response['count'] > 0:
+            if summary_needed and results:
+                overall_summary = get_overall_setpoint_optimization_summary(response)
+                response['data_summary'] = overall_summary 
+                ai_summary = generate_optimization_summary_response(overall_summary)
+                response['evaluation_factors'] = overall_summary['data']['evaluation_parameters']
+                response['summary'] = ai_summary
+        else:
+            response['summary'] = None
+
+        return response
         
     except Exception as e:
         log.error(f"[MPC History] Error: {e}")
