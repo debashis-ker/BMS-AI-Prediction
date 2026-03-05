@@ -2,11 +2,6 @@
 MPC Endpoints for Cinema AHU Optimization
 ==========================================
 
-FastAPI endpoints for MPC-based setpoint optimization.
-Provides real-time optimization for cinema AHU systems.
-
-Author: BMS-AI Team
-Date: January 2026
 """
 
 from datetime import datetime, timedelta
