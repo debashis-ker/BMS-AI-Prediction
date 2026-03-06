@@ -75,6 +75,42 @@ class GetEnergyDataRequest(BaseModel):
     )
 
 
+SUMMATION_KEYS: Dict[str, str] = {
+    "total_kwh": "kwh_value",
+    "total_rth": "rth_value",
+    "total_cost_aed": "estimated_cost_aed",
+    "avg_delta_t": "delta_t",
+    "avg_flow": "avg_flow",
+    "avg_chws": "avg_chws",
+    "avg_chwr": "avg_chwr",
+}
+
+
+class MonthlyTotalRequest(BaseModel):
+    building_id: str = Field(
+        default=DEFAULT_BUILDING_ID,
+        description="Building ID.",
+    )
+    from_date: Optional[str] = Field(
+        default=None,
+        description="ISO-8601 start datetime (UTC). Defaults to start of the current month.",
+        examples=["2026-03-01T00:00:00Z"],
+    )
+    to_date: Optional[str] = Field(
+        default=None,
+        description="ISO-8601 end datetime (UTC). Defaults to current datetime.",
+        examples=["2026-03-06T00:00:00Z"],
+    )
+    keys: Optional[List[str]] = Field(
+        default=["total_kwh"],
+        description=(
+            "List of keys to compute summations for. "
+            "Allowed keys: total_kwh, total_rth, total_cost_aed, "
+            "avg_delta_t, avg_flow, avg_chws, avg_chwr."
+        ),
+    )
+
+
 
 
 def _parse_dt(value: Optional[str]) -> Optional[datetime]:
@@ -197,4 +233,76 @@ async def get_energy_data(
         raise
     except Exception as e:
         log.error(f"[EnergyAPI] get_energy_data failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@router.post("/get_aggregated_values", summary="Get monthly total / aggregated values for selected keys")
+async def monthly_total(
+    body: MonthlyTotalRequest,
+    session: Session = Depends(get_cassandra_session),
+):
+    """
+    Return aggregated totals (or averages) for the requested period.
+        * Defaults to current month-to-date if no dates provided.
+        * Default key is ``total_kwh`` but you can specify any combination of:
+            - total_kwh
+    """
+    now = datetime.now(timezone.utc)
+    from_dt = _parse_dt(body.from_date) or now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    to_dt = _parse_dt(body.to_date) or now
+
+    requested_keys = body.keys or ["total_kwh"]
+    invalid_keys = [k for k in requested_keys if k not in SUMMATION_KEYS]
+    if invalid_keys:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Invalid key(s): {invalid_keys}. "
+                f"Allowed keys: {list(SUMMATION_KEYS.keys())}"
+            ),
+        )
+
+    try:
+        records = fetch_energy_data(
+            session=session,
+            building_id=body.building_id,
+            from_dt=from_dt,
+            to_dt=to_dt,
+        )
+
+        if not records:
+            return {
+                "status": "no_data",
+                "message": "No energy consumption records found for the given period.",
+                "from_date": from_dt.isoformat(),
+                "to_date": to_dt.isoformat(),
+                "totals": {k: 0.0 for k in requested_keys},
+            }
+
+        def _safe(v: float) -> float:
+            return 0.0 if (math.isnan(v) or math.isinf(v)) else v
+
+        totals: Dict[str, float] = {}
+        for key in requested_keys:
+            field = SUMMATION_KEYS[key]
+            values = [r.get(field, 0) or 0 for r in records]
+            if key.startswith("avg_"):
+                totals[key] = round(_safe(sum(values) / len(values)), 4)
+            else:
+                totals[key] = round(_safe(sum(values)), 4)
+
+        return {
+            "status": "success",
+            "from_date": from_dt.isoformat(),
+            "to_date": to_dt.isoformat(),
+            "total_records": len(records),
+            "totals": totals,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[EnergyAPI] monthly_total failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
