@@ -6,6 +6,7 @@ Endpoints:
     POST /energy_consumption/history   -> get_energy_data        (retrieve stored data)
 """
 
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
@@ -169,15 +170,26 @@ async def get_energy_data(
 
         aggregated = aggregate_energy_data(records, freq=freq)
 
+        def _safe(v: float) -> float:
+            return 0.0 if (math.isnan(v) or math.isinf(v)) else v
+
+        for rec in aggregated:
+            for k, v in rec.items():
+                if isinstance(v, float):
+                    rec[k] = _safe(v)
+
+        n = len(aggregated)
         return {
             "status": "success",
             "frequency": freq,
             "from_date": from_dt.isoformat(),
             "to_date": to_dt.isoformat(),
-            "total_records": len(aggregated),
-            "total_kwh": round(sum(r.get("kwh_value", 0) for r in aggregated), 4),
-            "total_rth": round(sum(r.get("rth_value", 0) for r in aggregated), 4),
-            "total_cost_aed": round(sum(r.get("estimated_cost_aed", 0) for r in aggregated), 4),
+            "total_records": n,
+            "avg_delta_t": round(_safe(sum(r.get("delta_t", 0) for r in aggregated) / n), 4),
+            "avg_flow": round(_safe(sum(r.get("avg_flow", 0) for r in aggregated) / n), 4),
+            "total_kwh": round(_safe(sum(r.get("kwh_value", 0) for r in aggregated)), 4),
+            "total_rth": round(_safe(sum(r.get("rth_value", 0) for r in aggregated)), 4),
+            "total_cost_aed": round(_safe(sum(r.get("estimated_cost_aed", 0) for r in aggregated)), 4),
             "data": aggregated,
         }
 
