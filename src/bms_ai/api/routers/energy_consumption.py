@@ -21,6 +21,9 @@ from src.bms_ai.utils.energy_consumption_utils import (
     process_and_store_hourly_energy,
     fetch_energy_data,
     aggregate_energy_data,
+    process_energy_meter_delta,
+    fetch_energy_delta_history,
+    aggregate_energy_delta_data,
 )
 
 import warnings
@@ -305,4 +308,185 @@ async def monthly_total(
         raise
     except Exception as e:
         log.error(f"[EnergyAPI] monthly_total failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ======================== Energy Meter Delta ========================
+
+class EnergyMeterDeltaRequest(BaseModel):
+    building_id: str = Field(
+        default=DEFAULT_BUILDING_ID,
+        description="Building UUID (with or without hyphens).",
+    )
+    service_id: str = Field(..., description="Service ID, e.g. OS01-MTR-06Eg")
+    asset_code: str = Field(..., description="Asset code, e.g. OS01-MTR-06")
+    site: str = Field(..., description="Site code, e.g. OS01")
+    system_type: str = Field(..., description="System type, e.g. MtrEMU")
+    device_id: str = Field(..., description="Device ID")
+    device_ip: str = Field(..., description="Device IP")
+    object_name: str = Field(..., description="Object name, e.g. VOX'OS01'MtrEMU'EMU06'00'Eg")
+    equipment_name: str = Field(..., description="Equipment name, e.g. EMU06")
+    equipment_id: str = Field(..., description="Equipment ID, e.g. EMU06")
+    data_received_on: str = Field(..., description="Timestamp string, e.g. 2026-03-09T11:09:14.994 UTC")
+    datapoint: str = Field(..., description="Datapoint name, e.g. Eg")
+    monitoring_data: str = Field(..., description="Current meter reading as string, e.g. 116207.3984375")
+    subsystem: str = Field(default="-", description="Subsystem")
+    system_id: str = Field(default="-", description="System ID")
+
+
+@router.post("/calculate_and_store_energy_meter_delta", summary="Calculate & store energy meter consumption delta")
+async def energy_meter_delta(
+    body: EnergyMeterDeltaRequest,
+    session: Session = Depends(get_cassandra_session),
+):
+    """
+    1. Fetch the most recent reading for this meter from the *values* table via IKON API.
+    2. Calculate the difference: ``current_monitoring_data - previous_monitoring_data``.
+    3. Store the current data + difference into ``energy_meter_consumption_delta_<buildingId>``.
+
+    The response includes the current value, previous value, and the computed delta.
+    """
+    current_data = {
+        "service_id": body.service_id,
+        "asset_code": body.asset_code,
+        "site": body.site,
+        "system_type": body.system_type,
+        "device_id": body.device_id,
+        "device_ip": body.device_ip,
+        "object_name": body.object_name,
+        "equipment_name": body.equipment_name,
+        "equipment_id": body.equipment_id,
+        "data_received_on": body.data_received_on,
+        "datapoint": body.datapoint,
+        "monitoring_data": body.monitoring_data,
+        "subsystem": body.subsystem,
+        "system_id": body.system_id,
+    }
+
+    try:
+        result = process_energy_meter_delta(
+            session=session,
+            building_id=body.building_id,
+            current_data=current_data,
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[EnergyAPI] energy_meter_delta failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class EnergyMeterDeltaHistoryRequest(BaseModel):
+    building_id: str = Field(
+        default=DEFAULT_BUILDING_ID,
+        description="Building UUID (with or without hyphens).",
+    )
+    from_date: Optional[str] = Field(
+        default=None,
+        description="ISO-8601 start datetime. Defaults to 24 hours ago.",
+        examples=["2026-03-09T00:00:00Z"],
+    )
+    to_date: Optional[str] = Field(
+        default=None,
+        description="ISO-8601 end datetime. Defaults to now.",
+        examples=["2026-03-10T00:00:00Z"],
+    )
+    site: str = Field(
+        default="OS01",
+        description="Site code filter, e.g. OS01",
+    )
+    equipment_ids: List[str] = Field(
+        default=[],
+        description=(
+            "List of equipment IDs to filter by. "
+            "Empty array = fetch all and sum same-timestamp readings across equipment. "
+            "Single item (e.g. ['EMU03']) = return only that equipment's data. "
+            "Multiple items (e.g. ['EMU03','EMU06']) = return each equipment individually."
+        ),
+    )
+    datapoint: str = Field(
+        default="Eg",
+        description="Datapoint name filter.",
+    )
+    frequency: Optional[str] = Field(
+        default="H",
+        description=(
+            "Aggregation frequency: "
+            "H = Hourly (default), D = Daily, W = Weekly, M = Monthly, Q = Quarterly."
+        ),
+    )
+
+
+@router.post("/meter_delta_history", summary="Retrieve stored energy meter delta history")
+async def energy_meter_delta_history(
+    body: EnergyMeterDeltaHistoryRequest,
+    session: Session = Depends(get_cassandra_session),
+):
+    """
+    Retrieve energy meter delta records from the ``energy_meter_consumption_delta_<buildingId>`` table.
+
+    * Defaults to last 24 hours, hourly aggregation, site=OS01, datapoint=Eg.
+    * ``equipment_ids``:
+        - Empty array (default): fetch all equipment, sum same-timestamp readings into combined totals.
+        - Single item: return only that equipment's data.
+        - Multiple items: return each equipment's data individually.
+    * Data is returned in **ascending** chronological order.
+    """
+    now = datetime.now(timezone.utc)
+    from_dt = _parse_dt(body.from_date) or (now - timedelta(hours=24))
+    to_dt = _parse_dt(body.to_date) or now
+    freq = (body.frequency or "H").upper()
+
+    if freq not in ("H", "D", "W", "M", "Q"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid frequency '{freq}'. Must be one of H, D, W, M, Q.",
+        )
+
+    combine = len(body.equipment_ids) == 0
+
+    try:
+        records = fetch_energy_delta_history(
+            session=session,
+            building_id=body.building_id,
+            from_dt=from_dt,
+            to_dt=to_dt,
+            site=body.site,
+            equipment_ids=body.equipment_ids if body.equipment_ids else None,
+            datapoint=body.datapoint,
+        )
+
+        if not records:
+            return {
+                "status": "no_data",
+                "message": "No energy meter delta records found for the given parameters.",
+                "data": [],
+            }
+
+        aggregated = aggregate_energy_delta_data(records, freq=freq, combine=combine)
+
+        def _safe(v: float) -> float:
+            return 0.0 if (math.isnan(v) or math.isinf(v)) else v
+
+        for rec in aggregated:
+            for k, v in rec.items():
+                if isinstance(v, float):
+                    rec[k] = _safe(v)
+
+        total_diff = sum(r.get("energy_difference", 0) or 0 for r in records)
+
+        return {
+            "status": "success",
+            "frequency": freq,
+            "from_date": from_dt.isoformat(),
+            "to_date": to_dt.isoformat(),
+            "total_records": len(records),
+            "total_energy_difference": round(_safe(total_diff), 7),
+            "data": aggregated,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[EnergyAPI] energy_meter_delta_history failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
