@@ -398,3 +398,336 @@ def process_and_store_hourly_energy(
             for r in energy_records
         ],
     }
+
+
+# ========================== Energy Meter Delta ==========================
+
+def _get_delta_table_name(building_id: str) -> str:
+    """Return sanitised delta table name for a building."""
+    cleaned = building_id.replace("-", "").lower()
+    return f"energy_meter_consumption_delta_{cleaned}"
+
+
+CREATE_DELTA_TABLE_CQL = """
+CREATE TABLE IF NOT EXISTS {keyspace}.{table_name} (
+    service_id          text,
+    asset_code          text,
+    site                text,
+    system_type         text,
+    device_id           text,
+    device_ip           text,
+    object_name         text,
+    equipment_name      text,
+    equipment_id        text,
+    data_received_on    text,
+    datapoint           text,
+    monitoring_data     text,
+    subsystem           text,
+    system_id           text,
+    energy_difference   double,
+    PRIMARY KEY ((service_id, asset_code, site, system_type, device_id, device_ip, object_name, equipment_name, equipment_id), data_received_on)
+) WITH CLUSTERING ORDER BY (data_received_on DESC);
+"""
+
+
+def _get_values_table_name(building_id: str) -> str:
+    """Return the 'values' table name that holds only the most recent reading."""
+    cleaned = building_id.replace("-", "").lower()
+    return f"datapoint_live_monitoring_values{cleaned}"
+
+
+def fetch_last_eg_reading(
+    building_id: str,
+    datapoint: str,
+    site: str,
+    equipment_id: str,
+    url: str = IKON_DATA_URL,
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the most recent row for the given datapoint / site / equipment_id
+    from the *values* table via the IKON data API.
+    Returns the single record dict, or None if nothing found.
+    """
+    values_table = _get_values_table_name(building_id)
+
+    query = (
+        f"SELECT * FROM {values_table} "
+        f"WHERE datapoint IN ('{datapoint}') "
+        f"AND site = '{site}' "
+        f"AND equipment_id = '{equipment_id}' "
+        f"ALLOW FILTERING;"
+    )
+
+    log.info(f"[EnergyDelta] Fetching last reading from {values_table}")
+    log.debug(f"[EnergyDelta] Query: {query}")
+
+    payload = {"query": query}
+    try:
+        resp = requests.post(url, json=payload, timeout=120)
+        resp.raise_for_status()
+        raw = resp.json()
+
+        if isinstance(raw, list):
+            data_list = raw
+        elif isinstance(raw, dict):
+            data_list = raw.get("queryResponse", [])
+        else:
+            data_list = []
+
+        if not data_list:
+            log.warning("[EnergyDelta] No previous reading found in values table.")
+            return None
+
+        record = data_list[0]
+        log.info(f"[EnergyDelta] Last reading: monitoring_data={record.get('monitoring_data')}")
+        return record
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"[EnergyDelta] HTTP error fetching last reading: {e}")
+        raise HTTPException(status_code=502, detail=f"External API error: {e}")
+    except Exception as e:
+        log.error(f"[EnergyDelta] Unexpected error fetching last reading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def ensure_delta_table(session: Session, building_id: str) -> str:
+    """Create the energy meter delta table if it doesn't exist. Returns table name."""
+    table_name = _get_delta_table_name(building_id)
+    cql = CREATE_DELTA_TABLE_CQL.format(keyspace=KEYSPACE, table_name=table_name)
+    try:
+        session.execute(cql)
+        log.info(f"[EnergyDelta] Ensured table {table_name} exists.")
+    except Exception as e:
+        log.error(f"[EnergyDelta] Failed to create table {table_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Table creation error: {e}")
+    return table_name
+
+
+def store_energy_delta_record(
+    session: Session,
+    building_id: str,
+    record: Dict[str, Any],
+) -> bool:
+    """Insert a single energy delta record into Cassandra. Returns True on success."""
+    table_name = ensure_delta_table(session, building_id)
+
+    insert_cql = f"""
+    INSERT INTO {KEYSPACE}.{table_name} (
+        service_id, asset_code, site, system_type,
+        device_id, device_ip, object_name, equipment_name, equipment_id,
+        data_received_on, datapoint, monitoring_data,
+        subsystem, system_id, energy_difference
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+
+    try:
+        prepared = session.prepare(insert_cql)
+        session.execute(prepared, (
+            record["service_id"],
+            record["asset_code"],
+            record["site"],
+            record["system_type"],
+            record["device_id"],
+            record["device_ip"],
+            record["object_name"],
+            record["equipment_name"],
+            record["equipment_id"],
+            record["data_received_on"],
+            record["datapoint"],
+            record["monitoring_data"],
+            record["subsystem"],
+            record["system_id"],
+            record["energy_difference"],
+        ))
+        log.info(f"[EnergyDelta] Inserted delta record at {record['data_received_on']}")
+        return True
+    except Exception as e:
+        log.error(f"[EnergyDelta] Insert failed for {record['data_received_on']}: {e}")
+        raise HTTPException(status_code=500, detail=f"CQL insert error: {e}")
+
+
+def process_energy_meter_delta(
+    session: Session,
+    building_id: str,
+    current_data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    End-to-end:
+    1. Fetch the last recorded reading from the values table via IKON API.
+    2. Calculate: energy_difference = received_value (newest) - last_recorded_value (from DB).
+    3. Store the received data + difference in the delta table.
+    """
+    last_record = fetch_last_eg_reading(
+        building_id=building_id,
+        datapoint=current_data["datapoint"],
+        site=current_data["site"],
+        equipment_id=current_data["equipment_id"],
+    )
+
+    current_value = float(current_data["monitoring_data"])
+
+    if last_record is None:
+        energy_difference = 0.0
+        log.info("[EnergyDelta] No previous reading; storing with difference=0.")
+    else:
+        last_value = float(last_record["monitoring_data"])
+        energy_difference = current_value - last_value
+        log.info(
+            f"[EnergyDelta] received={current_value}, last(DB)={last_value}, "
+            f"difference={energy_difference}"
+        )
+
+    delta_record = {
+        "service_id": current_data["service_id"],
+        "asset_code": current_data["asset_code"],
+        "site": current_data["site"],
+        "system_type": current_data["system_type"],
+        "device_id": current_data["device_id"],
+        "device_ip": current_data["device_ip"],
+        "object_name": current_data["object_name"],
+        "equipment_name": current_data["equipment_name"],
+        "equipment_id": current_data["equipment_id"],
+        "data_received_on": current_data["data_received_on"],
+        "datapoint": current_data["datapoint"],
+        "monitoring_data": current_data["monitoring_data"],
+        "subsystem": current_data["subsystem"],
+        "system_id": current_data["system_id"],
+        "energy_difference": round(energy_difference, 7),
+    }
+
+    store_energy_delta_record(session, building_id, delta_record)
+
+    return {
+        "status": "success",
+        "message": "Energy meter delta calculated and stored.",
+        "data": {
+            "data_received_on": delta_record["data_received_on"],
+            "object_name": delta_record["object_name"],
+            "monitoring_data": delta_record["monitoring_data"],
+            "previous_monitoring_data": last_record["monitoring_data"] if last_record else None,
+            "energy_difference": delta_record["energy_difference"],
+        },
+    }
+
+
+def fetch_energy_delta_history(
+    session: Session,
+    building_id: str,
+    from_dt: datetime,
+    to_dt: datetime,
+    site: str = "OS01",
+    equipment_ids: Optional[List[str]] = None,
+    datapoint: str = "Eg",
+) -> List[Dict[str, Any]]:
+    """Fetch stored energy meter delta records from Cassandra, returned in ascending order."""
+    table_name = ensure_delta_table(session, building_id)
+
+    from_str = from_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + " UTC"
+    to_str = to_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + " UTC"
+
+    query = (
+        f"SELECT * FROM {KEYSPACE}.{table_name} "
+        f"WHERE data_received_on >= '{from_str}' "
+        f"AND data_received_on <= '{to_str}' "
+        f"AND site = '{site}' "
+        f"AND datapoint = '{datapoint}' "
+    )
+    if equipment_ids:
+        id_in = ", ".join([f"'{eid}'" for eid in equipment_ids])
+        query += f"AND equipment_id IN ({id_in}) "
+    query += "ALLOW FILTERING;"
+
+    log.debug(f"[EnergyDelta] History query: {query}")
+
+    try:
+        rows = session.execute(query)
+        results = []
+        for row in rows:
+            results.append({
+                "service_id": row.service_id,
+                "asset_code": row.asset_code,
+                "site": row.site,
+                "system_type": row.system_type,
+                "device_id": row.device_id,
+                "device_ip": row.device_ip,
+                "object_name": row.object_name,
+                "equipment_name": row.equipment_name,
+                "equipment_id": row.equipment_id,
+                "data_received_on": row.data_received_on,
+                "datapoint": row.datapoint,
+                "monitoring_data": row.monitoring_data,
+                "subsystem": row.subsystem,
+                "system_id": row.system_id,
+                "energy_difference": row.energy_difference,
+            })
+
+        results.sort(key=lambda r: r["data_received_on"])
+
+        log.info(f"[EnergyDelta] Fetched {len(results)} delta history records.")
+        return results
+    except Exception as e:
+        log.error(f"[EnergyDelta] History fetch failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Query error: {e}")
+
+
+def aggregate_energy_delta_data(
+    records: List[Dict[str, Any]],
+    freq: str = "H",
+    combine: bool = True,
+) -> List[Dict[str, Any]]:
+    """
+    Aggregate energy meter delta records into coarser time buckets.
+
+    freq: H=hourly, D=daily, W=weekly, M=monthly, Q=quarterly
+    combine:
+        True  -> sum same-timestamp readings across equipment first, then aggregate.
+        False -> keep each equipment_id separate, aggregate individually.
+    """
+    if not records:
+        return []
+
+    df = pd.DataFrame(records)
+    df["data_received_on"] = pd.to_datetime(df["data_received_on"], utc=True)
+    df["monitoring_data"] = pd.to_numeric(df["monitoring_data"], errors="coerce")
+    df["energy_difference"] = pd.to_numeric(df["energy_difference"], errors="coerce")
+    df.sort_values("data_received_on", inplace=True)
+
+    freq_map = {"H": "h", "D": "D", "W": "W-MON", "M": "MS", "Q": "QS"}
+    pd_freq = freq_map.get(freq.upper(), "h")
+
+    if combine:
+        grouped = df.groupby("data_received_on").agg(
+            energy_difference=("energy_difference", "sum"),
+            monitoring_data=("monitoring_data", "sum"),
+        )
+        agg = grouped.resample(pd_freq).agg(
+            total_energy_difference=("energy_difference", "sum"),
+            record_count=("energy_difference", "count"),
+            total_monitoring_data=("monitoring_data", "sum"),
+        ).dropna(how="all")
+
+        agg = agg.round(7)
+        agg.reset_index(inplace=True)
+        agg.rename(columns={"data_received_on": "period_start"}, inplace=True)
+        agg["period_start"] = agg["period_start"].dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        return agg.to_dict(orient="records")
+    else:
+        all_results = []
+        for eid, edf in df.groupby("equipment_id"):
+            edf = edf.set_index("data_received_on")
+            agg = edf.resample(pd_freq).agg(
+                total_energy_difference=("energy_difference", "sum"),
+                record_count=("energy_difference", "count"),
+                min_monitoring_data=("monitoring_data", "min"),
+                max_monitoring_data=("monitoring_data", "max"),
+            ).dropna(how="all")
+
+            agg = agg.round(7)
+            agg.reset_index(inplace=True)
+            agg.rename(columns={"data_received_on": "period_start"}, inplace=True)
+            agg["period_start"] = agg["period_start"].dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            agg["equipment_id"] = eid
+            all_results.extend(agg.to_dict(orient="records"))
+
+        all_results.sort(key=lambda r: (r["period_start"], r["equipment_id"]))
+        return all_results
