@@ -10,6 +10,8 @@ from typing import Iterator, List, Dict, Any, Tuple
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from src.bms_ai.logger_config import setup_logger
+from datetime import datetime, timezone
+from cassandra.concurrent import execute_concurrent_with_args
 
 log = setup_logger(__name__)
 
@@ -19,7 +21,7 @@ CASSANDRA_PORT = 9042
 KEYSPACE_NAME = 'user_keyspace'
 CHUNK_SIZE = 100
 
-HISTORY_TABLE_SUFFIX = "historical_data"
+table_name_SUFFIX = "historical_data"
 ANAMOLY_TABLE_SUFFIX = "anamoly_data"
 ANAMOLY_TTL_SECONDS = 30 * 24 * 60 * 60
 
@@ -91,20 +93,78 @@ def fetch_data_in_chunks(url: str, chunk_size: int) -> Iterator[Tuple[str, Dict[
         
         yield building_id, asset_metadata, chunk_iterator
 
+def save_optimized_setpoint_difference_data(data_chunk: List[Dict], building_id: str, session: Session) -> int:
+    """Saves setpoint difference data to Cassandra using concurrent execution for better performance."""
+    if not data_chunk:
+        return 0
 
+    unusual_activity_table_suffix = "setpoint_overriden_data"
+    table_name = f"{unusual_activity_table_suffix}_{building_id.replace('-', '').lower()}"
+    
+    CREATE_BASE_CQL = """
+    CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
+        timestamp timestamp, 
+        timestamp_sharjah text,
+        mode text,
+        equipment_id text, 
+        sptreff_diff double, 
+        tempsp1_diff double, 
+        chwfb_diff double, 
+        PRIMARY KEY (equipment_id, timestamp))
+        WITH CLUSTERING ORDER BY (timestamp ASC);
+    """
+    
+    INSERT_BASE_CQL = """
+    INSERT INTO {keyspace}."{table_name}" 
+    (timestamp, timestamp_sharjah, mode, equipment_id, sptreff_diff, tempsp1_diff, chwfb_diff)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """
+    
+    try:
+        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=table_name))
+        
+        prep_query = INSERT_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=table_name)
+        stmt = session.prepare(prep_query)
 
+        params_list = []
+        for record in data_chunk:
+            ts_str = record.get('timestamp')
+            ts_obj = parser.parse(ts_str) #type:ignore
+            if ts_obj.tzinfo is None:
+                ts_obj = ts_obj.replace(tzinfo=timezone.utc)
+
+            data_tuple = (
+                ts_obj,
+                record.get('timestamp_sharjah'),
+                record.get('mode'),
+                record.get('equipment_id'),
+                float(record.get('SpTREff_diff', 0.0)),
+                float(record.get('TempSp1_diff', 0.0)),
+                float(record.get('ChwFb_diff', 0.0))
+            )
+            params_list.append(data_tuple)
+
+        results = execute_concurrent_with_args(session, stmt, params_list, concurrency=50)
+        
+        rows_inserted = sum(1 for success, result in results if success)
+        return rows_inserted
+
+    except Exception as e:
+        print(f"Error detail: {e}")
+        raise HTTPException(status_code=500, detail=f"Cassandra insert error: {e}")
+    
 def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata: Dict, session: Session) -> int: #type:ignore
     """Saves data chunk to Cassandra. Returns the number of rows inserted."""
     cluster = None
     rows_inserted = 0
-    Optimization_HISTORY_TABLE_SUFFIX = "historical_data_opt"
+    Optimization_table_name_SUFFIX = "historical_data_opt"
     Optimization_SETPOINT_TABLE_SUFFIX = "setpoint_data_opt"
     
     site_value = metadata["site"]
     equipment_id_value = metadata["equipment_id"]
     system_type_value = metadata["system_type"]
 
-    history_table = f"{Optimization_HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+    table_name = f"{Optimization_table_name_SUFFIX}_{building_id.replace('-', '').lower()}"
     setpoint_table = f"{Optimization_SETPOINT_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
     
     CREATE_BASE_CQL = """
@@ -137,10 +197,10 @@ def save_data_to_cassandraV2(data_chunk : List[Dict], building_id: str, metadata
         #     cluster.auth_provider = auth_provider
         # session = cluster.connect(KEYSPACE_NAME)
         
-        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=history_table, ttl_option=""))
+        session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=table_name, ttl_option=""))
         session.execute(CREATE_BASE_CQL.format(keyspace=KEYSPACE_NAME, table_name=setpoint_table, ttl_option=f"AND default_time_to_live = {ANAMOLY_TTL_SECONDS}"))
         
-        history_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=history_table))
+        history_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=table_name))
         anamoly_stmt = session.prepare(INSERT_BASE_CQL.format(table_name=setpoint_table))
 
         data_tuple = ()
@@ -169,7 +229,7 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
     Fetches adjustment history data for a given building and equipment from an external API.
     """
     ADJUSTMENT_API_URL = "https://ikoncloud.keross.com/bms-express-server/data"
-    Optimization_HISTORY_TABLE_SUFFIX = "historical_data_opt"
+    Optimization_table_name_SUFFIX = "historical_data_opt"
     Optimization_SETPOINT_TABLE_SUFFIX = "setpoint_data_opt"
 
     Query_BASE_CQL = f"""
@@ -188,10 +248,10 @@ def fetch_adjustment_hisoryData(building_id: str,site: str, system_type: str, eq
 
         # session = cluster.connect(KEYSPACE_NAME)
         
-        #history_table = f"{building_id.replace('-', '').lower()}_{HISTORY_TABLE_SUFFIX}"
-        history_table = f"{Optimization_HISTORY_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+        #table_name = f"{building_id.replace('-', '').lower()}_{table_name_SUFFIX}"
+        table_name = f"{Optimization_table_name_SUFFIX}_{building_id.replace('-', '').lower()}"
         setpoint_table = f"{Optimization_SETPOINT_TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
-        query_cql = Query_BASE_CQL.format(table_name=history_table)
+        query_cql = Query_BASE_CQL.format(table_name=table_name)
         log.info(f"Executing Cassandra query: {query_cql}")
         print(query_cql)
         

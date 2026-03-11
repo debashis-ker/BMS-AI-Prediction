@@ -20,7 +20,7 @@ from src.bms_ai.mpc.mpc_inference_pipeline import (
     InferenceConfig
 )
 from src.bms_ai.mpc.ahu_configs import get_ahu_config, OPTIMIZABLE_AHU_IDS
-from src.bms_ai.components.setpoint_optimization_summarizer_functions import get_overall_setpoint_optimization_summary, generate_optimization_summary_response
+from src.bms_ai.components.setpoint_optimization_summarizer_functions import get_overall_setpoint_optimization_summary
 import requests
 import pandas as pd
 import joblib
@@ -408,11 +408,11 @@ async def get_optimization_history(
         
         if response['count'] > 0:
             if summary_needed and results:
-                overall_summary = get_overall_setpoint_optimization_summary(response)
+                overall_summary = get_overall_setpoint_optimization_summary(response, session)
                 response['data_summary'] = overall_summary 
-                ai_summary = generate_optimization_summary_response(overall_summary)
-                response['evaluation_factors'] = overall_summary['data']['evaluation_parameters']
-                response['summary'] = ai_summary
+                # ai_summary = generate_optimization_summary_response(overall_summary)
+                # response['evaluation_factors'] = overall_summary['data']['evaluation_parameters']
+                # response['summary'] = ai_summary
         else:
             response['summary'] = None
 

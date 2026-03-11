@@ -7,7 +7,7 @@ import uvicorn
 # from bms_ai.api.routers import production_endpoints
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,production_endpoints,chatbot_ollama,fetch_datapoints_using_haystack,lstm_predictions,mpc_endpoints,energy_consumption,alert_system,movie_chat
+from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,production_endpoints,chatbot_ollama,fetch_datapoints_using_haystack,lstm_predictions,mpc_endpoints,energy_consumption,alert_system,movie_chat,setpoint_optimization_overriden_values
 import os
 from src.bms_ai.api.routers import mqtt
 from dotenv import load_dotenv
@@ -59,6 +59,7 @@ app.include_router(energy_consumption.router)  # Chilled-water energy consumptio
 app.include_router(mqtt.router)
 app.include_router(alert_system.router)
 app.include_router(movie_chat.router)
+app.include_router(setpoint_optimization_overriden_values.router)
 
 @app.get("/")
 def root():
