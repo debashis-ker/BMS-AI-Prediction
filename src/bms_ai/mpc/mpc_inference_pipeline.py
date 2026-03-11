@@ -324,7 +324,8 @@ class CassandraDataHandler:
         query = f"""
             SELECT * FROM {self.config.table_name}
             WHERE equipment_id = '{equipment_id}' {success_filter}
-            LIMIT 1;
+            LIMIT 1
+            ALLOW FILTERING;
         """
         
         log.debug(f"[CassandraHandler] Fetching last optimization for {equipment_id} (timeout: {effective_timeout} min)")
