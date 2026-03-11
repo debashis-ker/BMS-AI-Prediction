@@ -172,27 +172,21 @@ def get_optimization_analysis(data):
 
     for records in data['results']:
         if ((records['used_features']["occupied"] == 1) and records['used_features']["occupied_setpoint"] != records["actual_sptreff"] and records['actual_sptreff'] != records['optimized_setpoint']):
-            log.info("condition matched of occupied situation: ", records['used_features']["occupied"] == 1)
-            log.info("condition matched of occupied setpoint not equals to actual setpoint: ", records['used_features']["occupied_setpoint"] != records["actual_sptreff"])
-            log.info("condition matched of actual setpoint not equals to optimized setpoint : " , records['actual_sptreff'] != records['optimized_setpoint'])
-            log.info('All conditions matched within occupied session of setpoint optimization')
-            log.info("timestamp : ", records['timestamp_utc'])
-            log.info('timestamp_sharjah', records['timestamp_sharjah'])
+            log.info('All conditions matched within occupied session of setpoint optimization : Screen is Occupied, Occupied Setpoint not equals to actual setpoint, actual setpoint not equals to optimized setpoint')
+            log.info(f"timestamp : {records['timestamp_utc']}")
+            log.info(f"timestamp_sharjah : {records['timestamp_sharjah']}")
             result.append({"timestamp": records['timestamp_utc'], "timestamp_sharjah" : records['timestamp_sharjah'], "mode" : records['mode'] , "optimized_setpoint": records['optimized_setpoint'], "actual_sptreff": records['actual_sptreff'], "equipment_id": records['equipment_id'], "actual_tempsp1": records['actual_tempsp1']})
 
         elif ((records['used_features']["occupied"] == 0) and records['used_features']["unoccupied_setpoint"] != records["actual_sptreff"] and records['actual_sptreff'] != records['optimized_setpoint']):
-            log.info("condition matched of unoccupied situation: ", records['used_features']["occupied"] == 0)
-            log.info("condition matched of unoccupied setpoint not equals to actual setpoint: ", records['used_features']["unoccupied_setpoint"] != records["actual_sptreff"])
-            log.info("condition matched of actual setpoint not equals to optimized setpoint : " , records['actual_sptreff'] != records['optimized_setpoint'])
-            log.info('All conditions matched within unoccupied session of setpoint optimization')
-            log.info("timestamp : ", records['timestamp_utc'])
-            log.info('timestamp_sharjah', records['timestamp_sharjah'])
+            log.info('All conditions matched within unoccupied session of setpoint optimization : Screen is unoccupied, unoccupied Setpoint not equals to actual setpoint, actual setpoint not equals to optimized setpoint')
+            log.info(f"timestamp : {records['timestamp_utc']}")
+            log.info(f"timestamp_sharjah : {records['timestamp_sharjah']}")
             result.append({"timestamp": records['timestamp_utc'],  "timestamp_sharjah" : records['timestamp_sharjah'], "mode" : records['mode'] , "optimized_setpoint": records['optimized_setpoint'], "actual_sptreff": records['actual_sptreff'], "equipment_id": records['equipment_id'], "actual_tempsp1": records['actual_tempsp1']})
 
     if len(result) > 0:
         for records in result:
             unusual_timestamps_utc.append(records['timestamp'])
-        log.info("timestamps of occupied sessions with setpoint optimization issues: ", unusual_timestamps_utc)
+        log.info(f"timestamps of occupied sessions with setpoint optimization issues: {unusual_timestamps_utc}")
     return result
 
 async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=None, session=None):
@@ -272,7 +266,7 @@ def fetch_setpoint_diffs_averages(
     
     table_suffix = building_id.replace('-', '').lower()
     table_name = f"setpoint_overriden_data_{table_suffix}"
-    keyspace = os.getenv("CASSANDRA_KEYSPACE", "your_keyspace_name")
+    keyspace = os.getenv("CASSANDRA_KEYSPACE","user_keyspace")
 
     select_clause = """
         AVG(chwfb_diff) as avg_chwfb, 
@@ -319,3 +313,71 @@ def fetch_setpoint_diffs_averages(
     except Exception as e:
         log.error(f"Aggregation Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database aggregation failed: {str(e)}")
+
+def fetch_setpoint_diffs(
+    building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
+    equipment_id: str = "Ahu1", 
+    session: Any = None, 
+    start_date: Optional[str] = None, 
+    end_date: Optional[str] = None
+) -> Dict[str, Any]:
+    
+    table_suffix = building_id.replace('-', '').lower()
+    table_name = f"setpoint_overriden_data_{table_suffix}"
+    keyspace = os.getenv("CASSANDRA_KEYSPACE", "user_keyspace")
+
+    select_clause = """
+        equipment_id, 
+        timestamp, 
+        chwfb_diff, 
+        mode, 
+        sptreff_diff, 
+        tempsp1_diff, 
+        timestamp_sharjah
+    """
+    
+    query = f"SELECT {select_clause} FROM {keyspace}.\"{table_name}\" WHERE equipment_id = ?"
+    params = [equipment_id]
+
+    if start_date:
+        query += " AND timestamp >= ?"
+        params.append(parser.parse(start_date).replace(tzinfo=timezone.utc)) #type: ignore
+    if end_date:
+        query += " AND timestamp <= ?"
+        params.append(parser.parse(end_date).replace(tzinfo=timezone.utc)) #type: ignore
+
+    try:
+        log.info(f"Fetching raw records from {table_name}")
+        
+        stmt = session.prepare(query)
+        rows = session.execute(stmt, params)
+
+        records = []
+        for row in rows:
+            records.append({
+                "equipment_id": row.equipment_id,
+                "timestamp": row.timestamp.isoformat() if row.timestamp else None,
+                "timestamp_sharjah": row.timestamp_sharjah,
+                "mode": row.mode,
+                "chwfb_diff": round(float(row.chwfb_diff or 0), 4),
+                "sptreff_diff": round(float(row.sptreff_diff or 0), 4),
+                "tempsp1_diff": round(float(row.tempsp1_diff or 0), 4)
+            })
+
+        if not records:
+            return {
+                "success": False,
+                "message": "No data found for the specified criteria.",
+                "total_records": 0,
+                "data": []
+            }
+
+        return {
+            "success": True,
+            "total_records": len(records),
+            "data": records
+        }
+
+    except Exception as e:
+        log.error(f"Fetch Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database fetch failed: {str(e)}")
