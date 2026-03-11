@@ -86,11 +86,6 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
     if occ_count == 0:
         occ_situation["reason"] = "room is unoccupied for all the time"
 
-    unocc_count = len([
-        r for r in sorted_data 
-        if r.get("mode") == "unoccupied" 
-        and r.get("optimization_status") != "bypassed"
-    ])
     unocc_situation = {
         "total_write_count_unoccupied": unocc_count,
         "maximum_unoccupied_temperature": f"{round(max(unoccupied_temps), 2)}" if unoccupied_temps else None,
