@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, Field
-from src.bms_ai.components.setpoint_optimization_overriden_function import calculate_setpoint_diffs, fetch_setpoint_diffs_averages
+from src.bms_ai.components.setpoint_optimization_overriden_function import calculate_setpoint_diffs, fetch_setpoint_diffs_averages, fetch_setpoint_diffs
 from src.bms_ai.utils.save_cassandra_data import save_optimized_setpoint_difference_data
 import warnings
 from src.bms_ai.logger_config import setup_logger
@@ -54,6 +54,14 @@ async def save_setpoint_optimization_diff(
         log.error(f"Error saving setpoint optimization differences: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
 
+@router.post("/fetch_setpoint_optimization_differences")
+def fetch_setpoint_optimization_differences(
+    request: OptimizationRequest, 
+    session: Session = Depends(get_cassandra_session)
+):
+    result = fetch_setpoint_diffs(building_id=request.building_id, equipment_id=request.equipment_id, session=session, start_date=request.from_date, end_date=request.to_date)
+    return result
+
 @router.post("/fetch_setpoint_optimization_average")
 def fetch_setpoint_optimization_average(
     request: OptimizationRequest, 
@@ -61,3 +69,4 @@ def fetch_setpoint_optimization_average(
 ):
     result = fetch_setpoint_diffs_averages(building_id=request.building_id, equipment_id=request.equipment_id, session=session, start_date=request.from_date, end_date=request.to_date)
     return result
+

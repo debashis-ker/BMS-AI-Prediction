@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from src.bms_ai.components.setpoint_optimization_overriden_function import fetch_setpoint_diffs_averages
+from src.bms_ai.components.setpoint_optimization_overriden_function import fetch_setpoint_diffs_averages, fetch_setpoint_diffs
 import json
 from src.bms_ai.logger_config import setup_logger
 
@@ -23,9 +23,9 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
     unoccupied_temps = []
     precooling_temps = []
     # actual_optimization_events = [r for r in sorted_data if r.get("optimization_status") != "bypassed"]
-    actual_optimization_events = [r for r in sorted_data]
+    # actual_optimization_events = [r for r in sorted_data]
 
-    optimization_count = len(actual_optimization_events)
+    # optimization_count = len(actual_optimization_events)
 
     occupied_ranges, unoccupied_ranges, precooling_ranges = [], [], []
     current_occ_range = None
@@ -61,15 +61,27 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
     if current_occ_range:
         (occupied_ranges if current_occ_range["status"] == "Occupied" else unoccupied_ranges).append(current_occ_range)
 
-    occ_count = len([
-        r for r in sorted_data 
-        if (r.get("mode") == "occupied" or r.get("mode") == "pre_cooling") 
-        and r.get("optimization_status") != "bypassed"
-    ])
+    raw_records = []
+    if session:
+        try:
+            raw_res = fetch_setpoint_diffs(
+                equipment_id=data_input.get("equipment_id", ""),
+                session=session,
+                start_date=data_input.get("start_date"),
+                end_date=data_input.get("end_date")
+            )
+            if raw_res.get("success"):
+                raw_records = raw_res.get("data", [])
+        except Exception as e:
+            log.error(f"Failed to fetch raw records for counts: {e}")
+
+    occ_count = len([r for r in raw_records if r.get("mode") in ["occupied", "pre_cooling"]])
+    unocc_count = len([r for r in raw_records if r.get("mode") == "unoccupied"])
 
     occ_situation = {
         "total_write_count_occupied": occ_count,
-        "range_of_occupied_temperature": f"{round(min(occupied_temps), 2)}°C to {round(max(occupied_temps), 2)}°C" if occupied_temps else None
+        "maximum_occupied_temperature": f"{round(max(occupied_temps), 2)}" if occupied_temps else None,
+        "minimum_occupied_temperature": f"{round(min(occupied_temps), 2)}" if occupied_temps else None,
     }
     if occ_count == 0:
         occ_situation["reason"] = "room is unoccupied for all the time"
@@ -81,7 +93,8 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
     ])
     unocc_situation = {
         "total_write_count_unoccupied": unocc_count,
-        "range_of_unoccupied_temperature": f"{round(min(unoccupied_temps), 2)}°C to {round(max(unoccupied_temps), 2)}°C" if unoccupied_temps else None
+        "maximum_unoccupied_temperature": f"{round(max(unoccupied_temps), 2)}" if unoccupied_temps else None,
+        "minimum_unoccupied_temperature": f"{round(min(unoccupied_temps), 2)}" if unoccupied_temps else None,
     }
     if unocc_count == 0:
         unocc_situation["reason"] = "room is occupied for all the time"
