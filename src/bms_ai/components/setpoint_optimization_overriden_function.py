@@ -266,7 +266,7 @@ def fetch_setpoint_diffs_averages(
     
     table_suffix = building_id.replace('-', '').lower()
     table_name = f"setpoint_overriden_data_{table_suffix}"
-    keyspace = os.getenv("CASSANDRA_KEYSPACE", "your_keyspace_name")
+    keyspace = os.getenv("CASSANDRA_KEYSPACE","user_keyspace")
 
     select_clause = """
         AVG(chwfb_diff) as avg_chwfb, 
@@ -324,7 +324,7 @@ def fetch_setpoint_diffs(
     
     table_suffix = building_id.replace('-', '').lower()
     table_name = f"setpoint_overriden_data_{table_suffix}"
-    keyspace = os.getenv("CASSANDRA_KEYSPACE", "your_keyspace_name")
+    keyspace = os.getenv("CASSANDRA_KEYSPACE", "user_keyspace")
 
     select_clause = """
         equipment_id, 
