@@ -490,3 +490,63 @@ async def energy_meter_delta_history(
     except Exception as e:
         log.error(f"[EnergyAPI] energy_meter_delta_history failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ======================== CO2 Savings Equivalents ========================
+
+class Co2SavingsRequest(BaseModel):
+    compareable_co2_kg: float = Field(
+        ...,
+        description="Baseline / comparable CO2 emissions in kilograms.",
+        examples=[500.0],
+    )
+    current_co2_kg: float = Field(
+        ...,
+        description="Current CO2 emissions in kilograms.",
+        examples=[350.0],
+    )
+
+
+@router.post("/co2_savings_equivalents", summary="Calculate real-world equivalents for CO2 savings")
+async def co2_savings_equivalents(body: Co2SavingsRequest):
+    """
+    Compute human-readable real-world equivalents for the CO2 saved between a
+    baseline period and the current period.
+
+    **Formula:** ``savings = compareable_co2_kg - current_co2_kg``
+
+    When ``savings > 0`` the following equivalents are returned:
+    - ``trees_planted``      - A mature tree absorbs ~22 kg CO2/yr,  formula: savings / 22
+    - ``car_km_saved``       - An average car emits ~0.25 kg CO2/km, formula: savings * 4
+    - ``smartphone_charges`` - One full charge uses ~0.008 kg CO2,   formula: savings / 0.008
+    """
+    savings = body.compareable_co2_kg - body.current_co2_kg
+
+    if savings <= 0:
+        return {
+            "status": "no_savings",
+            "message": "No additional CO2 savings to report.",
+            "data": None,
+        }
+
+    # A mature tree absorbs approximately 22 kg of CO2 per year.
+    trees_planted = round(savings / 22)
+
+    # An average passenger car emits ~0.25 kg CO2 per km, so 1 kg saved ~= 4 km not driven.
+    car_km_saved = round(savings * 4)
+
+    # A single smartphone charge consumes roughly 0.008 kg CO2 (~8 Wh at the grid average).
+    smartphone_charges = round(savings / 0.008)
+
+    return {
+        "status": "success",
+        "message": "CO2 savings equivalents calculated successfully.",
+        "data": {
+            "savings_kg": round(savings, 4),
+            "equivalents": {
+                "trees_planted": trees_planted,
+                "car_km_saved": car_km_saved,
+                "smartphone_charges": smartphone_charges,
+            },
+        },
+    }
