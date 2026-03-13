@@ -37,80 +37,55 @@ def get_screen_operating_window(
         Dict with 'first_movie_start' and 'last_movie_end' as datetime objects,
         or None if no movies scheduled for that day on that screen.
     """
-    day_map_reverse = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
-    day_map = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
-    
     sessions = schedule.get('sessions', {})
-    all_starts = []
-    all_ends = []
-    
-    for session_key, session_data in sessions.items():
+    ordered_sessions = []
+
+    # Use source-order sessions for the given day (no chronological sorting).
+    # This allows day windows like Thu 16:30 -> Fri 02:10 when the last listed
+    # show ends after midnight.
+    day_rollover = 0
+    previous_start_time = None
+
+    for session_data in sessions.values():
         if session_data.get("screen", "").lower() != screen.lower():
             continue
-        
+
         day_sessions = session_data.get("sessions_by_day", {}).get(day_key, {})
         if not day_sessions:
             continue
-        
+
         for time_range in day_sessions.values():
             try:
                 parts = time_range.split("-")
                 if len(parts) != 2:
                     continue
-                
+
                 start_time = parse_time_str(parts[0].strip())
                 end_time = parse_time_str(parts[1].strip())
-                
-                show_start = datetime.combine(target_date, start_time)
-                show_end = datetime.combine(target_date, end_time)
-                
+
+                # If source-order times wrap from PM to AM, treat that as next day.
+                if previous_start_time is not None and start_time < previous_start_time:
+                    day_rollover += 1
+
+                show_date = target_date + timedelta(days=day_rollover)
+                show_start = datetime.combine(show_date, start_time)
+                show_end = datetime.combine(show_date, end_time)
+
                 if show_end <= show_start:
                     show_end += timedelta(days=1)
-                
-                all_starts.append(show_start)
-                all_ends.append(show_end)
+
+                ordered_sessions.append((show_start, show_end))
+                previous_start_time = start_time
             except Exception as e:
                 log.debug(f"Error parsing time range '{time_range}' for operating window: {e}")
                 continue
-    
-    prev_date = target_date - timedelta(days=1)
-    prev_day_key = day_map[prev_date.weekday()]
-    
-    for session_key, session_data in sessions.items():
-        if session_data.get("screen", "").lower() != screen.lower():
-            continue
-        
-        day_sessions = session_data.get("sessions_by_day", {}).get(prev_day_key, {})
-        if not day_sessions:
-            continue
-        
-        for time_range in day_sessions.values():
-            try:
-                parts = time_range.split("-")
-                if len(parts) != 2:
-                    continue
-                
-                start_time = parse_time_str(parts[0].strip())
-                end_time = parse_time_str(parts[1].strip())
-                
-                show_start = datetime.combine(prev_date, start_time)
-                show_end = datetime.combine(prev_date, end_time)
-                
-                if show_end <= show_start:
-                    show_end += timedelta(days=1)
-                
-                if show_end.date() == target_date:
-                    all_ends.append(show_end)
-            except Exception as e:
-                log.debug(f"Error parsing prev-day time range '{time_range}': {e}")
-                continue
-    
-    if not all_starts:
+
+    if not ordered_sessions:
         return None
-    
+
     return {
-        'first_movie_start': min(all_starts),
-        'last_movie_end': max(all_ends)
+        'first_movie_start': ordered_sessions[0][0],
+        'last_movie_end': ordered_sessions[-1][1]
     }
 
 
