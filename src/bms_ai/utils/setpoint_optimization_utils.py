@@ -286,23 +286,23 @@ def get_current_movie_occupancy_status(
                 if start_date:
                     # Apply 6 AM cutover logic for boundary dates
                     if current_date > start_date and current_date < end_date:
-                        # Strictly inside the range — always valid
+                        # Strictly inside the range - always valid
                         pass
                     elif current_date == start_date and current_date == end_date:
                         # Single-day schedule: valid before 6 AM only if ending today,
                         # but since start==end, treat as active after 6 AM (new schedule)
                         if current_hour_sharjah < SCHEDULE_CUTOVER_HOUR:
-                            log.debug(f"Instance {idx}: start==end=={current_date}, before 6 AM Sharjah — skipping (old schedule still active)")
+                            log.debug(f"Instance {idx}: start==end=={current_date}, before 6 AM Sharjah - skipping (old schedule still active)")
                             continue
                     elif current_date == end_date:
                         # Today is the end_date: only valid BEFORE 6 AM Sharjah
                         if current_hour_sharjah >= SCHEDULE_CUTOVER_HOUR:
-                            log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah — schedule expired")
+                            log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah - schedule expired")
                             continue
                     elif current_date == start_date:
                         # Today is the start_date: only valid AT or AFTER 6 AM Sharjah
                         if current_hour_sharjah < SCHEDULE_CUTOVER_HOUR:
-                            log.debug(f"Instance {idx}: start_date is today but it's before 6 AM Sharjah — not yet active")
+                            log.debug(f"Instance {idx}: start_date is today but it's before 6 AM Sharjah - not yet active")
                             continue
                     elif current_date < start_date or current_date > end_date:
                         log.debug(f"Instance {idx}: current_date {current_date} not in range {start_date_str} to {end_date_str}")
@@ -313,10 +313,10 @@ def get_current_movie_occupancy_status(
                     log.info(f"Auto-selected instance {idx}: {sched.get('cinema_name', 'Unknown')} ({start_date_str} to {end_date_str})")
                     break
                 elif not start_date and current_date <= end_date:
-                    # No start_date — valid as long as we haven't passed the end_date
+                    # No start_date - valid as long as we haven't passed the end_date
                     # Apply same 6 AM rule for end_date boundary
                     if current_date == end_date and current_hour_sharjah >= SCHEDULE_CUTOVER_HOUR:
-                        log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah — schedule expired (no start_date)")
+                        log.debug(f"Instance {idx}: end_date is today but it's past 6 AM Sharjah - schedule expired (no start_date)")
                         continue
                     schedule = sched
                     selected_instance_index = idx
@@ -700,7 +700,7 @@ if __name__ == "__main__":
     schedule_data = fetch_movie_schedule()
     print(f"Fetched {len(schedule_data) if schedule_data else 0} schedule instances.")
     if schedule_data:
-        print(f"\n✓ Fetched {len(schedule_data)} schedule instances")
+        print(f"\nFetched {len(schedule_data)} schedule instances")
         for idx, sched in enumerate(schedule_data):
             print(f"  [{idx}] {sched.get('cinema_name', 'Unknown')} - {sched.get('start_date', '')} to {sched.get('end_date', '')}")
         
