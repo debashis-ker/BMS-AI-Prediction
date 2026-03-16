@@ -211,7 +211,7 @@ mlartifacts/
 .mlflow/
 
 # Project-specific artifacts and logs
-#artifacts/
+artifacts/
 artifacts/*.csv
 log_info/
 logs/
@@ -228,7 +228,7 @@ resources/
 
 catboost_info/
 
-#artifacts/
+artifacts/
 artifacts/generic_anamoly_models/*
 artifacts/generic_models/*
 artifacts/production_models/*

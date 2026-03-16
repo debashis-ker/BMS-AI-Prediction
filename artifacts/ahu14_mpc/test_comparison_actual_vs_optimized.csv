@@ -1,4 +1,0 @@
-timestamp,actual_SpTREff,optimized_SpTREff,setpoint_difference,actual_TempSp1,target_temperature,occupied,mode,outside_temp,outside_humidity,FbVFD,Co2RA,co2_load_category,co2_load_factor,optimization_status
-2026-02-19 19:00:00,22.0,21.0,-1.0,24.04800033569336,21.0,1,occupied,23.4,67.0,100.35499954223633,434.6000061035156,low,0.0,success
-2026-02-19 20:40:00,22.0,21.0,-1.0,24.326000213623047,21.0,1,occupied,22.5,66.0,100.36666361490886,464.1333414713542,low,0.0,success
-2026-02-19 22:20:00,24.0,21.0,-3.0,25.055999755859375,21.0,1,occupied,22.0,64.0,0.1400000005960464,433.90000406901044,low,0.0,success
