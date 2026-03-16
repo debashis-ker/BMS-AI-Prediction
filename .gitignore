@@ -211,7 +211,7 @@ mlartifacts/
 .mlflow/
 
 # Project-specific artifacts and logs
-#artifacts/
+artifacts/
 artifacts/*.csv
 log_info/
 logs/
@@ -228,7 +228,7 @@ resources/
 
 catboost_info/
 
-#artifacts/
+artifacts/
 artifacts/generic_anamoly_models/*
 artifacts/generic_models/*
 artifacts/production_models/*
@@ -240,3 +240,10 @@ artifacts/optimization_history/*
 
 
 schedule_obj_dummy.json
+
+# Keep local-only files out of PR
+dummy_Eg.json
+notebooks/datapoints/bacnet_values.csv
+run_mpc_scheduler.py
+schedule_data.json
+screen_day_movie_report.py
