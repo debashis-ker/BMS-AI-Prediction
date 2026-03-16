@@ -353,7 +353,11 @@ def get_current_movie_occupancy_status(
             schedule_date = target_dt.date() + timedelta(days=day_offset)
             day_key = day_map[schedule_date.weekday()]
 
-            for session_key, session_data in sessions.items():
+            # Track rollover across the full screen-day stream in API source order.
+            day_rollover = 0
+            previous_start_time = None
+
+            for session_data in sessions.values():
                 if session_data.get("screen", "").lower() != screen.lower():
                     continue
 
@@ -367,15 +371,20 @@ def get_current_movie_occupancy_status(
                         if len(parts) != 2:
                             log.warning(f"Invalid time range format: {time_range}")
                             continue
-                        
+
                         start_str = parts[0].strip()
                         end_str = parts[1].strip()
-                        
+
                         start_time = parse_time_str(start_str)
                         end_time = parse_time_str(end_str)
 
-                        show_start = datetime.combine(schedule_date, start_time)
-                        show_end = datetime.combine(schedule_date, end_time)
+                        # Preserve source-order midnight rollover (e.g., 11:10p then 0:10a -> next day).
+                        if previous_start_time is not None and start_time < previous_start_time:
+                            day_rollover += 1
+
+                        show_date = schedule_date + timedelta(days=day_rollover)
+                        show_start = datetime.combine(show_date, start_time)
+                        show_end = datetime.combine(show_date, end_time)
 
                         if show_end <= show_start:
                             show_end += timedelta(days=1)
@@ -389,25 +398,22 @@ def get_current_movie_occupancy_status(
                                 "time_remaining": time_remaining_minutes
                             }
                             break
-                        
+
                         if show_start > target_dt:
                             upcoming_shows.append({
                                 "start": show_start,
                                 "movie_name": session_data.get("film_title", "Unknown")
                             })
 
+                        previous_start_time = start_time
                     except Exception as e:
                         log.debug(f"Error parsing time range '{time_range}': {e}")
                         continue
-                
-                if screen in result:
-                    break
             
             if screen in result:
                 break
         
         if screen not in result:
-            # Get the operating window for this screen today
             day_key = day_map[target_dt.date().weekday()]
             operating_window = get_screen_operating_window(
                 schedule=schedule,
@@ -422,10 +428,8 @@ def get_current_movie_occupancy_status(
                 time_until_next_seconds = (next_show["start"] - target_dt).total_seconds()
                 time_until_next_minutes = math.ceil(time_until_next_seconds / 60)
                 
-                # Check if we're within today's operating window (between first and last movie)
                 if (operating_window and
                     operating_window['first_movie_start'] <= target_dt < operating_window['last_movie_end']):
-                    # Inter-show gap: maintain comfort, do NOT mark as unoccupied
                     result[screen] = {
                         "status": 0,
                         "is_inter_show": True,
@@ -439,7 +443,6 @@ def get_current_movie_occupancy_status(
                              f"{operating_window['last_movie_end'].strftime('%H:%M')}), "
                              f"next movie in {time_until_next_minutes} min")
                 else:
-                    # Outside operating window: true unoccupied (precool logic still applies downstream)
                     result[screen] = {
                         "status": 0,
                         "is_inter_show": False,
@@ -452,7 +455,7 @@ def get_current_movie_occupancy_status(
                     "is_inter_show": False,
                     "time_until_next_movie": "No upcoming shows"
                 }
-    
+
     return result
 
 
@@ -550,11 +553,14 @@ def get_occupancy_status_for_timestamp(
             for day_offset in day_offsets:
                 schedule_date = timestamp_sharjah.date() + timedelta(days=day_offset)
                 day_key = day_map[schedule_date.weekday()]
-                
+
                 day_sessions = session_data.get("sessions_by_day", {}).get(day_key, {})
                 if not day_sessions:
                     continue
-                
+
+                day_rollover = 0
+                previous_start_time = None
+
                 for time_range in day_sessions.values():
                     try:
                         parts = time_range.split("-")
@@ -566,12 +572,18 @@ def get_occupancy_status_for_timestamp(
                         
                         start_time = parse_time_str(start_str)
                         end_time = parse_time_str(end_str)
-                        
-                        show_start = datetime.combine(schedule_date, start_time)
-                        show_end = datetime.combine(schedule_date, end_time)
+
+                        if previous_start_time is not None and start_time < previous_start_time:
+                            day_rollover += 1
+
+                        show_date = schedule_date + timedelta(days=day_rollover)
+                        show_start = datetime.combine(show_date, start_time)
+                        show_end = datetime.combine(show_date, end_time)
                         
                         if show_end <= show_start:
                             show_end += timedelta(days=1)
+
+                        previous_start_time = start_time
                         
                         if check_overnight_from_previous_day:
                             if show_end.date() != timestamp_sharjah.date():
