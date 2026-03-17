@@ -414,7 +414,7 @@ async def get_optimization_history(
                 # response['evaluation_factors'] = overall_summary['data']['evaluation_parameters']
                 # response['summary'] = ai_summary
         else:
-            response['summary'] = None
+            response['data_summary'] = None
 
         return response
         

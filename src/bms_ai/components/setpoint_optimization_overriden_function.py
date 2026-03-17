@@ -14,6 +14,8 @@ from cassandra.cluster import Session
 from src.bms_ai.api.dependencies import get_cassandra_session
 from fastapi import HTTPException, Depends
 from src.bms_ai.mpc.mpc_inference_pipeline import InferenceConfig
+import numpy as np
+import requests
 
 load_dotenv()
 
@@ -32,6 +34,25 @@ try:
 except Exception as e:
     log.error(f"Failed to initialize OpenAI client: {e}")
     client = None
+
+def fetch_historical_data(equipment_id, from_date=None, to_date=None):
+    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
+
+    if from_date and to_date:
+        print(from_date, to_date)
+        data = {
+            "equipment_id": equipment_id,
+            "from_date": from_date,
+            "to_date": to_date
+        }
+
+    else:
+        data = {
+            "equipment_id": equipment_id
+        }
+    response = requests.post(url, json=data)
+
+    return response.json()
 
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
@@ -190,70 +211,76 @@ def get_optimization_analysis(data):
     return result
 
 async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=None, session=None):
-    """
-    Analyzes setpoint issues by comparing telemetry data before and after an issue occurs.
-    The window extension logic has been removed to ensure stable performance.
-    """
-
     if not (from_date and to_date):
         now_utc = datetime.now(timezone.utc)
-        start_dt = now_utc - timedelta(minutes=30)
+        start_dt = now_utc - timedelta(minutes=40)
         from_date = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
         to_date = now_utc.strftime('%Y-%m-%dT%H:%M:%S')
         log.info(f"Using default UTC range: {from_date} to {to_date}")
 
-    data = await get_optimization_history(equipment_id=equipment_id,from_date=from_date, to_date=to_date, session=session)
+    # data = await get_optimization_history(equipment_id=equipment_id,from_date=from_date, to_date=to_date, session=session)
+    data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
+
+    if(data['count'] == 0):
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "MPC Optimization Data Not Found within this period"}
+        )
     
-    unusual_setpoint_data = get_optimization_analysis(data)
+    unusual_data = get_optimization_analysis(data)
 
     final_dict = []
-    opt_lookup = {item['timestamp']: item['optimized_setpoint'] for item in unusual_setpoint_data}
-
-    for record in unusual_setpoint_data:
+    
+    for record in unusual_data:
         timestamp = record['timestamp']
-        timestamp_sharjah = record.get('timestamp_sharjah')
+        target_opt = record['optimized_setpoint']
+        timestamp_sharjah = record['timestamp_sharjah']
         mode = record.get('mode')
-        equip_id = record.get('equipment_id')
         
-        dt_obj = datetime.fromisoformat(timestamp)
-        current_from_date = (dt_obj - timedelta(minutes=20)).isoformat()
-        current_to_date = (dt_obj + timedelta(minutes=10)).isoformat()
+        dt_obj = datetime.fromisoformat(timestamp.replace('Z', ''))
+        start_time = (dt_obj - timedelta(minutes=40)).isoformat()
+        end_time = dt_obj.isoformat() 
 
-        raw_data = fetch_cassandra_data(
-            equipment_id=equip_id, 
-            from_date=current_from_date, 
-            to_date=current_to_date
+        raw_telemetry = fetch_cassandra_data(
+            equipment_id=equipment_id, 
+            from_date=start_time, 
+            to_date=end_time, 
+            datapoints=["SpTREff", "TempSp1", "ChwFb"]
         )
         
-        if not raw_data:
-            log.info(f"No telemetry data found for {timestamp}")
+        if not raw_telemetry:
             continue
-
-        processed_df = data_pipeline(raw_data).reset_index()
-        current_val = opt_lookup.get(timestamp)
-
-        issue_data_df = processed_df[processed_df['SpTREff'] != current_val]
-
-        if issue_data_df.empty:
-            continue
-
-        for idx in issue_data_df.index:
-            if idx + 1 < len(processed_df):
-                row_curr = processed_df.iloc[idx]
-                row_next = processed_df.iloc[idx + 1]
-                
-                
-                diff_entry = {
+            
+        telemetry_df = data_pipeline(raw_telemetry).reset_index()
+        
+        telemetry_df['optimized_setpoint'] = target_opt
+        
+        issue_indices = telemetry_df.index[telemetry_df['SpTREff'] != telemetry_df['optimized_setpoint']]
+        
+        if not issue_indices.empty:
+            first_issue_idx = issue_indices[0]
+            issue_row = telemetry_df.iloc[first_issue_idx]
+            
+            stable_row = None
+            for i in range(first_issue_idx - 1, -1, -1):
+                if telemetry_df.iloc[i]['SpTREff'] == telemetry_df.iloc[i]['optimized_setpoint']:
+                    stable_row = telemetry_df.iloc[i]
+                    break
+            
+            if stable_row is not None:
+                diff_entry = ({
                     "timestamp": timestamp,
                     "timestamp_sharjah": timestamp_sharjah,
+                    "equipment_id": equipment_id,
                     "mode": mode,
-                    "equipment_id": equip_id,
-                    "SpTREff_diff": abs(row_next.get('SpTREff', 0) - row_curr.get('SpTREff', 0)),
-                    "TempSp1_diff": abs(row_next.get('TempSp1', 0) - row_curr.get('TempSp1', 0)),
-                    "ChwFb_diff": abs(row_next.get('ChwFb', 0) - row_curr.get('ChwFb', 0))
-                }
-                final_dict.append(diff_entry)
+                    "SpTREff_diff": abs(issue_row['SpTREff'] - stable_row['SpTREff']),
+                    "TempSp1_diff": abs(issue_row['TempSp1'] - stable_row['TempSp1']),
+                    "ChwFb_diff": abs(issue_row['ChwFb'] - stable_row['ChwFb'])
+                })
 
+                clean_entry = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in diff_entry.items()}
+                final_dict.append(clean_entry)
+                
     return final_dict
 
 def fetch_setpoint_diffs_averages(
@@ -282,10 +309,10 @@ def fetch_setpoint_diffs_averages(
 
     if start_date:
         query += " AND timestamp >= ?"
-        params.append(parser.parse(start_date).replace(tzinfo=timezone.utc)) #type: ignore
+        params.append(parser.parse(start_date).replace(tzinfo=timezone.utc))
     if end_date:
         query += " AND timestamp <= ?"
-        params.append(parser.parse(end_date).replace(tzinfo=timezone.utc)) #type: ignore
+        params.append(parser.parse(end_date).replace(tzinfo=timezone.utc))
 
     try:
         log.info(f"Executing Aggregate Query on {table_name}")
@@ -341,10 +368,10 @@ def fetch_setpoint_diffs(
 
     if start_date:
         query += " AND timestamp >= ?"
-        params.append(parser.parse(start_date).replace(tzinfo=timezone.utc)) #type: ignore
+        params.append(parser.parse(start_date).replace(tzinfo=timezone.utc))
     if end_date:
         query += " AND timestamp <= ?"
-        params.append(parser.parse(end_date).replace(tzinfo=timezone.utc)) #type: ignore
+        params.append(parser.parse(end_date).replace(tzinfo=timezone.utc))
 
     try:
         log.info(f"Fetching raw records from {table_name}")
