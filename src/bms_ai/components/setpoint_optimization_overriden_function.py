@@ -35,25 +35,6 @@ except Exception as e:
     log.error(f"Failed to initialize OpenAI client: {e}")
     client = None
 
-def fetch_historical_data(equipment_id, from_date=None, to_date=None):
-    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
-
-    if from_date and to_date:
-        print(from_date, to_date)
-        data = {
-            "equipment_id": equipment_id,
-            "from_date": from_date,
-            "to_date": to_date
-        }
-
-    else:
-        data = {
-            "equipment_id": equipment_id
-        }
-    response = requests.post(url, json=data)
-
-    return response.json()
-
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
     status: str = "success",
@@ -218,8 +199,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
         to_date = now_utc.strftime('%Y-%m-%dT%H:%M:%S')
         log.info(f"Using default UTC range: {from_date} to {to_date}")
 
-    # data = await get_optimization_history(equipment_id=equipment_id,from_date=from_date, to_date=to_date, session=session)
-    data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
+    data = await get_optimization_history(equipment_id=equipment_id,from_date=from_date, to_date=to_date, session=session)
 
     if(data['count'] == 0):
         raise HTTPException(
