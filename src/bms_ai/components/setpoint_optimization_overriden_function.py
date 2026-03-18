@@ -35,6 +35,25 @@ except Exception as e:
     log.error(f"Failed to initialize OpenAI client: {e}")
     client = None
 
+def fetch_historical_data(equipment_id, from_date=None, to_date=None):
+    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
+
+    if from_date and to_date:
+        print(from_date, to_date)
+        data = {
+            "equipment_id": equipment_id,
+            "from_date": from_date,
+            "to_date": to_date
+        }
+
+    else:
+        data = {
+            "equipment_id": equipment_id
+        }
+    response = requests.post(url, json=data)
+
+    return response.json()
+
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
     status: str = "success",
@@ -199,7 +218,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
         to_date = now_utc.strftime('%Y-%m-%dT%H:%M:%S')
         log.info(f"Using default UTC range: {from_date} to {to_date}")
 
-    data = await get_optimization_history(equipment_id=equipment_id,from_date=from_date, to_date=to_date, session=session)
+    data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
 
     if(data['count'] == 0):
         raise HTTPException(
@@ -210,6 +229,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     unusual_data = get_optimization_analysis(data)
 
     final_dict = []
+    global_last_stable_row = None
     
     for record in unusual_data:
         timestamp = record['timestamp']
@@ -232,7 +252,6 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
             continue
             
         telemetry_df = data_pipeline(raw_telemetry).reset_index()
-        
         telemetry_df['optimized_setpoint'] = target_opt
         
         issue_indices = telemetry_df.index[telemetry_df['SpTREff'] != telemetry_df['optimized_setpoint']]
@@ -241,21 +260,27 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
             first_issue_idx = issue_indices[0]
             issue_row = telemetry_df.iloc[first_issue_idx]
             
-            stable_row = None
+            current_stable_row = None
             for i in range(first_issue_idx - 1, -1, -1):
                 if telemetry_df.iloc[i]['SpTREff'] == telemetry_df.iloc[i]['optimized_setpoint']:
-                    stable_row = telemetry_df.iloc[i]
+                    current_stable_row = telemetry_df.iloc[i]
+                    global_last_stable_row = current_stable_row
                     break
+
+            effective_stable_row = current_stable_row if current_stable_row is not None else global_last_stable_row
             
-            if stable_row is not None:
+            if effective_stable_row is None:
+                log.info(f"Stable row (where SpTREff == optimized_setpoint) not found in window for {timestamp}.")
+            
+            if effective_stable_row is not None:
                 diff_entry = ({
                     "timestamp": timestamp,
                     "timestamp_sharjah": timestamp_sharjah,
                     "equipment_id": equipment_id,
                     "mode": mode,
-                    "SpTREff_diff": abs(issue_row['SpTREff'] - stable_row['SpTREff']),
-                    "TempSp1_diff": abs(issue_row['TempSp1'] - stable_row['TempSp1']),
-                    "ChwFb_diff": abs(issue_row['ChwFb'] - stable_row['ChwFb'])
+                    "SpTREff_diff": abs(issue_row['SpTREff'] - effective_stable_row['SpTREff']),
+                    "TempSp1_diff": abs(issue_row['TempSp1'] - effective_stable_row['TempSp1']),
+                    "ChwFb_diff": abs(issue_row['ChwFb'] - effective_stable_row['ChwFb'])
                 })
 
                 clean_entry = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in diff_entry.items()}
