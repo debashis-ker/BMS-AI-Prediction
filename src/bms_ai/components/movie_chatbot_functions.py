@@ -120,14 +120,23 @@ def show_time(purpose, schedule_data, screen_name, target_date, day_key, keyword
             continue 
         
         target_sessions = []
+        day_rollover = 0
+        previous_start_time = None
         for s_val in schedule_data.get('sessions', {}).values():
             if s_val.get('screen', '').lower() == current_screen.lower():
                 day_sessions = s_val.get('sessions_by_day', {}).get(day_key, {})
                 for time_range in day_sessions.values():
                     try:
                         parts = time_range.split("-")
-                        s_start = datetime.combine(target_date, parse_time_str(parts[0].strip()))
-                        s_end = datetime.combine(target_date, parse_time_str(parts[1].strip()))
+                        start_time = parse_time_str(parts[0].strip())
+                        end_time = parse_time_str(parts[1].strip())
+
+                        if previous_start_time is not None and start_time < previous_start_time:
+                            day_rollover += 1
+
+                        show_date = target_date + timedelta(days=day_rollover)
+                        s_start = datetime.combine(show_date, start_time)
+                        s_end = datetime.combine(show_date, end_time)
                         if s_end <= s_start: 
                             s_end += timedelta(days=1)
                         
@@ -136,6 +145,7 @@ def show_time(purpose, schedule_data, screen_name, target_date, day_key, keyword
                             "end": s_end, 
                             "movie": s_val.get("film_title")
                         })
+                        previous_start_time = start_time
                     except Exception:
                         continue
 
