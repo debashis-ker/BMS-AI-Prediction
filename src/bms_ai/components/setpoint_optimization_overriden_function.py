@@ -35,25 +35,6 @@ except Exception as e:
     log.error(f"Failed to initialize OpenAI client: {e}")
     client = None
 
-def fetch_historical_data(equipment_id, from_date=None, to_date=None):
-    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
-
-    if from_date and to_date:
-        print(from_date, to_date)
-        data = {
-            "equipment_id": equipment_id,
-            "from_date": from_date,
-            "to_date": to_date
-        }
-
-    else:
-        data = {
-            "equipment_id": equipment_id
-        }
-    response = requests.post(url, json=data)
-
-    return response.json()
-
 async def get_optimization_history(
     equipment_id: str = "Ahu13",
     status: str = "success",
@@ -186,30 +167,6 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
     result_df = result_df.sort_values(STANDARD_DATE_COLUMN).set_index(STANDARD_DATE_COLUMN)
     return result_df
 
-def get_optimization_analysis(data):
-    unusual_timestamps_utc = []
-
-    result = []
-
-    for records in data['results']:
-        if ((records['used_features']["occupied"] == 1) and records['used_features']["occupied_setpoint"] != records["actual_sptreff"] and records['actual_sptreff'] != records['optimized_setpoint']):
-            log.info('All conditions matched within occupied session of setpoint optimization : Screen is Occupied, Occupied Setpoint not equals to actual setpoint, actual setpoint not equals to optimized setpoint')
-            log.info(f"timestamp : {records['timestamp_utc']}")
-            log.info(f"timestamp_sharjah : {records['timestamp_sharjah']}")
-            result.append({"timestamp": records['timestamp_utc'], "timestamp_sharjah" : records['timestamp_sharjah'], "mode" : records['mode'] , "optimized_setpoint": records['optimized_setpoint'], "actual_sptreff": records['actual_sptreff'], "equipment_id": records['equipment_id'], "actual_tempsp1": records['actual_tempsp1']})
-
-        elif ((records['used_features']["occupied"] == 0) and records['used_features']["unoccupied_setpoint"] != records["actual_sptreff"] and records['actual_sptreff'] != records['optimized_setpoint']):
-            log.info('All conditions matched within unoccupied session of setpoint optimization : Screen is unoccupied, unoccupied Setpoint not equals to actual setpoint, actual setpoint not equals to optimized setpoint')
-            log.info(f"timestamp : {records['timestamp_utc']}")
-            log.info(f"timestamp_sharjah : {records['timestamp_sharjah']}")
-            result.append({"timestamp": records['timestamp_utc'],  "timestamp_sharjah" : records['timestamp_sharjah'], "mode" : records['mode'] , "optimized_setpoint": records['optimized_setpoint'], "actual_sptreff": records['actual_sptreff'], "equipment_id": records['equipment_id'], "actual_tempsp1": records['actual_tempsp1']})
-
-    if len(result) > 0:
-        for records in result:
-            unusual_timestamps_utc.append(records['timestamp'])
-        log.info(f"timestamps of occupied sessions with setpoint optimization issues: {unusual_timestamps_utc}")
-    return result
-
 async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=None, session=None):
     if not (from_date and to_date):
         now_utc = datetime.now(timezone.utc)
@@ -218,74 +175,111 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
         to_date = now_utc.strftime('%Y-%m-%dT%H:%M:%S')
         log.info(f"Using default UTC range: {from_date} to {to_date}")
 
-    data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
-
-    if(data['count'] == 0):
+    log.info(f"Fetching MPC history for {equipment_id} from {from_date} to {to_date}")
+    mpc_data = await get_optimization_history(equipment_id=equipment_id, from_date=from_date, to_date=to_date,session=session)
+    
+    if mpc_data.get('count', 0) == 0:
+        log.warning(f"No MPC data found for {equipment_id}")
         raise HTTPException(
             status_code=500,
             detail={"message": "MPC Optimization Data Not Found within this period"}
         )
+    log.info(f"Successfully fetched {mpc_data.get('count')} MPC records")
+
+    log.info(f"Fetching raw telemetry for {equipment_id}")
+    raw_telemetry = fetch_cassandra_data(
+        equipment_id=equipment_id, 
+        from_date=from_date, 
+        to_date=to_date, 
+        datapoints=["SpTREff", "TempSp1", "ChwFb"]
+    )
     
-    unusual_data = get_optimization_analysis(data)
+    if not raw_telemetry:
+        log.warning(f"No telemetry data found for {equipment_id} in requested window.")
+        return []
+
+    telemetry_df = data_pipeline(raw_telemetry).reset_index()
+    telemetry_df = telemetry_df.rename(columns={"data_received_on": "timestamp"})
+    
+    mpc_results_df = pd.DataFrame(mpc_data['results'])
+    mpc_results_df['timestamp'] = pd.to_datetime(mpc_results_df['timestamp_utc']).dt.tz_localize(None)
+    mpc_results_df = mpc_results_df.rename(columns={'timestamp_utc': 'mpc_run_time'}) 
+    mpc_results_df = mpc_results_df[['timestamp', 'optimized_setpoint', 'mode', 'mpc_run_time']]
+
+    combined_df = pd.merge(telemetry_df, mpc_results_df, on='timestamp', how='outer').sort_values('timestamp')
+    
+    combined_df['optimized_setpoint'] = combined_df['optimized_setpoint'].ffill()
+    combined_df['mode'] = combined_df['mode'].ffill()
+    combined_df['mpc_run_time'] = combined_df['mpc_run_time'].ffill()
+
+    combined_df = combined_df.dropna(subset=['SpTREff'])
+    log.info(f"Merged table created with {len(combined_df)} rows")
 
     final_dict = []
     global_last_stable_row = None
-    
-    for record in unusual_data:
-        timestamp = record['timestamp']
-        target_opt = record['optimized_setpoint']
-        timestamp_sharjah = record['timestamp_sharjah']
-        mode = record.get('mode')
-        
-        dt_obj = datetime.fromisoformat(timestamp.replace('Z', ''))
-        start_time = (dt_obj - timedelta(minutes=40)).isoformat()
-        end_time = dt_obj.isoformat() 
+    fetched_additional_baseline = False
 
-        raw_telemetry = fetch_cassandra_data(
-            equipment_id=equipment_id, 
-            from_date=start_time, 
-            to_date=end_time, 
-            datapoints=["SpTREff", "TempSp1", "ChwFb"]
-        )
+    for i in range(len(combined_df)):
+        row = combined_df.iloc[i]
         
-        if not raw_telemetry:
-            continue
-            
-        telemetry_df = data_pipeline(raw_telemetry).reset_index()
-        telemetry_df['optimized_setpoint'] = target_opt
-        
-        issue_indices = telemetry_df.index[telemetry_df['SpTREff'] != telemetry_df['optimized_setpoint']]
-        
-        if not issue_indices.empty:
-            first_issue_idx = issue_indices[0]
-            issue_row = telemetry_df.iloc[first_issue_idx]
-            
+        if row['SpTREff'] != row['optimized_setpoint']:
+            issue_row = row
             current_stable_row = None
-            for i in range(first_issue_idx - 1, -1, -1):
-                if telemetry_df.iloc[i]['SpTREff'] == telemetry_df.iloc[i]['optimized_setpoint']:
-                    current_stable_row = telemetry_df.iloc[i]
+            
+            for j in range(i - 1, -1, -1):
+                prev_row = combined_df.iloc[j]
+                if prev_row['SpTREff'] == prev_row['optimized_setpoint']:
+                    current_stable_row = prev_row
                     global_last_stable_row = current_stable_row
                     break
+            
+            if current_stable_row is None and global_last_stable_row is None and not fetched_additional_baseline:
+                log.info("Baseline not found in window. Fetching additional 20 minutes of prior data.")
+                fetched_additional_baseline = True
+                
+                prior_start = (datetime.fromisoformat(from_date) - timedelta(minutes=20)).isoformat()
+                prior_end = from_date
+                
+                prior_raw = fetch_cassandra_data(
+                    equipment_id=equipment_id, 
+                    from_date=prior_start, 
+                    to_date=prior_end, 
+                    datapoints=["SpTREff", "TempSp1", "ChwFb"]
+                )
+                
+                if prior_raw:
+                    prior_df = data_pipeline(prior_raw).reset_index()
+                    prior_df = prior_df.rename(columns={"data_received_on": "timestamp"})
+                    
+                    initial_target = mpc_results_df.iloc[0]['optimized_setpoint']
+                    stable_prior = prior_df[prior_df['SpTREff'] == initial_target]
+                    
+                    if not stable_prior.empty:
+                        global_last_stable_row = stable_prior.iloc[-1]
+                        log.info("Found stable baseline in prior 20-minute data.")
 
             effective_stable_row = current_stable_row if current_stable_row is not None else global_last_stable_row
             
-            if effective_stable_row is None:
-                log.info(f"Stable row (where SpTREff == optimized_setpoint) not found in window for {timestamp}.")
-            
             if effective_stable_row is not None:
-                diff_entry = ({
-                    "timestamp": timestamp,
-                    "timestamp_sharjah": timestamp_sharjah,
-                    "equipment_id": equipment_id,
-                    "mode": mode,
-                    "SpTREff_diff": abs(issue_row['SpTREff'] - effective_stable_row['SpTREff']),
-                    "TempSp1_diff": abs(issue_row['TempSp1'] - effective_stable_row['TempSp1']),
-                    "ChwFb_diff": abs(issue_row['ChwFb'] - effective_stable_row['ChwFb'])
-                })
-
-                clean_entry = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in diff_entry.items()}
-                final_dict.append(clean_entry)
+                sptreff_diff = abs(row['SpTREff'] - effective_stable_row['SpTREff'])
                 
+                if sptreff_diff > 0:
+                    diff_entry = {
+                        "timestamp": issue_row['timestamp'].isoformat(), 
+                        "timestamp_utc": issue_row['mpc_run_time'],
+                        "equipment_id": equipment_id,
+                        "mode": issue_row['mode'],
+                        "SpTREff_diff": sptreff_diff,
+                        "TempSp1_diff": abs(issue_row['TempSp1'] - effective_stable_row['TempSp1']),
+                        "ChwFb_diff": abs(issue_row['ChwFb'] - effective_stable_row['ChwFb'])
+                    }
+
+                    clean_entry = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in diff_entry.items()}
+                    final_dict.append(clean_entry)
+        else:
+            global_last_stable_row = row
+
+    log.info(f"Function Complete: Found {len(final_dict)} unusual setpoint activities")
     return final_dict
 
 def fetch_setpoint_diffs_averages(
@@ -304,8 +298,8 @@ def fetch_setpoint_diffs_averages(
         AVG(chwfb_diff) as avg_chwfb, 
         AVG(sptreff_diff) as avg_sptreff, 
         AVG(tempsp1_diff) as avg_tempsp1,
-        MIN(timestamp) as actual_from,
-        MAX(timestamp) as actual_to,
+        MIN(timestamp_utc) as actual_from,
+        MAX(timestamp_utc) as actual_to,
         COUNT(*) as record_count
     """
     
@@ -334,8 +328,8 @@ def fetch_setpoint_diffs_averages(
             }
 
         return {
-            "from_date": result.actual_from.isoformat() if result.actual_from else None,
-            "to_date": result.actual_to.isoformat() if result.actual_to else None,
+            "from_date": result.actual_from if result.actual_from else None,
+            "to_date": result.actual_to if result.actual_to else None,
             "total_records": result.record_count,
             "avg_chwfb_diff": round(float(result.avg_chwfb or 0), 4),
             "avg_sptreff_diff": round(float(result.avg_sptreff or 0), 4),
@@ -365,7 +359,7 @@ def fetch_setpoint_diffs(
         mode, 
         sptreff_diff, 
         tempsp1_diff, 
-        timestamp_sharjah
+        timestamp_utc
     """
     
     query = f"SELECT {select_clause} FROM {keyspace}.\"{table_name}\" WHERE equipment_id = ?"
@@ -389,7 +383,7 @@ def fetch_setpoint_diffs(
             records.append({
                 "equipment_id": row.equipment_id,
                 "timestamp": row.timestamp.isoformat() if row.timestamp else None,
-                "timestamp_sharjah": row.timestamp_sharjah,
+                "timestamp_utc": row.timestamp_utc,
                 "mode": row.mode,
                 "chwfb_diff": round(float(row.chwfb_diff or 0), 4),
                 "sptreff_diff": round(float(row.sptreff_diff or 0), 4),

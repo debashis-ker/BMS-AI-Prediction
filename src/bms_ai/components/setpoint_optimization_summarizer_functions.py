@@ -39,19 +39,18 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
 
     occ_situation = {
         "total_write_count_occupied": occ_count,
-        "maximum_occupied_temperature": round(max(occupied_temps), 2) if (occ_count > 0 and occupied_temps) else None,
-        "minimum_occupied_temperature": round(min(occupied_temps), 2) if (occ_count > 0 and occupied_temps) else None,
+        "maximum_occupied_temperature": round(max(occupied_temps), 2) if occupied_temps else None,
+        "minimum_occupied_temperature": round(min(occupied_temps), 2) if occupied_temps else None,
     }
-
-    if occ_count == 0:
+    if not occupied_temps:
         occ_situation["reason"] = "room is unoccupied for all the time"
 
     unocc_situation = {
         "total_write_count_unoccupied": unocc_count,
-        "maximum_unoccupied_temperature": round(max(unoccupied_temps), 2) if (unocc_count > 0 and unoccupied_temps) else None,
-        "minimum_unoccupied_temperature": round(min(unoccupied_temps), 2) if (unocc_count > 0 and unoccupied_temps) else None,
+        "maximum_unoccupied_temperature": round(max(unoccupied_temps), 2) if unoccupied_temps else None,
+        "minimum_unoccupied_temperature": round(min(unoccupied_temps), 2) if unoccupied_temps else None,
     }
-    if unocc_count == 0:
+    if not unoccupied_temps:
         unocc_situation["reason"] = "room is occupied for all the time"
 
     last_feat = sorted_data[-1].get('used_features', {}) if sorted_data else {}
@@ -83,19 +82,16 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
 
     return {
         "data": {
-            "summary_title": "Setpoint Optimization Summary",
-            # "start_date": data_input.get("start_date", "") if isinstance(data_input, dict) else "",
-            # "end_date": data_input.get("end_date", "") if isinstance(data_input, dict) else "",
-            # "optimized_count": optimization_count,
             "optimized_count": averages_data['total_records'] if averages_data else 0,
             "write_counts": {
                 "occupied_situation": occ_situation,
                 "unoccupied_situation": unocc_situation, 
             },
-            "optimization_averages": averages_data if averages_data else None,
+            "optimization_averages": averages_data,
             "evaluation_parameters": active_params if active_params else None
         }
     }
+
 
 # def generate_optimization_summary_response(optimization_data: Dict[str, Any]) -> str:
 #     """

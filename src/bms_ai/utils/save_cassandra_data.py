@@ -104,7 +104,7 @@ def save_optimized_setpoint_difference_data(data_chunk: List[Dict], building_id:
     CREATE_BASE_CQL = """
     CREATE TABLE IF NOT EXISTS {keyspace}."{table_name}" ( 
         timestamp timestamp, 
-        timestamp_sharjah text,
+        timestamp_utc text,
         mode text,
         equipment_id text, 
         sptreff_diff double, 
@@ -116,7 +116,7 @@ def save_optimized_setpoint_difference_data(data_chunk: List[Dict], building_id:
     
     INSERT_BASE_CQL = """
     INSERT INTO {keyspace}."{table_name}" 
-    (timestamp, timestamp_sharjah, mode, equipment_id, sptreff_diff, tempsp1_diff, chwfb_diff)
+    (timestamp, timestamp_utc, mode, equipment_id, sptreff_diff, tempsp1_diff, chwfb_diff)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     """
     
@@ -135,7 +135,7 @@ def save_optimized_setpoint_difference_data(data_chunk: List[Dict], building_id:
 
             data_tuple = (
                 ts_obj,
-                record.get('timestamp_sharjah'),
+                record.get('timestamp_utc'),
                 record.get('mode'),
                 record.get('equipment_id'),
                 float(record.get('SpTREff_diff', 0.0)),
