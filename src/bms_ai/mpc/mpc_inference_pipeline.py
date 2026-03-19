@@ -620,7 +620,7 @@ class MPCInferencePipeline:
         if rename_map and sensor_data:
             sensor_data = {rename_map.get(k, k): v for k, v in sensor_data.items()}
             log.debug(f"[MPCInference] Applied rename_map for {equipment_id}: {rename_map}")
-        
+        '''
         weather = self.weather_fetcher.fetch_current_weather()
         if weather is None:
             log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
@@ -663,6 +663,62 @@ class MPCInferencePipeline:
                 'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
                 'saved_to_cassandra': True
             }
+        '''
+        weather = self.weather_fetcher.fetch_current_weather()
+        if weather is None:
+            log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
+            fail_record = self._create_fail_record(
+                equipment_id=equipment_id,
+                screen_id=screen_id,
+                now_utc=now_utc,
+                now_sharjah=now_sharjah,
+                reason='WEATHER_FETCH_FAILED',
+                sensor_data=sensor_data,
+                occupied_setpoint=occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint
+            )
+            self.cassandra_handler.save_optimization_result(fail_record)
+            return {
+                'success': False,
+                'error': 'Failed to fetch weather data. Cannot proceed without weather information.',
+                'error_type': 'WEATHER_FETCH_FAILED',
+                'saved_to_cassandra': True
+            }
+        
+        force_continuous = os.getenv("FORCE_CONTINUOUS_OPTIMIZATION", "false").lower() == "true"
+
+        if force_continuous:
+            log.info(f"[MPCInference] Continuous override enabled for {screen_id}. Bypassing movie schedule.")
+            occupancy = {
+                'status': 1,  # Treat as always occupied to force optimization
+                'movie_name': '[CONTINUOUS OPTIMIZATION]',
+                'time_remaining': None,
+                'time_until_next_movie': None,
+                'next_movie_name': None,
+                'is_inter_show': False
+            }
+        else:
+            occupancy = self.occupancy_fetcher.fetch_occupancy_status(screen_id, ticket, ticket_type)
+            if occupancy is None or occupancy == {}:
+                log.error(f"[MPCInference] Schedule data unavailable for {screen_id} - cannot proceed")
+                fail_record = self._create_fail_record(
+                    equipment_id=equipment_id,
+                    screen_id=screen_id,
+                    now_utc=now_utc,
+                    now_sharjah=now_sharjah,
+                    reason='SCHEDULE_DATA_UNAVAILABLE',
+                    sensor_data=sensor_data,
+                    weather=weather,
+                    occupied_setpoint=occupied_setpoint,
+                    unoccupied_setpoint=unoccupied_setpoint
+                )
+                self.cassandra_handler.save_optimization_result(fail_record)
+                return {
+                    'success': False,
+                    'error': f'Failed to fetch schedule/occupancy status for {screen_id}. No valid schedule found for current date.',
+                    'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
+                    'saved_to_cassandra': True
+                }
         
         last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
         cassandra_fallback_used = False

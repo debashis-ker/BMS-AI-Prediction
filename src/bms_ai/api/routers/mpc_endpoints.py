@@ -175,7 +175,7 @@ async def optimize_setpoint(
     The endpoint is designed to be called at 10-minute intervals.
     """
     log.info(f"[MPC Optimize] Request for {request.equipment_id} / {request.screen_id}")
-    
+    print(f"[MPC Optimize] Request for {request.equipment_id} / {request.screen_id}")
     if not _mpc_models_loaded.get(request.equipment_id, False):
         log.error(f"[MPC Optimize] MPC model not loaded for {request.equipment_id}")
         raise HTTPException(
