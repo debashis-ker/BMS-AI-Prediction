@@ -186,6 +186,8 @@ def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_da
 
     for current_screen in screens_to_process:
         sessions_by_movie = {}
+        day_rollover = 0
+        previous_start_time = None
         
         for s_val in schedule_data.get('sessions', {}).values():
             if s_val.get('screen', '').lower() == current_screen.lower():
@@ -198,19 +200,26 @@ def total_cinema_timings(purpose, schedule_data, screen_name, day_key, target_da
                     
                     for time_range in day_sessions.values():
                         try:
-                            start_str, end_str = time_range.split(' - ')
-                            
-                            start_time_obj = parse_time_str(start_str)
-                            end_time_obj = parse_time_str(end_str)
-                            
-                            start_dt = datetime.combine(target_date, start_time_obj)
-                            end_dt = datetime.combine(target_date, end_time_obj)
+                            parts = time_range.split('-')
+                            if len(parts) != 2:
+                                continue
+
+                            start_time_obj = parse_time_str(parts[0].strip())
+                            end_time_obj = parse_time_str(parts[1].strip())
+
+                            if previous_start_time is not None and start_time_obj < previous_start_time:
+                                day_rollover += 1
+
+                            show_date = target_date + timedelta(days=day_rollover)
+                            start_dt = datetime.combine(show_date, start_time_obj)
+                            end_dt = datetime.combine(show_date, end_time_obj)
                             
                             if end_dt <= start_dt:
                                 end_dt += timedelta(days=1)
                             
                             formatted_range = f"{format_bms_time(start_dt)} - {format_bms_time(end_dt)}"
                             sessions_by_movie[film_title].append(formatted_range)
+                            previous_start_time = start_time_obj
                         except:
                             continue
         
