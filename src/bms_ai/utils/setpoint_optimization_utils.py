@@ -188,7 +188,7 @@ def fetch_movie_schedule(ticket: str="8a95c9df-bc32-484f-bd6b-8c1c35f5da7d", tic
             log.warning("No instances found for Schedule Archival with Utility Bill task.")
             return None
         
-        print(f"Found {len(instances)} instances for Schedule Archival with Utility Bill task.")
+        # print(f"Found {len(instances)} instances for Schedule Archival with Utility Bill task.")
         log.debug(f"Found {len(instances)} instances for Schedule Archival with Utility Bill task.")
         
         all_instances = []
