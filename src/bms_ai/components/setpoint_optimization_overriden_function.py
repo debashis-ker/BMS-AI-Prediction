@@ -169,119 +169,115 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
 
 async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=None, session=None):
     if not (from_date and to_date):
-        now_utc = datetime.now(timezone.utc)
-        start_dt = now_utc - timedelta(minutes=40)
-        from_date = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
-        to_date = now_utc.strftime('%Y-%m-%dT%H:%M:%S')
-        log.info(f"Using default UTC range: {from_date} to {to_date}")
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        to_date_dt = now_utc
+        from_date_dt = now_utc - timedelta(minutes=50)
+        eval_start_time = now_utc - timedelta(minutes=30)
+        from_date = from_date_dt.strftime('%Y-%m-%dT%H:%M:%S')
+        to_date = to_date_dt.strftime('%Y-%m-%dT%H:%M:%S')
+        log.info(f"[{equipment_id}] No dates: Fetching 50m, evaluating last 30m.")
+    else:
+        from_date_dt = datetime.fromisoformat(from_date.replace('Z', '')).replace(tzinfo=None)
+        to_date_dt = datetime.fromisoformat(to_date.replace('Z', '')).replace(tzinfo=None)    
+        eval_start_time = from_date_dt + timedelta(minutes=20) 
+        log.info(f"[{equipment_id}] Dates provided: Fetching 50m range, skipping first 20m priming.")
 
-    log.info(f"Fetching MPC history for {equipment_id} from {from_date} to {to_date}")
-    mpc_data = await get_optimization_history(equipment_id=equipment_id, from_date=from_date, to_date=to_date,session=session)
-    
+    log.info(f"[{equipment_id}] Time Specs: FetchStart={from_date_dt}, EvalStart={eval_start_time}, End={to_date_dt}")
+
+    log.info(f"[{equipment_id}] Step 1: Fetching MPC Optimization history...")
+    mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
     if mpc_data.get('count', 0) == 0:
-        log.warning(f"No MPC data found for {equipment_id}")
+        log.warning(f"[{equipment_id}] Aborting: No MPC records found in this period.")
         raise HTTPException(
-            status_code=500,
-            detail={"message": "MPC Optimization Data Not Found within this period"}
-        )
-    log.info(f"Successfully fetched {mpc_data.get('count')} MPC records")
-
-    log.info(f"Fetching raw telemetry for {equipment_id}")
-    raw_telemetry = fetch_cassandra_data(
-        equipment_id=equipment_id, 
-        from_date=from_date, 
-        to_date=to_date, 
+            status_code=500, 
+            detail="No MPC Setpoint records found within this time period.")
+    
+    log.info(f"[{equipment_id}] Step 2: Fetching raw telemetry from Cassandra...")
+    raw_data = fetch_cassandra_data(
+        equipment_id=equipment_id, from_date=from_date, to_date=to_date, 
         datapoints=["SpTREff", "TempSp1", "ChwFb"]
     )
-    
-    if not raw_telemetry:
-        log.warning(f"No telemetry data found for {equipment_id} in requested window.")
-        return []
+    if not raw_data:
+        log.warning(f"[{equipment_id}] Aborting: No Cassandra data found within this period.")
+        raise HTTPException(
+            status_code=500, 
+            detail="No Cassandra data found within this time period.")
 
-    telemetry_df = data_pipeline(raw_telemetry).reset_index()
-    telemetry_df = telemetry_df.rename(columns={"data_received_on": "timestamp"})
+    log.info(f"[{equipment_id}] Step 3: Processing DataFrames...")
+    raw_data_df = data_pipeline(raw_data).reset_index().rename(columns={"data_received_on": "timestamp"})
+    raw_data_df['timestamp'] = pd.to_datetime(raw_data_df['timestamp']).dt.tz_localize(None)
     
     mpc_results_df = pd.DataFrame(mpc_data['results'])
-    mpc_results_df['timestamp'] = pd.to_datetime(mpc_results_df['timestamp_utc']).dt.tz_localize(None)
-    mpc_results_df = mpc_results_df.rename(columns={'timestamp_utc': 'mpc_run_time'}) 
+    mpc_results_df['timestamp'] = (pd.to_datetime(mpc_results_df['timestamp_utc']) + timedelta(minutes=1)).dt.tz_localize(None)
+    mpc_results_df = mpc_results_df.rename(columns={'timestamp_utc': 'mpc_run_time'})
     mpc_results_df = mpc_results_df[['timestamp', 'optimized_setpoint', 'mode', 'mpc_run_time']]
 
-    combined_df = pd.merge(telemetry_df, mpc_results_df, on='timestamp', how='outer').sort_values('timestamp')
+    combined_df = pd.merge(raw_data_df, mpc_results_df, on='timestamp', how='outer').sort_values('timestamp')
     
-    combined_df['optimized_setpoint'] = combined_df['optimized_setpoint'].ffill()
-    combined_df['mode'] = combined_df['mode'].ffill()
-    combined_df['mpc_run_time'] = combined_df['mpc_run_time'].ffill()
-
+    combined_df[['optimized_setpoint', 'mode', 'mpc_run_time']] = combined_df[['optimized_setpoint', 'mode', 'mpc_run_time']].ffill()
     combined_df = combined_df.dropna(subset=['SpTREff'])
-    log.info(f"Merged table created with {len(combined_df)} rows")
+    
+    log.info(f"[{equipment_id}] Data synchronized. Merged rows: {len(combined_df)}")
 
-    final_dict = []
+    log.info(f"[{equipment_id}] Step 4: Finding manual overrides...")
+    temp_results = []
     global_last_stable_row = None
-    fetched_additional_baseline = False
 
     for i in range(len(combined_df)):
         row = combined_df.iloc[i]
+        curr_ts = row['timestamp']
+        curr_sp = row['SpTREff']
+        ai_sp = row['optimized_setpoint']
         
-        if row['SpTREff'] != row['optimized_setpoint']:
-            issue_row = row
+        if curr_sp == ai_sp:
+            global_last_stable_row = row
+            log.debug(f"[{equipment_id}] Stable Baseline Updated at {curr_ts}: Sp={curr_sp}")
+
+        if curr_sp != ai_sp:
+            if curr_ts < eval_start_time:
+                log.debug(f"[{equipment_id}] IGNORE (Priming Window): Override at {curr_ts} (Sp:{curr_sp} != AI:{ai_sp})")
+                continue
+
             current_stable_row = None
-            
             for j in range(i - 1, -1, -1):
-                prev_row = combined_df.iloc[j]
-                if prev_row['SpTREff'] == prev_row['optimized_setpoint']:
-                    current_stable_row = prev_row
-                    global_last_stable_row = current_stable_row
+                if combined_df.iloc[j]['SpTREff'] == combined_df.iloc[j]['optimized_setpoint']:
+                    current_stable_row = combined_df.iloc[j]
                     break
             
-            if current_stable_row is None and global_last_stable_row is None and not fetched_additional_baseline:
-                log.info("Baseline not found in window. Fetching additional 20 minutes of prior data.")
-                fetched_additional_baseline = True
-                
-                prior_start = (datetime.fromisoformat(from_date) - timedelta(minutes=20)).isoformat()
-                prior_end = from_date
-                
-                prior_raw = fetch_cassandra_data(
-                    equipment_id=equipment_id, 
-                    from_date=prior_start, 
-                    to_date=prior_end, 
-                    datapoints=["SpTREff", "TempSp1", "ChwFb"]
-                )
-                
-                if prior_raw:
-                    prior_df = data_pipeline(prior_raw).reset_index()
-                    prior_df = prior_df.rename(columns={"data_received_on": "timestamp"})
-                    
-                    initial_target = mpc_results_df.iloc[0]['optimized_setpoint']
-                    stable_prior = prior_df[prior_df['SpTREff'] == initial_target]
-                    
-                    if not stable_prior.empty:
-                        global_last_stable_row = stable_prior.iloc[-1]
-                        log.info("Found stable baseline in prior 20-minute data.")
-
             effective_stable_row = current_stable_row if current_stable_row is not None else global_last_stable_row
             
             if effective_stable_row is not None:
-                sptreff_diff = abs(row['SpTREff'] - effective_stable_row['SpTREff'])
+                stable_sp = effective_stable_row['SpTREff']
+                sptreff_diff = round(abs(curr_sp - stable_sp), 4)
                 
                 if sptreff_diff > 0:
-                    diff_entry = {
-                        "timestamp": issue_row['timestamp'].isoformat(), 
-                        "timestamp_utc": issue_row['mpc_run_time'],
+                    log.info(f"[{equipment_id}] VALID OVERRIDE: Time={curr_ts} | Actual={curr_sp} | Baseline={stable_sp} | Diff={sptreff_diff} | AI_Cycle={row['mpc_run_time']}")
+                    temp_results.append({
+                        "timestamp": curr_ts.isoformat(),
+                        "timestamp_utc": row['mpc_run_time'], 
                         "equipment_id": equipment_id,
-                        "mode": issue_row['mode'],
+                        "mode": row['mode'],
                         "SpTREff_diff": sptreff_diff,
-                        "TempSp1_diff": abs(issue_row['TempSp1'] - effective_stable_row['TempSp1']),
-                        "ChwFb_diff": abs(issue_row['ChwFb'] - effective_stable_row['ChwFb'])
-                    }
+                        "TempSp1_diff": round(abs(row['TempSp1'] - effective_stable_row['TempSp1']), 4),
+                        "ChwFb_diff": round(abs(row['ChwFb'] - effective_stable_row['ChwFb']), 4) if 'ChwFb' in row else 0
+                    })
+            else:
+                log.warning(f"[{equipment_id}] POTENTIAL ISSUE at {curr_ts} (Sp:{curr_sp} != AI:{ai_sp}) but NO STABLE BASELINE found in the last 40m.")
 
-                    clean_entry = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in diff_entry.items()}
-                    final_dict.append(clean_entry)
-        else:
-            global_last_stable_row = row
 
-    log.info(f"Function Complete: Found {len(final_dict)} unusual setpoint activities")
+    if not temp_results:
+        log.warning(f"[{equipment_id}] Result: No manual overrides detected in the 30-minute evaluation window.")
+        return []
+
+    log.info(f"[{equipment_id}] Step 5: Deduplicating {len(temp_results)} override rows...")
+    final_df = pd.DataFrame(temp_results)
+    final_df = final_df.loc[final_df.groupby('timestamp_utc')['SpTREff_diff'].idxmax()]
+    
+    final_dict = final_df.sort_values('timestamp').replace({np.nan: None}).to_dict(orient='records')
+    log.info(f"[{equipment_id}] Final Result: Successfully extracted {len(final_dict)} deduplicated override events.")
+    
     return final_dict
-
+    
 def fetch_setpoint_diffs_averages(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
     equipment_id: str = "Ahu1", 
