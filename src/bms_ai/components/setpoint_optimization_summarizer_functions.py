@@ -8,58 +8,11 @@ log = setup_logger(__name__)
 '''Setpoint Optimization Summary Functions'''
 
 def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = None) -> Dict:
-    """
-    Analyzes historical optimization data to produce a performance summary,
-    including detailed write counts and session timelines for occupied/unoccupied modes.
-    """
     results = data_input.get("results", []) if isinstance(data_input, dict) else data_input
-
     if not results:
         return {"message": "No data available for the selected period."}
 
     sorted_data = sorted(results, key=lambda x: x.get('timestamp_utc', ''))
-
-    occupied_temps = []
-    unoccupied_temps = []
-    precooling_temps = []
-    # actual_optimization_events = [r for r in sorted_data if r.get("optimization_status") != "bypassed"]
-    # actual_optimization_events = [r for r in sorted_data]
-
-    # optimization_count = len(actual_optimization_events)
-
-    occupied_ranges, unoccupied_ranges, precooling_ranges = [], [], []
-    current_occ_range = None
-
-    for r in sorted_data:
-        ts = r.get('timestamp_utc')
-        mode = (r.get('mode') or "").lower()
-        temp = r.get('actual_tempsp1')
-
-        if mode == "occupied":
-            if temp is not None: occupied_temps.append(temp)
-        elif mode == "unoccupied":
-            if temp is not None: unoccupied_temps.append(temp)
-        elif mode == "pre_cooling":
-            if temp is not None: precooling_temps.append(temp)
-
-        if mode == "pre_cooling":
-            status = "Pre-cooling"
-        else:
-            status = "Occupied" if mode == "occupied" else "Unoccupied"
-        if current_occ_range is None or status != current_occ_range["status"]:
-            if current_occ_range:
-                if current_occ_range["status"] == "Occupied":
-                    occupied_ranges.append(current_occ_range)
-                elif current_occ_range["status"] == "Unoccupied":
-                    unoccupied_ranges.append(current_occ_range)
-                else:
-                    precooling_ranges.append(current_occ_range)
-            current_occ_range = {"start": ts, "end": ts, "status": status}
-        else:
-            current_occ_range["end"] = ts
-
-    if current_occ_range:
-        (occupied_ranges if current_occ_range["status"] == "Occupied" else unoccupied_ranges).append(current_occ_range)
 
     raw_records = []
     if session:
@@ -75,23 +28,29 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
         except Exception as e:
             log.error(f"Failed to fetch raw records for counts: {e}")
 
-    occ_count = len([r for r in raw_records if r.get("mode") in ["occupied", "pre_cooling"]])
+    occ_modes = ["occupied", "pre_cooling", "inter_show"]
+    
+    occ_count = len([r for r in raw_records if r.get("mode") in occ_modes])
     unocc_count = len([r for r in raw_records if r.get("mode") == "unoccupied"])
+    occupied_temps = [r.get("actual_tempsp1") for r in results 
+                      if (r.get("mode") or "").lower() in occ_modes and r.get("actual_tempsp1") is not None]
+    unoccupied_temps = [r.get("actual_tempsp1") for r in results 
+                        if (r.get("mode") or "").lower() == "unoccupied" and r.get("actual_tempsp1") is not None]
 
     occ_situation = {
         "total_write_count_occupied": occ_count,
-        "maximum_occupied_temperature": f"{round(max(occupied_temps), 2)}" if occupied_temps else None,
-        "minimum_occupied_temperature": f"{round(min(occupied_temps), 2)}" if occupied_temps else None,
+        "maximum_occupied_temperature": round(max(occupied_temps), 2) if occupied_temps else None,
+        "minimum_occupied_temperature": round(min(occupied_temps), 2) if occupied_temps else None,
     }
-    if occ_count == 0:
+    if not occupied_temps:
         occ_situation["reason"] = "room is unoccupied for all the time"
 
     unocc_situation = {
         "total_write_count_unoccupied": unocc_count,
-        "maximum_unoccupied_temperature": f"{round(max(unoccupied_temps), 2)}" if unoccupied_temps else None,
-        "minimum_unoccupied_temperature": f"{round(min(unoccupied_temps), 2)}" if unoccupied_temps else None,
+        "maximum_unoccupied_temperature": round(max(unoccupied_temps), 2) if unoccupied_temps else None,
+        "minimum_unoccupied_temperature": round(min(unoccupied_temps), 2) if unoccupied_temps else None,
     }
-    if unocc_count == 0:
+    if not unoccupied_temps:
         unocc_situation["reason"] = "room is occupied for all the time"
 
     last_feat = sorted_data[-1].get('used_features', {}) if sorted_data else {}
@@ -122,22 +81,17 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
             log.error(f"Failed to fetch averages for summary: {e}")
 
     return {
-        "success": True,
-        "equipment_id": data_input.get("equipment_id", "") if isinstance(data_input, dict) else "",
         "data": {
-            "summary_title": "Setpoint Optimization Summary",
-            "start_date": data_input.get("start_date", "") if isinstance(data_input, dict) else "",
-            "end_date": data_input.get("end_date", "") if isinstance(data_input, dict) else "",
-            # "optimized_count": optimization_count,
             "optimized_count": averages_data['total_records'] if averages_data else 0,
             "write_counts": {
                 "occupied_situation": occ_situation,
                 "unoccupied_situation": unocc_situation, 
             },
-            "optimization_averages": averages_data if averages_data else None,
+            "optimization_averages": averages_data,
             "evaluation_parameters": active_params if active_params else None
         }
     }
+
 
 # def generate_optimization_summary_response(optimization_data: Dict[str, Any]) -> str:
 #     """

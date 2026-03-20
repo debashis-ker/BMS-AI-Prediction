@@ -237,7 +237,7 @@ artifacts/*.csv
 artifacts*.pkl
 artifacts*.joblib
 artifacts/optimization_history/*
-
+artifacts/ahu*_mpc/
 
 schedule_obj_dummy.json
 
