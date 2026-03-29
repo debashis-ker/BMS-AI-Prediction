@@ -216,8 +216,13 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     
     combined_df[['optimized_setpoint', 'mode', 'mpc_run_time']] = combined_df[['optimized_setpoint', 'mode', 'mpc_run_time']].ffill()
     combined_df = combined_df.dropna(subset=['SpTREff'])
-    
-    log.info(f"[{equipment_id}] Data synchronized. Merged rows: {len(combined_df)}")
+
+    combined_df['SpTREff'] = combined_df['SpTREff'].round(1)
+    combined_df['optimized_setpoint'] = combined_df['optimized_setpoint'].round(1)
+
+    diff_df = combined_df[combined_df['SpTREff'] != combined_df['optimized_setpoint']].dropna(subset=['SpTREff', 'optimized_setpoint'])
+
+    log.info(f"[{equipment_id}] Data synchronized. Rows with differences: \n{diff_df[['SpTREff', 'optimized_setpoint']].to_string() if not diff_df.empty else 'None'}")
 
     log.info(f"[{equipment_id}] Step 4: Finding manual overrides...")
     temp_results = []
