@@ -31,6 +31,9 @@ import numpy as np
 import os
 from dotenv import load_dotenv
 
+from src.bms_ai.mpc.mpc_inference_pipeline import WeatherFetcher
+from src.bms_ai.mpc.mpc_inference_pipeline import OccupancyFetcher
+
 load_dotenv()
 
 log = setup_logger(__name__)
@@ -429,4 +432,200 @@ async def get_optimization_history(
             }
         )
 
+@router.post("/setpoint_range_optimization", response_model=MPCOptimizeResponse)
+async def setpoint_range_optimization(
+    request: MPCOptimizeRequest,
+    session: Session = Depends(get_cassandra_session)
+):
+   
+    log.info(f"[MPC Setpoint Range] Request for {request.equipment_id} / {request.screen_id}")
+    print(f"[MPC Setpoint Range] Request for {request.equipment_id} / {request.screen_id}")
+    
+    if not _mpc_models_loaded.get(request.equipment_id, False):
+        log.error(f"[MPC Setpoint Range] MPC model not loaded for {request.equipment_id}")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "success": False,
+                "error": f"MPC model not loaded for {request.equipment_id}.",
+                "error_type": "MODEL_NOT_LOADED"
+            }
+        )
+    
+    try:
+        # Configure inference pipeline
+        config = InferenceConfig(
+            equipment_id=request.equipment_id,
+            screen_id=request.screen_id,
+            building_id=request.building_id
+        )
+        
+        # Fetch outdoor temperature from weather API
+        weather_fetcher = WeatherFetcher(config)
+        weather = weather_fetcher.fetch_current_weather()
+        
+        if weather is None:
+            log.error(f"[MPC Setpoint Range] Failed to fetch weather data for {request.equipment_id}")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "success": False,
+                    "error": "Failed to fetch outdoor temperature data",
+                    "error_type": "WEATHER_FETCH_FAILED"
+                }
+            )
+        
+        outside_temp = weather.get('temperature')
+        outside_humidity = weather.get('humidity')
+        log.info(f"[MPC Setpoint Range] Outside temperature: {outside_temp}°C, Humidity: {outside_humidity}%")
+        
+        # Fetch occupancy level from movie schedule API
+        occupancy_fetcher = OccupancyFetcher(config)
+        
+        try:
+            occupancy = occupancy_fetcher.fetch_occupancy_status(
+                screen_id=request.screen_id,
+                ticket=request.ticket,
+                ticket_type=request.ticket_type
+            )
+            
+        except Exception as occ_error:
+            log.error(f"[MPC Setpoint Range] Exception while fetching occupancy: {occ_error}", exc_info=True)
+            occupancy = None
+        
+        if occupancy is None:
+            log.error(f"[MPC Setpoint Range] Failed to fetch occupancy data for {request.screen_id}. Using default values.")
+            # Fallback to default values instead of failing
+            occupied_status = 0
+            movie_name = "Unknown"
+            time_until_next_movie = None
+            log.warning(f"[MPC Setpoint Range] Using fallback occupancy values")
+        else:
+            occupied_status = occupancy.get('status', 0)
+            movie_name = occupancy.get('movie_name', 'No movie')
+            time_until_next_movie = occupancy.get('time_until_next_movie', 0)
+        
+        log.info(f"[MPC Setpoint Range] Occupancy status: {occupied_status}")
 
+        # Return only when the space is occupied
+        if occupied_status != 1:
+            log.info(
+                f"[MPC Setpoint Range] Skipping response because occupied status is {occupied_status} for {request.equipment_id}/{request.screen_id}"
+            )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "success": False,
+                    "error": "Occupancy is not 1; skipping setpoint range response",
+                    "error_type": "UNOCCUPIED",
+                    "occupied": occupied_status,
+                    "screen_id": request.screen_id,
+                    "equipment_id": request.equipment_id,
+                },
+            )
+
+        # Fetch recent sensor data to include CO2 signal if available
+        co2_ra = None
+        try:
+            pipeline = MPCInferencePipeline(
+                cassandra_session=session,
+                config=config
+            )
+            sensor_data = pipeline.bms_fetcher.fetch_last_10_minutes(request.equipment_id)
+            if sensor_data:
+                try:
+                    from src.bms_ai.mpc.ahu_configs import get_sensor_rename_map
+                    rename_map = get_sensor_rename_map(request.equipment_id)
+                    sensor_data = {rename_map.get(k, k): v for k, v in sensor_data.items()} if rename_map else sensor_data
+                except Exception:
+                    pass
+                co2_ra = sensor_data.get('Co2RA')
+        except Exception as sensor_err:
+            log.warning(f"[MPC Setpoint Range] Unable to fetch sensor data for CO2: {sensor_err}")
+
+        optimized_setpoint_db = None
+        try:
+            table_name = config.table_name
+            status_filter = "AND optimization_status IN ('success', 'bypassed')"
+            query = f"""
+                SELECT * FROM {table_name}
+                WHERE equipment_id = '{request.equipment_id}' {status_filter}
+                LIMIT 1
+                ALLOW FILTERING;
+            """
+            rows = session.execute(query)
+            row = rows.one()
+            if row:
+                optimized_setpoint_db = getattr(row, 'optimized_setpoint', None)
+                log.info(f"[MPC Setpoint Range] optimized_setpoint from DB: {optimized_setpoint_db}")
+            else:
+                log.warning("[MPC Setpoint Range] No record found to fetch optimized_setpoint; falling back to request")
+        except Exception as db_err:
+            log.warning(f"[MPC Setpoint Range] Failed to fetch optimized_setpoint from DB: {db_err}. Falling back to request")
+
+        # Compute a simple setpoint band around the applicable base setpoint.
+        base_setpoint = optimized_setpoint_db if optimized_setpoint_db is not None else request.occupied_setpoint
+
+        # Widen the band when outside temperature deviates from 30C and when humidity/CO2 are elevated.
+        temp_effect = 0.02 * abs(outside_temp - 30)
+        humidity_effect = 0
+        if outside_humidity > 55:
+            humidity_effect = 0.01 * (outside_humidity - 55)
+
+        co2_effect = 0
+        if co2_ra is not None and co2_ra > 800:
+            co2_effect = 0.0003 * (co2_ra - 800)  # small widening for high CO2
+
+        delta_raw = 1 + temp_effect + humidity_effect + co2_effect
+        delta = min(1.5, max(0.5, delta_raw))  # clamp to [0.5, 1.5]
+        range_min = base_setpoint - delta
+        range_max = base_setpoint + delta
+
+        log.info(
+            f"[MPC Setpoint Range] Base setpoint={base_setpoint}°C, range=({range_min}°C, {range_max}°C), "
+            f"outside={outside_temp}°C, humidity={outside_humidity}%, co2={co2_ra}, occupied={occupied_status}, delta={delta} (raw={delta_raw})"
+        )
+        
+        return MPCOptimizeResponse(
+            success=True,
+            equipment_id=request.equipment_id,
+            screen_id=request.screen_id,
+            outside_temp=outside_temp,
+            outside_humidity=outside_humidity,
+            occupied=occupied_status,
+            movie_name=movie_name,
+            time_until_next_movie=time_until_next_movie,
+            optimized_setpoint=base_setpoint,
+            target_temperature=base_setpoint,
+            setpoint_difference=0.0,
+            timestamp_utc=datetime.utcnow().isoformat(),
+            optimization_status="range_computed",
+            used_features={
+                "range_min": range_min,
+                "range_max": range_max,
+                "base_setpoint": base_setpoint,
+                "outside_temp": outside_temp,
+                "outside_humidity": outside_humidity,
+                "co2_ra": co2_ra,
+                "occupied_status": occupied_status,
+                "delta": delta,
+                "delta_raw": delta_raw
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[MPC Setpoint Range] Unexpected error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error": str(e),
+                "error_type": "INTERNAL_ERROR"
+            }
+        )
+
+    
+    
+   
+   
