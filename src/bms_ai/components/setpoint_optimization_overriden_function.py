@@ -145,25 +145,6 @@ async def get_optimization_history(
             }
         )
 
-def fetch_historical_data(equipment_id, from_date=None, to_date=None):
-    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
-
-    if from_date and to_date:
-        print(from_date, to_date)
-        data = {
-            "equipment_id": equipment_id,
-            "from_date": from_date,
-            "to_date": to_date
-        }
-
-    else:
-        data = {
-            "equipment_id": equipment_id
-        }
-    response = requests.post(url, json=data)
-
-    return response.json()
-
 '''Setpoint Unusal Activity of Overriding Optimization Functions'''
 
 def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "data_received_on") -> pd.DataFrame:
@@ -203,8 +184,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
 
     log.info(f"[{equipment_id}] Time Specs: FetchStart={from_date_dt}, EvalStart={eval_start_time}, End={to_date_dt}")
 
-    # mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
-    mpc_data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
+    mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
 
     if mpc_data.get('count', 0) == 0:
         log.warning(f"[{equipment_id}] Aborting: No MPC records found in this period.")
