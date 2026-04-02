@@ -145,6 +145,25 @@ async def get_optimization_history(
             }
         )
 
+def fetch_historical_data(equipment_id, from_date=None, to_date=None):
+    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
+
+    if from_date and to_date:
+        print(from_date, to_date)
+        data = {
+            "equipment_id": equipment_id,
+            "from_date": from_date,
+            "to_date": to_date
+        }
+
+    else:
+        data = {
+            "equipment_id": equipment_id
+        }
+    response = requests.post(url, json=data)
+
+    return response.json()
+
 '''Setpoint Unusal Activity of Overriding Optimization Functions'''
 
 def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "data_received_on") -> pd.DataFrame:
@@ -184,18 +203,18 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
 
     log.info(f"[{equipment_id}] Time Specs: FetchStart={from_date_dt}, EvalStart={eval_start_time}, End={to_date_dt}")
 
-    log.info(f"[{equipment_id}] Step 1: Fetching MPC Optimization history...")
-    mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
+    # mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
+    mpc_data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
+
     if mpc_data.get('count', 0) == 0:
         log.warning(f"[{equipment_id}] Aborting: No MPC records found in this period.")
         raise HTTPException(
             status_code=500, 
             detail="No MPC Setpoint records found within this time period.")
     
-    log.info(f"[{equipment_id}] Step 2: Fetching raw telemetry from Cassandra...")
     raw_data = fetch_cassandra_data(
         equipment_id=equipment_id, from_date=from_date, to_date=to_date, 
-        datapoints=["SpTREff", "TempSp1", "ChwFb"]
+        datapoints=["SpTREff","ChwFb","TempSp1","TempSp"]
     )
     if not raw_data:
         log.warning(f"[{equipment_id}] Aborting: No Cassandra data found within this period.")
@@ -207,6 +226,13 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     raw_data_df = data_pipeline(raw_data).reset_index().rename(columns={"data_received_on": "timestamp"})
     raw_data_df['timestamp'] = pd.to_datetime(raw_data_df['timestamp']).dt.tz_localize(None)
     
+    if 'TempSp1' not in raw_data_df.columns or raw_data_df['TempSp1'].isna().all():
+        if 'TempSp' in raw_data_df.columns:
+            log.info(f"[{equipment_id}] TempSp1 not found or empty. Falling back to 'TempSp'.")
+            raw_data_df['TempSp1'] = raw_data_df['TempSp']
+        else:
+            log.warning(f"[{equipment_id}] Neither TempSp1 nor TempSp found in data.")
+
     mpc_results_df = pd.DataFrame(mpc_data['results'])
     mpc_results_df['timestamp'] = (pd.to_datetime(mpc_results_df['timestamp_utc']) + timedelta(minutes=1)).dt.tz_localize(None)
     mpc_results_df = mpc_results_df.rename(columns={'timestamp_utc': 'mpc_run_time'})
@@ -224,62 +250,46 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
 
     log.info(f"[{equipment_id}] Data synchronized. Rows with differences: \n{diff_df[['SpTREff', 'optimized_setpoint']].to_string() if not diff_df.empty else 'None'}")
 
-    log.info(f"[{equipment_id}] Step 4: Finding manual overrides...")
     temp_results = []
-    global_last_stable_row = None
 
-    for i in range(len(combined_df)):
-        row = combined_df.iloc[i]
-        curr_ts = row['timestamp']
-        curr_sp = row['SpTREff']
-        ai_sp = row['optimized_setpoint']
+    unusual_mask = (combined_df['SpTREff'] != combined_df['optimized_setpoint']) & (combined_df['timestamp'] >= eval_start_time)
+    affected_mpc_times = combined_df[unusual_mask]['mpc_run_time'].dropna().unique()
+
+    for mpc_time in affected_mpc_times:
+        group = combined_df[combined_df['mpc_run_time'] == mpc_time]
         
-        if curr_sp == ai_sp:
-            global_last_stable_row = row
-            log.debug(f"[{equipment_id}] Stable Baseline Updated at {curr_ts}: Sp={curr_sp}")
+        if len(group) < 2:
+            continue
 
-        if curr_sp != ai_sp:
-            if curr_ts < eval_start_time:
-                log.debug(f"[{equipment_id}] IGNORE (Priming Window): Override at {curr_ts} (Sp:{curr_sp} != AI:{ai_sp})")
-                continue
+        idx_min = group['ChwFb'].idxmin()
+        idx_max = group['ChwFb'].idxmax()
 
-            current_stable_row = None
-            for j in range(i - 1, -1, -1):
-                if combined_df.iloc[j]['SpTREff'] == combined_df.iloc[j]['optimized_setpoint']:
-                    current_stable_row = combined_df.iloc[j]
-                    break
-            
-            effective_stable_row = current_stable_row if current_stable_row is not None else global_last_stable_row
-            
-            if effective_stable_row is not None:
-                stable_sp = effective_stable_row['SpTREff']
-                sptreff_diff = round(abs(curr_sp - stable_sp), 4)
-                
-                if sptreff_diff > 0:
-                    log.info(f"[{equipment_id}] VALID OVERRIDE: Time={curr_ts} | Actual={curr_sp} | Baseline={stable_sp} | Diff={sptreff_diff} | AI_Cycle={row['mpc_run_time']}")
-                    temp_results.append({
-                        "timestamp": curr_ts.isoformat(),
-                        "timestamp_utc": row['mpc_run_time'], 
-                        "equipment_id": equipment_id,
-                        "mode": row['mode'],
-                        "SpTREff_diff": sptreff_diff,
-                        "TempSp1_diff": round(abs(row['TempSp1'] - effective_stable_row['TempSp1']), 4),
-                        "ChwFb_diff": round(abs(row['ChwFb'] - effective_stable_row['ChwFb']), 4) if 'ChwFb' in row else 0
-                    })
-            else:
-                log.warning(f"[{equipment_id}] POTENTIAL ISSUE at {curr_ts} (Sp:{curr_sp} != AI:{ai_sp}) but NO STABLE BASELINE found in the last 40m.")
+        row_min = group.loc[idx_min]
+        row_max = group.loc[idx_max]
 
+        chwfb_swing = round(abs(row_max['ChwFb'] - row_min['ChwFb']),2)
+        
+        sptreff_offset = round(abs(row_max['SpTREff'] - row_max['optimized_setpoint']),2)
+        
+        tempsp1_swing = round(abs(row_max['TempSp1'] - row_min['TempSp1']),2)
+
+        if sptreff_offset > 0.5:
+            temp_results.append({
+                "timestamp": row_max['timestamp'].isoformat(),
+                "timestamp_utc": mpc_time,                   
+                "equipment_id": equipment_id,
+                "mode": row_max['mode'],
+                "SpTREff_diff": sptreff_offset,
+                "TempSp1_diff": tempsp1_swing,
+                "ChwFb_diff": chwfb_swing
+            })
 
     if not temp_results:
-        log.warning(f"[{equipment_id}] Result: No manual overrides detected in the 30-minute evaluation window.")
+        log.warning(f"[{equipment_id}] Result: No manual overrides detected with valid fluctuations.")
         return []
-
-    log.info(f"[{equipment_id}] Step 5: Deduplicating {len(temp_results)} override rows...")
+        
     final_df = pd.DataFrame(temp_results)
-    final_df = final_df.loc[final_df.groupby('timestamp_utc')['SpTREff_diff'].idxmax()]
-    
     final_dict = final_df.sort_values('timestamp').replace({np.nan: None}).to_dict(orient='records')
-    log.info(f"[{equipment_id}] Final Result: Successfully extracted {len(final_dict)} deduplicated override events.")
     
     return final_dict
     
