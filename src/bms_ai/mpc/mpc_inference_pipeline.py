@@ -6,7 +6,7 @@ This module provides real-time MPC inference for cinema AHU optimization.
 It handles:
 1. Fetching live sensor data from BMS API (last 10 minutes, resampled)
 2. Fetching lag values from Cassandra (previous optimization)
-3. Fetching current weather from Open-Meteo
+3. Fetching current weather from WeatherAPI
 4. Fetching occupancy from movie schedule API
 5. Running MPC optimization
 6. Saving results to Cassandra
@@ -51,7 +51,7 @@ class InferenceConfig:
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
     
     bms_api_url: str = "https://ikoncloud.keross.com/bms-express-server/data"
-    weather_api_url: str = "https://api.open-meteo.com/v1/forecast"
+    weather_api_url: str = "https://api.weatherapi.com/v1/current.json"
     
     # Location (Sharjah)
     latitude: float = 25.34
@@ -191,26 +191,32 @@ class BMSDataFetcher:
 
 
 class WeatherFetcher:
-    """Fetches current weather from Open-Meteo API."""
+    """Fetches current weather from WeatherAPI."""
     
     def __init__(self, config: InferenceConfig):
         self.config = config
         
     def fetch_current_weather(self) -> Dict[str, float]:
         """
-        Fetch current weather (temperature, humidity) from Open-Meteo.
+        Fetch current weather (temperature, humidity) from WeatherAPI.
         
         Returns:
             Dict with 'temperature' and 'humidity' keys
         """
+        api_key = os.getenv("WEATHER_API_KEY", "").strip().strip("'\"")
+        query_location = os.getenv("WEATHER_LOCATION", "Sharjah").strip().strip("'\"")
+
+        if not api_key:
+            log.error("[WeatherFetcher] WEATHER_API_KEY not found in environment")
+            return None
+
         params = {
-            "latitude": self.config.latitude,
-            "longitude": self.config.longitude,
-            "current": "temperature_2m,relative_humidity_2m",
-            "timezone": "GMT"
+            "key": api_key,
+            "q": query_location,
+            "aqi": "no"
         }
         
-        log.info("[WeatherFetcher] Fetching current weather from Open-Meteo")
+        log.info(f"[WeatherFetcher] Fetching current weather from WeatherAPI for {query_location}")
         
         try:
             response = requests.get(
@@ -224,8 +230,8 @@ class WeatherFetcher:
             current = data.get('current', {})
             
             result = {
-                'temperature': current.get('temperature_2m', 35.0),
-                'humidity': current.get('relative_humidity_2m', 50.0)
+                'temperature': current.get('temp_c', 35.0),
+                'humidity': current.get('humidity', 50.0)
             }
             
             log.info(f"[WeatherFetcher] Current weather: {result['temperature']}degC, {result['humidity']}% RH")
@@ -664,27 +670,6 @@ class MPCInferencePipeline:
                 'saved_to_cassandra': True
             }
         '''
-        weather = self.weather_fetcher.fetch_current_weather()
-        if weather is None:
-            log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
-            fail_record = self._create_fail_record(
-                equipment_id=equipment_id,
-                screen_id=screen_id,
-                now_utc=now_utc,
-                now_sharjah=now_sharjah,
-                reason='WEATHER_FETCH_FAILED',
-                sensor_data=sensor_data,
-                occupied_setpoint=occupied_setpoint,
-                unoccupied_setpoint=unoccupied_setpoint
-            )
-            self.cassandra_handler.save_optimization_result(fail_record)
-            return {
-                'success': False,
-                'error': 'Failed to fetch weather data. Cannot proceed without weather information.',
-                'error_type': 'WEATHER_FETCH_FAILED',
-                'saved_to_cassandra': True
-            }
-        
         force_continuous = os.getenv("FORCE_CONTINUOUS_OPTIMIZATION", "false").lower() == "true"
 
         if force_continuous:
@@ -719,6 +704,44 @@ class MPCInferencePipeline:
                     'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
                     'saved_to_cassandra': True
                 }
+
+        is_occupied_now = occupancy.get('status') == 1
+        time_until_next = occupancy.get('time_until_next_movie')
+        is_precooling_now = (not is_occupied_now and isinstance(time_until_next, (int, float)) and time_until_next <= 60)
+        is_inter_show_now = occupancy.get('is_inter_show', False)
+        should_fetch_weather = force_continuous or is_occupied_now or is_precooling_now or is_inter_show_now
+
+        if should_fetch_weather:
+            weather = self.weather_fetcher.fetch_current_weather()
+            if weather is None:
+                log.error("[MPCInference] Weather data unavailable - cannot proceed with optimization")
+                fail_record = self._create_fail_record(
+                    equipment_id=equipment_id,
+                    screen_id=screen_id,
+                    now_utc=now_utc,
+                    now_sharjah=now_sharjah,
+                    reason='WEATHER_FETCH_FAILED',
+                    sensor_data=sensor_data,
+                    occupancy=occupancy,
+                    occupied_setpoint=occupied_setpoint,
+                    unoccupied_setpoint=unoccupied_setpoint
+                )
+                self.cassandra_handler.save_optimization_result(fail_record)
+                return {
+                    'success': False,
+                    'error': 'Failed to fetch weather data. Cannot proceed without weather information.',
+                    'error_type': 'WEATHER_FETCH_FAILED',
+                    'saved_to_cassandra': True
+                }
+        else:
+            weather = {
+                'temperature': 35.0,
+                'humidity': 50.0
+            }
+            log.info(
+                f"[MPCInference] Skipping weather fetch for unoccupied {screen_id} "
+                "(no occupancy, pre-cooling, or inter-show processing needed)"
+            )
         
         last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
         cassandra_fallback_used = False
