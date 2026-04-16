@@ -212,6 +212,7 @@ mlartifacts/
 
 # Project-specific artifacts and logs
 artifacts/
+artifacts_old/
 artifacts/*.csv
 log_info/
 logs/

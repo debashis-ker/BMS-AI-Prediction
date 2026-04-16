@@ -219,7 +219,14 @@ def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: 
         raise HTTPException(status_code=500, detail=f"Internal data pipeline failure for asset {asset_code}/{feature}: {e}")
         
     data_column = model_features[0] 
+
+    physical_name = raw_data[0].get('datapoint', feature) if raw_data else feature
+    
+    if physical_name != data_column and physical_name in df_wide.columns:
+        df_wide.rename(columns={physical_name: data_column}, inplace=True)
+
     cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
+    
     X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
     
     if X_df.empty:

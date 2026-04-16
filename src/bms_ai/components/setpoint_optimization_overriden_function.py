@@ -194,7 +194,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     
     raw_data = fetch_cassandra_data(
         equipment_id=equipment_id, from_date=from_date, to_date=to_date, 
-        datapoints=["SpTREff","ChwFb","TempSp1","TempSp"]
+        datapoints=["SpTREff","ChwFb","TempSp1","TempSp","AvgTmp"]
     )
     if not raw_data:
         log.warning(f"[{equipment_id}] Aborting: No Cassandra data found within this period.")
@@ -207,11 +207,14 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     raw_data_df['timestamp'] = pd.to_datetime(raw_data_df['timestamp']).dt.tz_localize(None)
     
     if 'TempSp1' not in raw_data_df.columns or raw_data_df['TempSp1'].isna().all():
-        if 'TempSp' in raw_data_df.columns:
-            log.info(f"[{equipment_id}] TempSp1 not found or empty. Falling back to 'TempSp'.")
+        if 'AvgTmp' in raw_data_df.columns:
+            log.info(f"[{equipment_id}] TempSp1 not found or empty. Falling back to 'AvgTmp'.")
+            raw_data_df['TempSp1'] = raw_data_df['AvgTmp']
+        elif 'TempSp' in raw_data_df.columns:
+            log.info(f"[{equipment_id}] TempSp1 not found or empty. Filling with 'TempSp' values.")
             raw_data_df['TempSp1'] = raw_data_df['TempSp']
         else:
-            log.warning(f"[{equipment_id}] Neither TempSp1 nor TempSp found in data.")
+            log.warning(f"[{equipment_id}] Neither TempSp1 nor AvgTmp found in data.")
 
     mpc_results_df = pd.DataFrame(mpc_data['results'])
     mpc_results_df['timestamp'] = (pd.to_datetime(mpc_results_df['timestamp_utc']) + timedelta(minutes=1)).dt.tz_localize(None)

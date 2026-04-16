@@ -6,7 +6,7 @@ This module provides real-time MPC inference for cinema AHU optimization.
 It handles:
 1. Fetching live sensor data from BMS API (last 10 minutes, resampled)
 2. Fetching lag values from Cassandra (previous optimization)
-3. Fetching current weather from Open-Meteo
+3. Fetching current weather from WeatherAPI
 4. Fetching occupancy from movie schedule API
 5. Running MPC optimization
 6. Saving results to Cassandra
@@ -51,7 +51,7 @@ class InferenceConfig:
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2"
     
     bms_api_url: str = "https://ikoncloud.keross.com/bms-express-server/data"
-    weather_api_url: str = "https://api.open-meteo.com/v1/forecast"
+    weather_api_url: str = "https://api.weatherapi.com/v1/current.json"
     
     # Location (Sharjah)
     latitude: float = 25.34
@@ -191,26 +191,32 @@ class BMSDataFetcher:
 
 
 class WeatherFetcher:
-    """Fetches current weather from Open-Meteo API."""
+    """Fetches current weather from WeatherAPI."""
     
     def __init__(self, config: InferenceConfig):
         self.config = config
         
     def fetch_current_weather(self) -> Dict[str, float]:
         """
-        Fetch current weather (temperature, humidity) from Open-Meteo.
+        Fetch current weather (temperature, humidity) from WeatherAPI.
         
         Returns:
             Dict with 'temperature' and 'humidity' keys
         """
+        api_key = os.getenv("WEATHER_API_KEY", "").strip().strip("'\"")
+        query_location = os.getenv("WEATHER_LOCATION", "Sharjah").strip().strip("'\"")
+
+        if not api_key:
+            log.error("[WeatherFetcher] WEATHER_API_KEY not found in environment")
+            return None
+
         params = {
-            "latitude": self.config.latitude,
-            "longitude": self.config.longitude,
-            "current": "temperature_2m,relative_humidity_2m",
-            "timezone": "GMT"
+            "key": api_key,
+            "q": query_location,
+            "aqi": "no"
         }
         
-        log.info("[WeatherFetcher] Fetching current weather from Open-Meteo")
+        log.info(f"[WeatherFetcher] Fetching current weather from WeatherAPI for {query_location}")
         
         try:
             response = requests.get(
@@ -224,8 +230,8 @@ class WeatherFetcher:
             current = data.get('current', {})
             
             result = {
-                'temperature': current.get('temperature_2m', 35.0),
-                'humidity': current.get('relative_humidity_2m', 50.0)
+                'temperature': current.get('temp_c', 35.0),
+                'humidity': current.get('humidity', 50.0)
             }
             
             log.info(f"[WeatherFetcher] Current weather: {result['temperature']}degC, {result['humidity']}% RH")
@@ -684,7 +690,7 @@ class MPCInferencePipeline:
                 'error_type': 'WEATHER_FETCH_FAILED',
                 'saved_to_cassandra': True
             }
-        
+
         force_continuous = os.getenv("FORCE_CONTINUOUS_OPTIMIZATION", "false").lower() == "true"
 
         if force_continuous:
@@ -719,7 +725,7 @@ class MPCInferencePipeline:
                     'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
                     'saved_to_cassandra': True
                 }
-        
+
         last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
         cassandra_fallback_used = False
         
