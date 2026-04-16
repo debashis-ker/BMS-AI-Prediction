@@ -26,18 +26,27 @@ class FetchingAlarmDataRequest(BaseModel):
     state: List[str] = Field(default=['warning', 'critical'], description="Filter by states: 'warning', 'critical', or both.")
 
 class StoringAlarmDataRequest(BaseModel):
-    building_id: Optional[str] = Field(default="36c27828-d0b4-4f1e-8a94-d962d342e7c2", description="Building ID (optional)")
-    system_type: Optional[str] = Field(default="AHU", description="System type (e.g., 'AHU', 'MAHU')")
-    equipment_id: Optional[str] = Field(default="Ahu13", description="Equipment ID for datapoint fetching")
-    ticket: str = Field(default="", description="Ticket identifier for data processing (optional)")
-    ticket_type: Optional[str] = Field(default=None, description="Type of ticket for data processing (optional)")
-    software_id: Optional[str] = Field(default=None, description="Software ID for data processing (optional)")
-    account_id: Optional[str] = Field(default=None, description="Account ID for data processing (optional)")
+    building_id: Optional[str] = Field(default="36c27828-d0b4-4f1e-8a94-d962d342e7c2")
+    system_type: Optional[str] = Field(default="AHU")
+    equipment_id: Optional[str] = Field(default="Ahu13")
+    ticket: str = Field(default="")
+    ticket_type: Optional[str] = Field(default=None)
+    freeze_alarm_config: Optional[Dict[str, Any]] = None
+    oscillation_alarm_config: Optional[Dict[str, Any]] = None
+    tracking_alarm_config: Optional[Dict[str, Any]] = None
+    return_air_temp_alarm_config: Optional[Dict[str, Any]] = None
+    heat_stress_alarm_config: Optional[Dict[str, Any]] = None
 
 class TestAlarmRequest(BaseModel):
-    data: List[Dict[str, Any]] = Field(..., description="List of raw BMS data records to test.")
+    building_id: Optional[str] = Field(default="36c27828-d0b4-4f1e-8a94-d962d342e7c2")
+    data: List[Dict[str, Any]] = Field(...)
     ticket: Optional[str] = Field(default="")
     ticket_type: Optional[str] = Field(default=None)
+    freeze_alarm_config: Optional[Dict[str, Any]] = None
+    oscillation_alarm_config: Optional[Dict[str, Any]] = None
+    tracking_alarm_config: Optional[Dict[str, Any]] = None
+    return_air_temp_alarm_config: Optional[Dict[str, Any]] = None
+    heat_stress_alarm_config: Optional[Dict[str, Any]] = None
 
 def common_response_handler(request: FetchingAlarmDataRequest, session: Session) -> Dict[str, Any]:
     """Handles query execution and response formatting for both historical and anomaly fetch endpoints."""
@@ -74,7 +83,7 @@ def common_response_handler(request: FetchingAlarmDataRequest, session: Session)
     except HTTPException as he:
         raise he
     except Exception as e:
-        log.error(f"Unexpected error in common_response_handler: {str(e)}", exc_info=True)
+        log.error(f"Unexpected error in common_response_handler: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An internal error occurred: {str(e)}")
 
 '''Cassandra Database Endpoints for storing and fetching data of alarm'''
@@ -99,8 +108,6 @@ def store_alarms_endpoint(request: StoringAlarmDataRequest, session: Session = D
     system_type = request.system_type
     ticket = request.ticket
     ticket_type = request.ticket_type
-    software_id = request.software_id
-    account_id = request.account_id
 
     log.debug(f"Request Context - Building: {building_id}, System: {system_type}, Ticket: {ticket}")
 
@@ -110,14 +117,13 @@ def store_alarms_endpoint(request: StoringAlarmDataRequest, session: Session = D
             raise HTTPException(status_code=503, detail="Database session not found.")
 
         result = save_data_to_cassandra(
-            building_id=building_id, 
-            equipment_id=equipment_id,  
-            system_type=system_type,  
-            ticket=ticket, 
-            ticket_type=ticket_type,  
-            software_id=software_id,  
-            account_id=account_id,  
-            session=session
+            building_id=building_id, equipment_id=equipment_id, system_type=system_type,  
+            ticket=ticket, ticket_type=ticket_type, session=session,
+            freeze_alarm_config=request.freeze_alarm_config,
+            oscillation_alarm_config=request.oscillation_alarm_config,
+            tracking_alarm_config=request.tracking_alarm_config,
+            return_air_temp_alarm_config=request.return_air_temp_alarm_config,
+            heat_stress_alarm_config=request.heat_stress_alarm_config
         )
 
         duration = time.time() - start_time
@@ -130,7 +136,7 @@ def store_alarms_endpoint(request: StoringAlarmDataRequest, session: Session = D
         log.error(f"Database connection error during storage: {str(ce)}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection failed during storage.")
     except Exception as e:
-        log.error(f"Critical error in store_alarms_endpoint: {str(e)}", exc_info=True)
+        log.error(f"Critical error in store_alarms_endpoint: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Storage operation failed: {str(e)}")
     
 @router.post("/fetch_alarm_data")
@@ -169,7 +175,7 @@ def count_alarms_db_endpoint(
     except HTTPException as he:
         raise he
     except Exception as e:
-        log.error(f"Error in count_alarms_db_endpoint: {str(e)}", exc_info=True)
+        log.error(f"Error in count_alarms_db_endpoint: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while counting alarms.")
        
 @router.post("/test_alarm")
@@ -184,10 +190,12 @@ def test_alarm_endpoint(request: TestAlarmRequest, session: Session = Depends(ge
             raise HTTPException(status_code=400, detail="Data list cannot be empty for testing.")
 
         results = test_alarm_logic(
-            records=request.data, 
-            ticket=request.ticket,  
-            ticket_type=request.ticket_type,
-            session = session
+            records=request.data, ticket=request.ticket, ticket_type=request.ticket_type, session=session,
+            freeze_alarm_config=request.freeze_alarm_config,
+            oscillation_alarm_config=request.oscillation_alarm_config,
+            tracking_alarm_config=request.tracking_alarm_config,
+            return_air_temp_alarm_config=request.return_air_temp_alarm_config,
+            heat_stress_alarm_config=request.heat_stress_alarm_config
         )
 
         log.info(f"Test alarm logic processed. Results found: {len(results)}")
@@ -203,5 +211,5 @@ def test_alarm_endpoint(request: TestAlarmRequest, session: Session = Depends(ge
     except HTTPException as he:
         raise he
     except Exception as e:
-        log.error(f"Test Alarm execution failed: {e}", exc_info=True)
+        log.error(f"Test Alarm execution failed: {e}")
         raise HTTPException(status_code=500, detail=f"Testing failed: {str(e)}")

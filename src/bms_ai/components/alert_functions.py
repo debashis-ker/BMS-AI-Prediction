@@ -11,6 +11,7 @@ import os
 import numpy as np
 import json
 from pathlib import Path
+from cassandra.concurrent import execute_concurrent
 
 log = setup_logger(__name__)
 
@@ -23,125 +24,225 @@ TABLE_SUFFIX = "alarm_data"
 if not KEYSPACE_NAME:
     log.error("CASSANDRA_KEYSPACE environment variable is not set. Database operations will fail.")
 
-def check_freeze_alarm(df: pd.DataFrame) -> pd.Series:
+def check_freeze_alarm(df: pd.DataFrame, config: Dict[str, Any] = None, hist_states: pd.Series = None) -> pd.Series:
     """
-    Logic: Evaluates if the Supply Air Temperature (TempSu) is dangerously low, posing a risk to the coil.
+    Logic: Evaluates if the Supply Air Temperature (TempSu) drops below a specified threshold, indicating a potential freeze risk.
     Trigger:
-    - Warning (1): Triggered if 'TempSu' < 5.0 for at least 1 sample in a rolling window of 3.
-    - Critical (-1): Triggered if 'TempSu' < 5.0 for 3 consecutive samples.
-    Note: Requires 'TempSu' column.
+    - A "hit" occurs when 'TempSu' < `temp_threshold` (default 5.0).
+    - Warning (1): Triggered if the number of hits is >= `warning_hits` (default 1).
+    - Critical (-1): Triggered if the number of hits is >= `critical_hits` (default 3).
+    Note: Requires the 'TempSu' column. Skips evaluation gracefully if the column is missing or entirely empty.
     """
+    config = config or {}
+    temp_threshold = config.get('supply_air_temp_threshold', 5.0)
+    warn_hits = config.get('warning_hits', 1)
+    crit_hits = config.get('critical_hits', 3)
 
     log.info("Evaluating Freeze Alarm logic.")
-    if 'TempSu' not in df.columns: 
-        log.warning("Column 'TempSu' missing for Freeze Alarm evaluation.")
+    required_cols = ['TempSu']
+    missing = [c for c in required_cols if c not in df.columns or df[c].isna().all()]
+    if missing: 
+        log.warning(f"Required columns {missing} missing/empty. Skipping Freeze Alarm.")
         return pd.Series(0, index=df.index)
     
-    raw_hit = (df['TempSu'] < 5).astype(int)
-    consecutive_count = raw_hit.rolling(window=3, min_periods=1).sum()
+    raw_hit = (df['TempSu'] < temp_threshold).astype(int)
+
+    if hist_states is not None and not hist_states.empty:
+        hist_raw_hits = (hist_states != 0).astype(int)
+        combined_hits = pd.concat([hist_raw_hits, raw_hit]).reset_index(drop=True)
+    else:
+        combined_hits = raw_hit
+    reset_blocks = (combined_hits == 0).cumsum()
+    consecutive_count = combined_hits.groupby(reset_blocks).cumsum()
+    
+    if hist_states is not None and not hist_states.empty:
+        consecutive_count = pd.Series(consecutive_count.iloc[len(hist_states):].values, index=df.index)
     
     status_series = pd.Series(0, index=df.index)
-    status_series[consecutive_count >= 1] = 1  
-    status_series[consecutive_count >= 3] = -1
+    status_series[consecutive_count >= warn_hits] = 1  
+    status_series[consecutive_count >= crit_hits] = -1
     log.debug(f"Freeze Alarm evaluation complete. Detected hits: {status_series.any()}")
     return status_series.astype(int)
 
-def check_oscillation_alarm(df: pd.DataFrame) -> pd.Series:
+def check_oscillation_alarm(df: pd.DataFrame, config: Dict[str, Any] = None, hist_states: pd.Series = None) -> pd.Series:
     """
-    Logic: Detects rapid, unstable switching in the VFD Command (CmdVFD).
+    Logic: Detects rapid, unstable hunting/switching in the VFD Command (CmdVFD).
     Trigger:
-    - Warning (1): Triggered if at least one flip (0->1 or 1->0) is detected within 3 samples.
-    - Critical (-1): Triggered if 2 or more flips are detected within a rolling window of 3 samples.
-    Note: Uses absolute difference of shifted values to detect state changes.
+    - A "hit" occurs when the absolute change in CmdVFD is exactly 1 for two consecutive samples (e.g., 0 -> 1 -> 0, 1 -> 0 -> 1).
+    - Warning (1): Triggered if the number of hits is >= `warning_hits` (default 1).
+    - Critical (-1): Triggered if the number of hits is >= `critical_hits` (default 2).
+    Note: Requires the 'CmdVFD' column. Skips evaluation gracefully if the column is missing or entirely empty.
     """
+    config = config or {}
+    warn_hits = config.get('warning_hits', 1)
+    crit_hits = config.get('critical_hits', 2)
 
     log.info("Evaluating Oscillation Alarm logic.")
-    if 'CmdVFD' not in df.columns: 
-        log.warning("Column 'CmdVFD' missing for Oscillation Alarm evaluation.")
+    required_cols = ['CmdVFD']
+    missing = [c for c in required_cols if c not in df.columns or df[c].isna().all()]
+    if missing: 
+        log.warning(f"Required columns {missing} missing/empty. Skipping Oscillation Alarm.")
         return pd.Series(0, index=df.index)
     
     changes = df['CmdVFD'].diff().abs().fillna(0)
     raw_hit = ((changes == 1) & (changes.shift(1) == 1)).astype(int)
     
-    consecutive_count = raw_hit.rolling(window=3, min_periods=1).sum()
+    if hist_states is not None and not hist_states.empty:
+        hist_raw_hits = (hist_states != 0).astype(int)
+        combined_hits = pd.concat([hist_raw_hits, raw_hit]).reset_index(drop=True)
+    else:
+        combined_hits = raw_hit
+    reset_blocks = (combined_hits == 0).cumsum()
+    consecutive_count = combined_hits.groupby(reset_blocks).cumsum()
+    
+    if hist_states is not None and not hist_states.empty:
+        consecutive_count = pd.Series(consecutive_count.iloc[len(hist_states):].values, index=df.index)
     
     status_series = pd.Series(0, index=df.index)
-    status_series[consecutive_count >= 1] = 1
-    status_series[consecutive_count >= 2] = -1
+    status_series[consecutive_count >= warn_hits] = 1
+    status_series[consecutive_count >= crit_hits] = -1
     log.debug(f"Oscillation Alarm evaluation complete. Detected hits: {status_series.any()}")
     return status_series.astype(int)
 
-def check_tracking_alarm(df: pd.DataFrame) -> pd.Series:
+def check_tracking_alarm(df: pd.DataFrame, config: Dict[str, Any] = None, hist_states: pd.Series = None) -> pd.Series:
     """
-    Logic: Monitors the deviation between the VFD Speed Command and actual Speed Feedback.
+    Logic: Monitors the percentage deviation between the VFD Speed Command (CMDSpdVFD) and actual Speed Feedback (FbVFD).
     Trigger:
-    - Suppression: Logic only executes if 'CMDSpdVFD' > 1.0 (Unit must be commanded ON).
-    - Calculation: Error = |CMDSpdVFD - FbVFD| / CMDSpdVFD.
-    - Warning (1): Triggered if Error > 3% for at least 1 sample in a window of 3.
-    - Critical (-1): Triggered if Error > 3% for 3 consecutive samples.
+    - Suppression: Only evaluates when 'CMDSpdVFD' > `fan_speed_command_run_threshold` (default 1.0) to ignore systems that are turned off.
+    - Calculation: Relative Error = |CMDSpdVFD - FbVFD| / (CMDSpdVFD).
+    - A "hit" occurs when Error > `command_feedback_deviation_threshold` (default 0.03 or 3%).
+    - Warning (1): Triggered if the number of hits is >= `warning_hits` (default 1).
+    - Critical (-1): Triggered if the number of hits is >= `critical_hits` (default 3).
+    Note: Requires 'CMDSpdVFD' and 'FbVFD' columns. Skips evaluation gracefully if missing or entirely empty.
     """
+    config = config or {}
+    cmd_running_threshold = config.get('fan_speed_command_run_threshold', 1.0)
+    error_threshold = config.get('command_feedback_deviation_threshold', 0.03)
+    log.info(f"Tracking Alarm Config - fan_speed_command_run_threshold: {cmd_running_threshold}, command_feedback_deviation_threshold: {error_threshold}")
+    warn_hits = config.get('warning_hits', 1)
+    crit_hits = config.get('critical_hits', 3)
 
     log.info("Evaluating Tracking Alarm logic with 0-command suppression.")
-    if not all(c in df.columns for c in ['CMDSpdVFD', 'FbVFD']): 
-        log.warning("Required columns ['CMDSpdVFD', 'FbVFD'] missing for Tracking Alarm.")
+    required_cols = ['CMDSpdVFD', 'FbVFD']
+    missing = [c for c in required_cols if c not in df.columns or df[c].isna().all()]
+    if missing: 
+        log.warning(f"Required columns {missing} missing/empty. Skipping Tracking Alarm.")
         return pd.Series(0, index=df.index)
     
-    is_running = df['CMDSpdVFD'] > 1.0
+    is_running = df['CMDSpdVFD'] > cmd_running_threshold
     
     divisor = df['CMDSpdVFD'].replace(0, 1)
     error = (df['CMDSpdVFD'] - df['FbVFD']).abs() / divisor
+    log.info(f"Tracking Alarm - Error: {error.max()}")
     
-    raw_hit = ((error > 0.03) & is_running).astype(int)
+    raw_hit = ((error > error_threshold) & is_running).astype(int)
     
-    consecutive_count = raw_hit.rolling(window=3, min_periods=1).sum()
+    if hist_states is not None and not hist_states.empty:
+        hist_raw_hits = (hist_states != 0).astype(int)
+        combined_hits = pd.concat([hist_raw_hits, raw_hit]).reset_index(drop=True)
+    else:
+        combined_hits = raw_hit
+    reset_blocks = (combined_hits == 0).cumsum()
+    consecutive_count = combined_hits.groupby(reset_blocks).cumsum()
+    
+    if hist_states is not None and not hist_states.empty:
+        consecutive_count = pd.Series(consecutive_count.iloc[len(hist_states):].values, index=df.index)
     
     status_series = pd.Series(0, index=df.index)
-    status_series[consecutive_count >= 1] = 1
-    status_series[consecutive_count >= 3] = -1
+    status_series[consecutive_count >= warn_hits] = 1
+    status_series[consecutive_count >= crit_hits] = -1
     
     return status_series.astype(int)
 
-def check_return_air_temp_alarm(df: pd.DataFrame) -> pd.Series:
+def check_return_air_temp_alarm(df: pd.DataFrame, config: Dict[str, Any] = None, hist_states: pd.Series = None) -> pd.Series:
     """
     Logic: Identifies poor cooling/heating performance when the Fresh Air Damper is fully open.
     Trigger:
-    - Warning (1): Triggered if |TRe - TempSp1| > 10.0 AND 'FbFAD' >= 95.0 for at least 1 sample.
-    - Critical (-1): Triggered if these conditions persist for 3 consecutive samples.
-    Note: Indicates the unit cannot reach setpoint despite maximum fresh air intake.
+    - A "hit" occurs when the absolute difference |TRe - TempSu| > `supply_and_return_air_temp_diff_threshold` (default 5.0) AND Space is occupied AND AHU is ON (CmdVFD == 1.0).
+    - Warning (1): Triggered if the number of hits is >= `warning_hits` (default 1).
+    - Critical (-1): Triggered if the number of hits is >= `critical_hits` (default 3).
+    Note: Requires 'TRe', 'TempSu', 'Occupied_Flag', and 'CmdVFD' columns. Skips evaluation gracefully if missing or entirely empty.
     """
+    config = config or {}
+    temp_diff_threshold = config.get('supply_and_return_air_temp_diff_threshold', 5.0)
+    warn_hits = config.get('warning_hits', 1)
+    crit_hits = config.get('critical_hits', 3)
 
     log.info("Evaluating Return Air Temp Alarm logic.")
-    if not all(c in df.columns for c in ['TRe', 'TempSp1', 'FbFAD']): 
-        log.warning("Required columns ['TRe', 'TempSp1', 'FbFAD'] missing.")
+    required_cols = ['TRe', 'Occupied_Flag', 'TempSu', 'CmdVFD']
+    missing = [c for c in required_cols if c not in df.columns or df[c].isna().all()]
+    if missing: 
+        log.warning(f"Required columns {missing} missing/empty. Skipping Return Air Temp Alarm.")
         return pd.Series(0, index=df.index)
     
-    raw_hit = (((df['TRe'] - df['TempSp1']).abs() > 10) & (df['FbFAD'] >= 95.0)).astype(int)
-    consecutive_count = raw_hit.rolling(window=3, min_periods=1).sum()
+    raw_hit = (((df['TRe'] - df['TempSu']) > temp_diff_threshold) & (df['CmdVFD'] == 1.0) & (df['Occupied_Flag'] == 'Occupied')).astype(int)
+    if hist_states is not None and not hist_states.empty:
+        hist_raw_hits = (hist_states != 0).astype(int)
+        combined_hits = pd.concat([hist_raw_hits, raw_hit]).reset_index(drop=True)
+    else:
+        combined_hits = raw_hit
+    reset_blocks = (combined_hits == 0).cumsum()
+    consecutive_count = combined_hits.groupby(reset_blocks).cumsum()
+    
+    if hist_states is not None and not hist_states.empty:
+        consecutive_count = pd.Series(consecutive_count.iloc[len(hist_states):].values, index=df.index)
     
     status_series = pd.Series(0, index=df.index)
-    status_series[consecutive_count >= 1] = 1
-    status_series[consecutive_count >= 3] = -1
+    status_series[consecutive_count >= warn_hits] = 1
+    status_series[consecutive_count >= crit_hits] = -1
     return status_series.astype(int)
 
-def check_heat_stress_alarm(df: pd.DataFrame) -> pd.Series:
+def check_heat_stress_alarm(df: pd.DataFrame, config: Dict[str, Any] = None, hist_states: pd.Series = None) -> pd.Series:
     """
-    Logic: Detects uncomfortable temperatures for occupants during active hours.
+    Logic: Detects uncomfortable temperatures for occupants during active hours, specifically when cooling fails to meet the setpoint despite high valve demand.
     Trigger:
-    - Warning (1): Triggered if 'TempSp1' > 26.0 AND 'Occupied_Flag' is 'Occupied' for at least 1 sample.
-    - Critical (-1): Triggered if high temperature persists for 3 consecutive samples during occupancy.
+    - A "hit" occurs when all of the following are true:
+        1. 'ChwFb' > `max_cooling_valve_feedback_threshold` (default 100.0)
+        2. |TempSp1 - SpTREff| > `setpoint_space_air_temp_diff_threshold` (default 5.0)
+        3. 'Occupied_Flag' == 'Occupied'
+        4. 'CmdVFD' == 1.0 (AHU is ON)
+    - Warning (1): Triggered if the number of hits is >= `warning_hits` (default 1).
+    - Critical (-1): Triggered if the number of hits is >= `critical_hits` (default 3).
+    - Escalation: If currently in a Warning state (1) AND 'TempSp1' > `space_air_temp_uncomfortable_level_threshold` (default 26.0), it immediately upgrades to Critical (-1).
+    Note: Requires 'TempSp1', 'Occupied_Flag', 'ChwFb', and 'SpTREff', 'CmdVFD' columns. Skips evaluation gracefully if missing or entirely empty.
     """
+    config = config or {}
+    diff_threshold = config.get('setpoint_space_air_temp_diff_threshold', 5.0) 
+    temp_sp1_threshold = config.get('space_air_temp_uncomfortable_level_threshold', 26.0)
+    chwfb_threshold = config.get('max_cooling_valve_feedback_threshold', 100.0)
+    
+    warn_hits = config.get('warning_hits', 1)
+    crit_hits = config.get('critical_hits', 3)
 
     log.info("Evaluating Heat Stress Alarm logic.")
-    if not all(c in df.columns for c in ['TempSp1', 'Occupied_Flag']): 
-        log.warning("Required columns ['TempSp1', 'Occupied_Flag'] missing.")
+    required_cols = ['TempSp1', 'Occupied_Flag', 'ChwFb', 'SpTREff','CmdVFD']
+    missing = [c for c in required_cols if c not in df.columns or df[c].isna().all()]
+    if missing: 
+        log.warning(f"Required columns {missing} missing/empty. Skipping Heat Stress Alarm.")
         return pd.Series(0, index=df.index)
     
-    raw_hit = ((df['TempSp1'] > 26.0) & (df['Occupied_Flag'] == 'Occupied')).astype(int)
-    consecutive_count = raw_hit.rolling(window=3, min_periods=1).sum()
+    raw_hit = ((df['ChwFb'] > chwfb_threshold) & 
+               ((df['TempSp1'] - df['SpTREff']).abs() > diff_threshold) & 
+               (df['Occupied_Flag'] == 'Occupied') & (df['CmdVFD'] == 1.0)).astype(int)
+               
+    if hist_states is not None and not hist_states.empty:
+        hist_raw_hits = (hist_states != 0).astype(int)
+        combined_hits = pd.concat([hist_raw_hits, raw_hit]).reset_index(drop=True)
+    else:
+        combined_hits = raw_hit
+    reset_blocks = (combined_hits == 0).cumsum()
+    consecutive_count = combined_hits.groupby(reset_blocks).cumsum()
+    
+    if hist_states is not None and not hist_states.empty:
+        consecutive_count = pd.Series(consecutive_count.iloc[len(hist_states):].values, index=df.index)
     
     status_series = pd.Series(0, index=df.index)
-    status_series[consecutive_count >= 1] = 1
-    status_series[consecutive_count >= 3] = -1
+    status_series[consecutive_count >= warn_hits] = 1
+    status_series[consecutive_count >= crit_hits] = -1
+    
+    upgrade_mask = (df['TempSp1'] > temp_sp1_threshold) & (df['Occupied_Flag'] == "Occupied") & (df['CmdVFD'] == 1.0) & (status_series == 1)
+    status_series[upgrade_mask] = -1
+    
     return status_series.astype(int)
 
 ALARM_FUNCTIONS = {
@@ -225,16 +326,27 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
         if 'monitoring_data' in df.columns:
             df['monitoring_data'] = pd.to_numeric(df['monitoring_data'].replace({'inactive': 0.0, 'active': 1.0}), errors='coerce')
         
-        # df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
         df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce',utc=True)
         if df[STANDARD_DATE_COLUMN].isnull().any():
              log.error("Found unparseable timestamps in data records.")
              raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="One or more timestamps could not be parsed.")
 
-        # if df[STANDARD_DATE_COLUMN].dt.tz is not None: 
-        #     df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None)
-
         result_df = df.groupby(['site', 'equipment_id', STANDARD_DATE_COLUMN, 'datapoint'])['monitoring_data'].agg('first').unstack(level='datapoint').reset_index()
+
+        fallbacks = {
+            'Ahu4': {'CMDSpdVFD': 'CmdSpsvfd'},
+            'Ahu14': {'TempSp1': 'AvgTmp'},
+            'Ahu16': {'TempSp1': 'TempSp'},
+        }
+        
+        for equip, mapping in fallbacks.items():
+            mask = result_df['equipment_id'] == equip
+            if mask.any():
+                for target_col, fallback_col in mapping.items():
+                    if fallback_col in result_df.columns:
+                        if target_col not in result_df.columns:
+                            result_df[target_col] = np.nan
+                        result_df.loc[mask, target_col] = result_df.loc[mask, target_col].fillna(result_df.loc[mask, fallback_col])
 
         meta_cols = ['asset_code','device_id','device_ip']
         for col in meta_cols:
@@ -253,9 +365,8 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to fetch movie schedule from external service.")
         
         if not schedule_data:
-            log.warning(f"No schedule data found for ticket {ticket}. Defaulting to Unoccupied.")
-            result_df['Occupied_Flag'] = 'Unoccupied'
-            return result_df
+            log.error(f"No schedule data found for ticket {ticket}.")
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"No schedule data found for ticket {ticket}.")
 
         def map_equipment_to_screen(equip):
             return equip.replace('Ahu', 'Screen ')
@@ -290,44 +401,60 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
     except HTTPException as he:
         raise he
     except Exception as e:
-        log.error(f"Critical error in data_pipeline: {e}", exc_info=True)
+        log.error(f"Critical error in data_pipeline: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Data transformation failed: {str(e)}")
     
-def alarm_evaluation(data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Filters the processed dataset to isolate significant events.
-    Logic:
-    Identifies and returns only the rows where at least one alarm function (Freeze, Oscillation, etc.) 
-    has returned a non-zero status (Warning or Critical).
-    """
-    if data.empty: 
-        log.info("Empty dataframe passed to alarm_evaluation. Skipping.")
-        return data
-    
-    if 'data_received_on' not in data.columns:
-        log.error("Column 'data_received_on' missing. Cannot evaluate alarms.")
-        return pd.DataFrame()
+def alarm_evaluation(
+    data: pd.DataFrame, 
+    freeze_alarm_config: Dict[str, Any] = None,
+    oscillation_alarm_config: Dict[str, Any] = None,
+    tracking_alarm_config: Dict[str, Any] = None,
+    heat_stress_alarm_config: Dict[str, Any] = None,
+    return_air_temp_alarm_config: Dict[str, Any] = None,
+    historical_alarms_df: pd.DataFrame = None
+) -> pd.DataFrame:
+    if data.empty or 'data_received_on' not in data.columns: return pd.DataFrame()
 
     data = data.sort_values('data_received_on')
     alarm_cols_detected = []
     
+    config_mapping = {
+        "Alarm_Freeze": freeze_alarm_config or {},
+        "Alarm_Oscillation": oscillation_alarm_config or {},
+        "Alarm_Tracking": tracking_alarm_config or {},
+        "Alarm_Heat_Stress": heat_stress_alarm_config or {},
+        "Alarm_Return_Air_Temp": return_air_temp_alarm_config or {}
+    }
+    
     for alarm_name, func in ALARM_FUNCTIONS.items():
         try:
-            log.debug(f"Running evaluation function for: {alarm_name}")
-            data[alarm_name] = func(data)
+            specific_config = config_mapping[alarm_name]
+            alarm_df = data.copy()
+            if 'last_n_minutes' in specific_config:
+                cutoff = alarm_df['data_received_on'].max() - pd.Timedelta(minutes=specific_config['last_n_minutes'])
+                alarm_df = alarm_df[alarm_df['data_received_on'] >= cutoff]
+            elif 'from_date' in specific_config and 'to_date' in specific_config:
+                from_dt = pd.to_datetime(specific_config['from_date'], utc=True)
+                to_dt = pd.to_datetime(specific_config['to_date'], utc=True)
+                alarm_df = alarm_df[(alarm_df['data_received_on'] >= from_dt) & (alarm_df['data_received_on'] <= to_dt)]
+
+            hist_states = None
+            if historical_alarms_df is not None and not historical_alarms_df.empty:
+                if alarm_name in historical_alarms_df.columns:
+                    hist_states = historical_alarms_df[alarm_name]
+
+            if alarm_df.empty:
+                data[alarm_name] = 0
+            else:
+                res_series = func(alarm_df, config=specific_config, hist_states=hist_states)
+                data[alarm_name] = res_series
+                data[alarm_name] = data[alarm_name].fillna(0).astype(int)
+                
             alarm_cols_detected.append(alarm_name)
         except Exception as e:
             log.error(f"Error during {alarm_name} evaluation: {e}")
 
-    if not alarm_cols_detected:
-        log.warning("No alarms were successfully evaluated.")
-        return pd.DataFrame()
-
     filtered_df = data[data[alarm_cols_detected].any(axis=1)].copy()
-    if filtered_df.empty:
-        log.info("No active alarms detected in this cycle. Skipping storage.")
-        
-    log.info(f"Alarm evaluation complete. Found {len(filtered_df)} alarm events.")
     return filtered_df
 
 def format_cassandra_output(data_records: List[Dict], limit: Optional[int] = None) -> Dict[str, Any]:
@@ -362,17 +489,58 @@ def store_data(data_chunk: List[Dict], building_id: str, session: Session) -> in
     """
     Handles bulk insertion of alarm records into Cassandra.
     Logic:
-    1. Sanitizes records by removing Null/NaN values.
-    2. Performs strict type-casting (NumPy to Python native) to ensure driver compatibility.
-    3. Uses parameterized SQL with tuple-based execution to prevent formatting errors.
-    4. Renames 'data_received_on' to 'timestamp' for DB schema alignment.
+    1. Dynamically creates the building-specific table if it does not exist (matching the required schema).
+    2. Sanitizes records by removing Null/NaN values.
+    3. Filters out unmapped fallback columns to prevent database schema crashes.
+    4. Performs strict type-casting (NumPy to Python native) to ensure driver compatibility.
+    5. Uses parameterized SQL with tuple-based execution to prevent formatting errors.
     """
     if not data_chunk: 
         log.info("No active alarm records to persist.")
         return 0
     
     table_name = f"{TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
-    rows_affected = 0
+    
+    create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {KEYSPACE_NAME}."{table_name}" (
+        site text,
+        equipment_id text,
+        timestamp timestamp,
+        "Alarm_Freeze" int,
+        "Alarm_Heat_Stress" int,
+        "Alarm_Oscillation" int,
+        "Alarm_Return_Air_Temp" int,
+        "Alarm_Tracking" int,
+        "CMDSpdVFD" double,
+        "CmdVFD" double,
+        "FbFAD" double,
+        "FbVFD" double,
+        "Occupied_Flag" text,
+        "TRe" double,
+        "TempSp1" double,
+        "TempSu" double,
+        "ChwFb" double,
+        "SpTREff" double,
+        asset_code text,
+        device_id text,
+        device_ip text,
+        PRIMARY KEY ((site, equipment_id), timestamp)
+    ) WITH CLUSTERING ORDER BY (timestamp DESC);
+    """
+    try:
+        session.execute(create_table_query)
+        log.debug(f"Ensured table {table_name} exists.")
+    except Exception as e:
+        log.error(f"Failed to initialize table schema for {table_name}: {e}")
+        raise HTTPException(status_code=500, detail="Database schema initialization failed.")
+
+    allowed_columns = {
+        'site', 'equipment_id', 'timestamp', 'CMDSpdVFD', 'CmdVFD', 'FbFAD', 
+        'FbVFD', 'Occupied_Flag', 'TRe', 'TempSp1', 'TempSu', 'ChwFb', 'SpTREff', 
+        'asset_code', 'device_id', 'device_ip'
+    }
+
+    statements_and_params = []
 
     for record in data_chunk:
         try:
@@ -387,82 +555,147 @@ def store_data(data_chunk: List[Dict], building_id: str, session: Session) -> in
 
             final_data = {}
             for k, v in clean_record.items():
-                if "Alarm_" in k:
-                    final_data[k] = int(v)
-                elif isinstance(v, (np.integer, int)):
-                    final_data[k] = int(v)
-                elif isinstance(v, (np.floating, float)):
-                    final_data[k] = float(v)
-                elif isinstance(v, (pd.Timestamp, datetime)):
-                    final_data[k] = v.to_pydatetime() if hasattr(v, 'to_pydatetime') else v
-                else:
-                    final_data[k] = str(v)
+                if k in allowed_columns or str(k).startswith("Alarm_"):
+                    if "Alarm_" in k:
+                        final_data[k] = int(v)
+                    elif isinstance(v, (np.integer, int)):
+                        final_data[k] = int(v)
+                    elif isinstance(v, (np.floating, float)):
+                        final_data[k] = float(v)
+                    elif isinstance(v, (pd.Timestamp, datetime)):
+                        final_data[k] = v.to_pydatetime() if hasattr(v, 'to_pydatetime') else v
+                    else:
+                        final_data[k] = str(v)
+
+            if not final_data:
+                continue
 
             columns = list(final_data.keys())
             placeholders = ", ".join(["%s" for _ in columns])
             column_names = ", ".join([f'"{c}"' for c in columns])
             
             query = f'INSERT INTO {KEYSPACE_NAME}."{table_name}" ({column_names}) VALUES ({placeholders})'
+            params = tuple(final_data[c] for c in columns)
             
-            session.execute(query, tuple(final_data[c] for c in columns))
-            rows_affected += 1
+            statements_and_params.append((query, params))
             
         except Exception as e:
             error_ts = record.get('data_received_on') or record.get('timestamp')
-            log.error(f"Cassandra INSERT failed for record {error_ts}: {e}")
+            log.error(f"Data formatting failed for record {error_ts}: {e}")
 
-    log.info(f"Successfully stored {rows_affected} records.")
+    rows_affected = 0
+    if statements_and_params:
+        try:
+            results = execute_concurrent(session, statements_and_params, concurrency=100)
+            for success, result_or_exc in results:
+                if success:
+                    rows_affected += 1
+                else:
+                    log.error(f"Cassandra concurrent INSERT failed: {result_or_exc}")
+                    
+        except Exception as e:
+            log.error(f"Concurrent batch execution failed: {e}")
+
+    log.info(f"Successfully stored {rows_affected} records concurrently.")
     return rows_affected
 
-def save_data_to_cassandra(session: Session, building_id: str, equipment_id: str, system_type: str = "AHU", ticket: str = "", ticket_type: str = "", software_id: str = "", account_id : str = "") -> Dict[str, Any]:
-    """
-    The primary synchronization routine for real-time alarm detection.
-    Logic:
-    1. Fetches raw sensor data for the last 10 minutes.
-    2. Density Check: If 'CmdVFD' records < 3, retries fetch with a 30-minute lookback.
-    3. Stale Check: Skips processing if data hasn't updated after 2 consecutive cycles.
-    4. Executes the pipeline, evaluates all 5 alarm types, and persists results to Cassandra.
-    """
-    log.info(f"Starting real-time sync for {equipment_id} in building {building_id}")
-    now_utc = datetime.now(timezone.utc)
-    
-    def format_bms_time(dt_obj):
-        return dt_obj.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + "Z"
-
+def save_data_to_cassandra(
+    session: Session, building_id: str, equipment_id: str, system_type: str = "AHU", 
+    ticket: str = "", ticket_type: str = "", freeze_alarm_config=None, oscillation_alarm_config=None, tracking_alarm_config=None, 
+    heat_stress_alarm_config=None, return_air_temp_alarm_config=None
+) -> Dict[str, Any]:
     try:
-        polling_interval = 10 
-        max_lookback_minutes = 30
-        log.debug(f"Using static polling interval: {polling_interval} minutes.")
+        log.info(f"Starting real-time sync for {equipment_id} in building {building_id}")
+        now_utc = datetime.now(timezone.utc)
+        
+        def format_bms_time(dt_obj):
+            return dt_obj.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + "Z"
 
-        to_date = format_bms_time(now_utc)
-        from_date = format_bms_time(now_utc - timedelta(minutes=polling_interval))
+        is_explicit_range = False
+        all_configs = [freeze_alarm_config, oscillation_alarm_config, tracking_alarm_config, heat_stress_alarm_config, return_air_temp_alarm_config]
+        
+        earliest_from = now_utc - timedelta(minutes=30)
+        latest_to = now_utc
+        max_rows_needed = 3 
+        conf_from = None
+        conf_to = None
 
-        log.info(f"Initial fetch (Window: {polling_interval}m) from {from_date} to {to_date}")
+        for conf in all_configs:
+            if conf and isinstance(conf, dict):
+                req_rows = max(conf.get('warning_hits', 1), conf.get('critical_hits', 3))
+                max_rows_needed = max(max_rows_needed, req_rows)
+                
+                if 'from_date' in conf and 'to_date' in conf:
+                    is_explicit_range = True
+                    dt_from = pd.to_datetime(conf['from_date'], utc=True)
+                    dt_to = pd.to_datetime(conf['to_date'], utc=True)
+                    conf_from = min(conf_from, dt_from) if conf_from else dt_from
+                    conf_to = max(conf_to, dt_to) if conf_to else dt_to
+                    
+                elif 'last_n_minutes' in conf:
+                    dt_from = now_utc - timedelta(minutes=conf['last_n_minutes'])
+                    conf_from = min(conf_from, dt_from) if conf_from else dt_from
+                    conf_to = max(conf_to, now_utc) if conf_to else now_utc
+
+        if(conf_from and conf_to):
+            earliest_from = conf_from
+            latest_to = conf_to
+
+        from_date_str = format_bms_time(earliest_from)
+        to_date_str = format_bms_time(latest_to)
+        
         raw_data = fetch_cassandra_data(
             system_type=system_type, equipment_id=equipment_id, 
-            datapoints=['CMDSpdVFD', 'FbVFD', 'TRe', 'TempSp1', 'TempSu', 'CmdVFD', 'FbFAD'],
-            from_date=from_date, to_date=to_date
+            datapoints=['CMDSpdVFD', 'FbVFD', 'TRe', 'TempSp1', 'TempSu', 'CmdVFD', 'FbFAD','SpTREff', 'ChwFb','AvgTmp', 'CmdSpsvfd', 'TempSp', 'ChwTemp'],
+            from_date=from_date_str, to_date=to_date_str
         )
 
-        cmd_vfd_count = len([r for r in raw_data if r.get('datapoint') == 'CmdVFD'])
-        log.info(f"CmdVFD records found: {cmd_vfd_count}")
+        unique_ts_count = len(set(r.get('data_received_on') for r in raw_data if r.get('data_received_on')))
 
-        if cmd_vfd_count < 3:
-            log.warning(f"Insufficient CmdVFD data ({cmd_vfd_count} records). Retrying with max lookback: {max_lookback_minutes}m")
-            from_date = format_bms_time(now_utc - timedelta(minutes=max_lookback_minutes))
+        historical_alarms_df = pd.DataFrame()
+        if is_explicit_range and unique_ts_count >= max_rows_needed:
+            log.info(f"Explicit range provided with sufficient data ({unique_ts_count}). Evaluating whole dataset.")
+        elif unique_ts_count < max_rows_needed and raw_data:
+            missing_count = max_rows_needed - unique_ts_count
+            log.warning(f"Insufficient data ({unique_ts_count} < {max_rows_needed}). Fetching {missing_count} previous states from Alarm Table.")
             
-            raw_data = fetch_cassandra_data(
-                system_type=system_type, equipment_id=equipment_id, 
-                datapoints=['CMDSpdVFD', 'FbVFD', 'TRe', 'TempSp1', 'TempSu', 'CmdVFD', 'FbFAD'],
-                from_date=from_date, to_date=to_date
-            )
+            table_name = f"{TABLE_SUFFIX}_{building_id.replace('-', '').lower()}"
+            
+            site_val = raw_data[0].get('site') 
+            
+            query = f"""SELECT "timestamp", "Alarm_Freeze", "Alarm_Oscillation", "Alarm_Tracking", 
+                               "Alarm_Return_Air_Temp", "Alarm_Heat_Stress"
+                        FROM {KEYSPACE_NAME}."{table_name}" 
+                        WHERE site = %s AND equipment_id = %s 
+                        ORDER BY timestamp DESC LIMIT %s ALLOW FILTERING"""
+            try:
+                hist_rows = session.execute(query, (site_val, equipment_id, missing_count))
+                hist_data = [dict(r._asdict()) for r in hist_rows]
+                
+                if hist_data:
+                    historical_alarms_df = pd.DataFrame(hist_data).sort_values('timestamp').reset_index(drop=True)
+                    latest_hist_ts = pd.to_datetime(historical_alarms_df['timestamp'].max(), utc=True)
+                    earliest_raw_ts = pd.to_datetime(min([r.get('data_received_on') for r in raw_data if r.get('data_received_on')]), utc=True)
+                    
+                    time_gap = earliest_raw_ts - latest_hist_ts
+                    
+                    if time_gap > timedelta(days=1):
+                        log.error(f"Time gap rejected for {equipment_id}. History is {time_gap} old.")
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                            detail="No Previous Alarms were recorded today to evaluate the current alarm due to insufficient data within the given timeframe"
+                        )
+            except HTTPException as he:
+                raise he
+            except Exception as e:
+                log.error(f"Failed to fetch historical alarm states: {e}")
 
         if not raw_data:
             log.info("No raw sensor data found after fetch attempts.")
             return {"status": "SUCCESS", "records": 0, "message": "No data found."}
-        
+            
         latest_pull_ts = max([r.get('data_received_on') for r in raw_data if r.get('data_received_on')])
-        
+            
         state_data = {}
         if Path(STATE_FILE).exists():
             with open(STATE_FILE, "r") as f:
@@ -470,7 +703,7 @@ def save_data_to_cassandra(session: Session, building_id: str, equipment_id: str
                     state_data = json.load(f).get(equipment_id, {"timestamp": None, "repeat_count": 0})
                 except json.JSONDecodeError:
                     state_data = {"timestamp": None, "repeat_count": 0}
-        
+            
         last_ts = state_data.get("timestamp")
         repeat_count = state_data.get("repeat_count", 0)
 
@@ -480,9 +713,9 @@ def save_data_to_cassandra(session: Session, building_id: str, equipment_id: str
             if repeat_count >= 2:
                 update_last_timestamp(equipment_id, str(latest_pull_ts), repeat_count)
                 return {"status": "SKIPPED", "message": "Stale data threshold reached (2 repeats)."}
-        else:
-            repeat_count = 0
-        
+            else:
+                repeat_count = 0
+            
         update_last_timestamp(equipment_id, str(latest_pull_ts), repeat_count)
 
         df_processed = data_pipeline(raw_data, ticket=ticket, ticket_type=ticket_type)
@@ -491,23 +724,23 @@ def save_data_to_cassandra(session: Session, building_id: str, equipment_id: str
 
         df_processed = df_processed.sort_values('data_received_on')
 
-        log.info("Evaluating all alarms (Freeze, Tracking, Heat Stress, Return Air, Oscillation).")
-        df_processed['Alarm_Freeze'] = check_freeze_alarm(df_processed)
-        df_processed['Alarm_Tracking'] = check_tracking_alarm(df_processed)
-        df_processed['Alarm_Heat_Stress'] = check_heat_stress_alarm(df_processed)
-        df_processed['Alarm_Return_Air_Temp'] = check_return_air_temp_alarm(df_processed)
-        df_processed['Alarm_Oscillation'] = check_oscillation_alarm(df_processed)
-
-        df_to_store = alarm_evaluation(df_processed)
-        
+        log.info("Evaluating all alarms dynamically via evaluation wrapper.")
+        df_to_store = alarm_evaluation(
+            df_processed, 
+            freeze_alarm_config=freeze_alarm_config,
+            oscillation_alarm_config=oscillation_alarm_config,
+            tracking_alarm_config=tracking_alarm_config,
+            heat_stress_alarm_config=heat_stress_alarm_config,
+            return_air_temp_alarm_config=return_air_temp_alarm_config,
+            historical_alarms_df=historical_alarms_df
+        )
+            
         total_stored = store_data(df_to_store.to_dict(orient='records'), building_id, session)
 
         return {"status": "SUCCESS", "records_stored": total_stored}
 
-    except HTTPException as he:
-        raise he
     except Exception as e:
-        log.error(f"Critical failure in save_data_to_cassandra: {e}", exc_info=True)
+        log.error(f"Critical failure in save_data_to_cassandra: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
 def fetch_alarm_data_from_cassandra(params: Dict[str, Any], session: Session) -> List[Dict]:
@@ -518,9 +751,8 @@ def fetch_alarm_data_from_cassandra(params: Dict[str, Any], session: Session) ->
     Logic Flow:
     1. Dynamically constructs a CQL query targeting the table 'alarm_data_<building_id>'.
     2. Applies time-range filters (defaulting to the last 24 hours if dates are missing).
-    3. Executes a prepared statement with 'ALLOW FILTERING' for non-primary key attributes.
-    4. Post-filters results in memory based on requested alarm names and states ('warning': 1, 'critical': -1).
-    Returns: A list of filtered dictionary records.
+    3. Executes a prepared statement with 'ALLOW FILTERING'.
+    4. Normalizes column casing to handle driver outputs, then post-filters results.
     """
     log.info(f"Fetching alarm records for parameters: {params}")
     building_id = params.get('building_id')
@@ -572,13 +804,12 @@ def fetch_alarm_data_from_cassandra(params: Dict[str, Any], session: Session) ->
     try:
         stmt = session.prepare(full_query)
         rows = session.execute(stmt, values)
-        results = [dict(row._asdict()) for row in rows]
         
-        if not results:
+        if not rows:
             log.info("No records found in Cassandra for the given query.")
             return []
 
-        requested_alarms = params.get('alarm_names') or [k for k in results[0].keys() if "Alarm_" in k]
+        requested_alarms = params.get('alarm_names') or list(ALARM_FUNCTIONS.keys())
         input_states = params.get('state', [])
         if isinstance(input_states, str): input_states = [input_states]
             
@@ -592,10 +823,34 @@ def fetch_alarm_data_from_cassandra(params: Dict[str, Any], session: Session) ->
             target_vals = [1, -1]
 
         filtered_results = []
-        for r in results:
-            if any(int(r.get(a, 0) or 0) in target_vals for a in requested_alarms):
-                if 'timestamp' in r: r['data_received_on'] = r.pop('timestamp')
-                filtered_results.append(r)
+        
+        lower_to_exact = {a.lower(): a for a in requested_alarms}
+
+        for row in rows:
+            raw_dict = dict(row._asdict())
+            normalized_dict = {}
+            
+            for k, v in raw_dict.items():
+                k_lower = k.lower()
+                if k_lower in lower_to_exact:
+                    normalized_dict[lower_to_exact[k_lower]] = v
+                else:
+                    normalized_dict[k] = v
+
+            hit = False
+            for a in requested_alarms:
+                try:
+                    val = int(float(normalized_dict.get(a) or 0))
+                    if val in target_vals:
+                        hit = True
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+            if hit:
+                if 'timestamp' in normalized_dict: 
+                    normalized_dict['data_received_on'] = normalized_dict.pop('timestamp')
+                filtered_results.append(normalized_dict)
 
         log.info(f"Fetch completed. Returned {len(filtered_results)} records.")
         return filtered_results
@@ -603,19 +858,10 @@ def fetch_alarm_data_from_cassandra(params: Dict[str, Any], session: Session) ->
     except Exception as e:
         log.error(f"Database read operation failed: {e}")
         raise HTTPException(status_code=503, detail="Database read error.")
-    
+
 def count_alarms_from_db(params: Dict[str, Any], session: Session) -> Dict[str, Any]:
     """
     Logic: Aggregates alarm occurrences into a structured count summary grouped by severity state.
-    Parameters:
-    - params: Dictionary containing the filter criteria for 'fetch_alarm_data_from_cassandra'.
-    - session: An active Cassandra Session.
-    Logic Flow:
-    1. Calls 'fetch_alarm_data_from_cassandra' to retrieve relevant historical records.
-    2. Converts the result set into a Pandas DataFrame for high-performance aggregation.
-    3. Iterates through the requested states (e.g., 'warning', 'critical') and counts non-zero entries for each alarm column.
-    4. Fills missing alarm categories with 0 to ensure a consistent response schema.
-    Returns: A nested dictionary in the format { "state": { "alarm_name": count } }.
     """
     log.info("Calculating alarm counts from database.")
     try:
@@ -651,8 +897,13 @@ def count_alarms_from_db(params: Dict[str, Any], session: Session) -> Dict[str, 
     except Exception as e:
         log.error(f"Error in count_alarms_from_db: {e}")
         raise HTTPException(status_code=500, detail="Failed to calculate grouped alarm counts.")
-    
-def test_alarm_logic(records: List[Dict[str, Any]], ticket: str = "", ticket_type = None, session: Session = None) -> List[Dict[str, Any]]:
+     
+def test_alarm_logic(
+    records: List[Dict[str, Any]], building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
+    ticket: str = "", ticket_type: Optional[str] = None, session: Session = None,
+    freeze_alarm_config=None, oscillation_alarm_config=None, tracking_alarm_config=None, 
+    heat_stress_alarm_config=None, return_air_temp_alarm_config=None
+) -> List[Dict[str, Any]]:
     """
     A diagnostic function for manual verification of alarm logic using provided JSON data.
     Logic:
@@ -666,19 +917,20 @@ def test_alarm_logic(records: List[Dict[str, Any]], ticket: str = "", ticket_typ
         log.warning("Pipeline returned empty dataframe; nothing to evaluate.")
         return []
 
-    df_processed['Alarm_Freeze'] = check_freeze_alarm(df_processed)
-    df_processed['Alarm_Tracking'] = check_tracking_alarm(df_processed)
-    df_processed['Alarm_Heat_Stress'] = check_heat_stress_alarm(df_processed)
-    df_processed['Alarm_Return_Air_Temp'] = check_return_air_temp_alarm(df_processed)
-    df_processed['Alarm_Oscillation'] = check_oscillation_alarm(df_processed)
-
-    df_alarms = alarm_evaluation(df_processed)
+    log.info("Evaluating all alarms dynamically via evaluation wrapper for test data.")
+    df_alarms = alarm_evaluation(
+        df_processed,
+        freeze_alarm_config=freeze_alarm_config,
+        oscillation_alarm_config=oscillation_alarm_config,
+        tracking_alarm_config=tracking_alarm_config,
+        heat_stress_alarm_config=heat_stress_alarm_config,
+        return_air_temp_alarm_config=return_air_temp_alarm_config
+    )
 
     if session is not None:
         if not df_alarms.empty:
-            b_id = records[0].get('building_id', "36c27828-d0b4-4f1e-8a94-d962d342e7c2")
-            log.info(f"Saving {len(df_alarms)} test records to Cassandra for building {b_id}...")
-            store_data(df_alarms.to_dict(orient='records'), b_id, session)
+            log.info(f"Saving {len(df_alarms)} test records to Cassandra for building {building_id}...")
+            store_data(df_alarms.to_dict(orient='records'), building_id, session)
         else:
             log.info("No active alarms detected in test data; skipping Cassandra storage.")
 
