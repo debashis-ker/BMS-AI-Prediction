@@ -167,24 +167,6 @@ def data_pipeline(records: List[Dict[str, Any]], STANDARD_DATE_COLUMN: str = "da
     result_df = result_df.sort_values(STANDARD_DATE_COLUMN).set_index(STANDARD_DATE_COLUMN)
     return result_df
 
-def fetch_historical_data(equipment_id, from_date=None, to_date=None):
-    url = "https://ikoncloud.keross.com/bms-ai-ops/mpc/history"
-
-    if from_date and to_date:
-        data = {
-            "equipment_id": equipment_id,
-            "from_date": from_date,
-            "to_date": to_date
-        }
-
-    else:
-        data = {
-            "equipment_id": equipment_id
-        }
-    response = requests.post(url, json=data)
-
-    return response.json()
-
 async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=None, session=None):
     if not (from_date and to_date):
         now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -202,8 +184,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
 
     log.info(f"[{equipment_id}] Time Specs: FetchStart={from_date_dt}, EvalStart={eval_start_time}, End={to_date_dt}")
 
-    # mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
-    mpc_data = fetch_historical_data(equipment_id=equipment_id, from_date=from_date, to_date=to_date)
+    mpc_data = await get_optimization_history(from_date=from_date, to_date=to_date, equipment_id=equipment_id, session=session)
 
     if mpc_data.get('count', 0) == 0:
         log.warning(f"[{equipment_id}] Aborting: No MPC records found in this period.")
@@ -213,7 +194,7 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
     
     raw_data = fetch_cassandra_data(
         equipment_id=equipment_id, from_date=from_date, to_date=to_date, 
-        datapoints=["SpTREff","ChwFb","TempSp1","AvgTmp"]
+        datapoints=["SpTREff","ChwFb","TempSp1","TempSp","AvgTmp"]
     )
     if not raw_data:
         log.warning(f"[{equipment_id}] Aborting: No Cassandra data found within this period.")
@@ -229,6 +210,9 @@ async def calculate_setpoint_diffs(equipment_id="Ahu1", from_date=None, to_date=
         if 'AvgTmp' in raw_data_df.columns:
             log.info(f"[{equipment_id}] TempSp1 not found or empty. Falling back to 'AvgTmp'.")
             raw_data_df['TempSp1'] = raw_data_df['AvgTmp']
+        elif 'TempSp' in raw_data_df.columns:
+            log.info(f"[{equipment_id}] TempSp1 not found or empty. Filling with 'TempSp' values.")
+            raw_data_df['TempSp1'] = raw_data_df['TempSp']
         else:
             log.warning(f"[{equipment_id}] Neither TempSp1 nor AvgTmp found in data.")
 
