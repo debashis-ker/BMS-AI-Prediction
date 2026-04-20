@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 import warnings
 from src.bms_ai.logger_config import setup_logger
 from fastapi import HTTPException
-from src.bms_ai.api.routers.mpc_endpoints import get_optimization_history
 
 log = setup_logger(__name__)
 
@@ -220,13 +219,13 @@ def occupancy_dashboard(
         return {
             "success": True,
             "occupied_stats": {
-                "count": len([r for r in historical_data["data"] if r["mode"] in occ_modes]),
+                "count": len([r for r in setpoint_diff_data["data"] if r["mode"] in occ_modes]),
                 "max_temp": max(occ_temps) if occ_temps else None,
                 "min_temp": min(occ_temps) if occ_temps else None,
                 "average_chwfb_diff": avg_occ_chwfb_diff
             },
             "unoccupied_stats": {
-                "count": len([r for r in historical_data["data"] if r["mode"] == "unoccupied"]),
+                "count": len([r for r in setpoint_diff_data["data"] if r["mode"] == "unoccupied"]),
                 "max_temp": max(unocc_temps) if unocc_temps else None,
                 "min_temp": min(unocc_temps) if unocc_temps else None,
                 "average_chwfb_diff": avg_unocc_chwfb_diff
