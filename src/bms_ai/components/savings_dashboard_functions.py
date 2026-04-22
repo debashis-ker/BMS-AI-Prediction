@@ -1,14 +1,13 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 import os
 import pandas as pd
 from dateutil import parser
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import warnings
 from src.bms_ai.api.routers.energy_consumption import GetEnergyDataRequest, get_energy_data
 from dateutil.relativedelta import relativedelta
 from src.bms_ai.logger_config import setup_logger
 from fastapi import HTTPException
-import requests
 
 log = setup_logger(__name__)
 
@@ -286,30 +285,37 @@ async def get_energy_comparison_data(
 
     list_a = data_a.get("data", [])
     list_b = data_b.get("data", [])
-
+    
     if not list_a and not list_b:
         raise HTTPException(
             status_code=404, 
             detail="No energy data records found for either comparison period. Please ensure data is processed for these dates."
         )
-    
-    key_fmt = '%Y-%m-%d %H:00' if frequency == "H" else '%Y-%m-%d'
-    
-    map_a = {parser.parse(r['period_start']).strftime(key_fmt): r for r in data_a.get("data", [])}
-    map_b = {parser.parse(r['period_start']).strftime(key_fmt): r for r in data_b.get("data", [])}
 
-    freq_map = {
-        "H": relativedelta(hours=1),
-        "D": relativedelta(days=1),
-        "W": relativedelta(weeks=1),
-        "M": relativedelta(months=1)
-    }
-    step = freq_map.get(frequency.upper(), relativedelta(days=1))
+    start_a = parser.parse(period_a.get("from_date")).replace(tzinfo=timezone.utc)
+    end_a = parser.parse(period_a.get("to_date")).replace(tzinfo=timezone.utc)
+    start_b = parser.parse(period_b.get("from_date")).replace(tzinfo=timezone.utc)
+    end_b = parser.parse(period_b.get("to_date")).replace(tzinfo=timezone.utc)
 
-    start_a = parser.parse(period_a.get("from_date"))
-    start_b = parser.parse(period_b.get("from_date"))
+    base_a = start_a.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    base_b = start_b.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    total_steps = max(len(data_a.get("data", [])), len(data_b.get("data", [])))
+    if frequency.upper() == "D":
+        step = relativedelta(days=1)
+        total_steps = max((end_a - base_a).days, (end_b - base_b).days) + 1
+    elif frequency.upper() == "H":
+        step = relativedelta(hours=1)
+        total_steps = max(
+            int((end_a - base_a).total_seconds() // 3600), 
+            int((end_b - base_b).total_seconds() // 3600)
+        ) + 1
+    else:
+        step = relativedelta(days=1)
+        total_steps = max(len(list_a), len(list_b))
+        base_a, base_b = start_a, start_b
+
+    map_a = {parser.parse(r['period_start']): r for r in list_a}
+    map_b = {parser.parse(r['period_start']): r for r in list_b}
 
     consumption_comparison_chart_data = {}
     delta_t_chart_data = {}
@@ -317,33 +323,32 @@ async def get_energy_comparison_data(
 
     for i in range(total_steps):
         step_label = f"period_{i+1}"
+        curr_a = base_a + (step * i)
+        curr_b = base_b + (step * i)
         
-        curr_a_key = (start_a + (step * i)).strftime(key_fmt)
-        curr_b_key = (start_b + (step * i)).strftime(key_fmt)
-        
-        item_a = map_a.get(curr_a_key)
-        item_b = map_b.get(curr_b_key)
+        item_a = map_a.get(curr_a) if start_a <= curr_a <= end_a else None
+        item_b = map_b.get(curr_b) if start_b <= curr_b <= end_b else None
 
         consumption_comparison_chart_data[step_label] = {
             "period_a_cost": item_a.get("estimated_cost_aed") if item_a else None,
             "period_b_cost": item_b.get("estimated_cost_aed") if item_b else None,
             "period_a_rth": item_a.get("rth_value") if item_a else None,
             "period_b_rth": item_b.get("rth_value") if item_b else None,
-            "period_a_key": item_a.get("period_start") if item_a else None,
-            "period_b_key": item_b.get("period_start") if item_b else None,
+            "period_a_key": curr_a if item_a else None,
+            "period_b_key": curr_b if item_b else None,
         }
         delta_t_chart_data[step_label] = {
             "period_a": item_a.get("delta_t") if item_a else None,
             "period_b": item_b.get("delta_t") if item_b else None,
-            "period_a_key": item_a.get("period_start") if item_a else None,
-            "period_b_key": item_b.get("period_start") if item_b else None,
+            "period_a_key": curr_a if item_a else None,
+            "period_b_key": curr_b if item_b else None,
         }
 
         flow_vs_consumption_chart_data[step_label] = {
             "period_a": item_a.get("avg_flow") if item_a else None,
             "period_b": item_b.get("avg_flow") if item_b else None,
-            "period_a_key": item_a.get("period_start") if item_a else None,
-            "period_b_key": item_b.get("period_start") if item_b else None,
+            "period_a_key": curr_a if item_a else None,
+            "period_b_key": curr_b if item_b else None,
         }
 
     total_a = data_a.get("total_rth", 0)
