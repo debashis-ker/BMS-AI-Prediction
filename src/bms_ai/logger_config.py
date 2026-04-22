@@ -1,6 +1,6 @@
 import logging
 import os
-from logging.handlers import RotatingFileHandler
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 
 LOG_FOLDER = os.path.join(os.getcwd(), "log_info")
 
@@ -37,7 +37,7 @@ def setup_logger(name=__name__):
     }
 
     for level_name, level in handler_configs.items():
-        handler = RotatingFileHandler(
+        handler = ConcurrentRotatingFileHandler(
             os.path.join(LOG_FOLDER, f'{level_name}.log'),
             maxBytes=10*1024*1024,  # 10MB
             backupCount=5

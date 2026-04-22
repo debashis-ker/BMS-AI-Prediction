@@ -140,6 +140,55 @@ def get_next_day_first_movie_start(
     return earliest_start
 
 
+def resolve_setpoint_reference_context(
+    schedule: Dict[str, Any],
+    screen: str,
+    target_dt: datetime,
+    upcoming_shows: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """
+    Resolve the schedule day that should drive occupied setpoint selection.
+
+    The winning day is the operating window that actually contains the timestamp.
+    We check the previous day first so cross-midnight windows keep following the
+    day on which the schedule window started.
+    """
+    day_map = {
+        0: "mon", 1: "tue", 2: "wed",
+        3: "thu", 4: "fri", 5: "sat", 6: "sun"
+    }
+
+    for schedule_date in (target_dt.date() - timedelta(days=1), target_dt.date()):
+        day_key = day_map[schedule_date.weekday()]
+        operating_window = get_screen_operating_window(
+            schedule=schedule,
+            screen=screen,
+            target_date=schedule_date,
+            day_key=day_key
+        )
+
+        if operating_window and operating_window['first_movie_start'] <= target_dt < operating_window['last_movie_end']:
+            return {
+                "setpoint_reference_date": operating_window['first_movie_start'].date().isoformat(),
+                "setpoint_reference_source": "operating_window",
+                "operating_window": operating_window
+            }
+
+    if upcoming_shows:
+        next_show = min(upcoming_shows, key=lambda x: x["start"])
+        return {
+            "setpoint_reference_date": next_show["start"].date().isoformat(),
+            "setpoint_reference_source": "next_movie",
+            "operating_window": None
+        }
+
+    return {
+        "setpoint_reference_date": None,
+        "setpoint_reference_source": "fallback",
+        "operating_window": None
+    }
+
+
 def parse_time_str(t_str: str):
     """
     Parse time string handling single-digit hours and flexible formats.
@@ -395,7 +444,11 @@ def get_current_movie_occupancy_status(
                             result[screen] = {
                                 "status": 1,
                                 "movie_name": session_data.get("film_title", "Unknown"),
-                                "time_remaining": time_remaining_minutes
+                                "time_remaining": time_remaining_minutes,
+                                "show_start_time": show_start.strftime("%Y-%m-%d %H:%M:%S"),
+                                "show_end_time": show_end.strftime("%Y-%m-%d %H:%M:%S"),
+                                "setpoint_reference_date": show_start.date().isoformat(),
+                                "setpoint_reference_source": "occupied_show_start"
                             }
                             break
 
@@ -421,6 +474,14 @@ def get_current_movie_occupancy_status(
                 target_date=target_dt.date(),
                 day_key=day_key
             )
+
+            reference_context = resolve_setpoint_reference_context(
+                schedule=schedule,
+                screen=screen,
+                target_dt=target_dt,
+                upcoming_shows=upcoming_shows if upcoming_shows else None
+            )
+            reference_operating_window = reference_context.get("operating_window")
             
             if upcoming_shows:
                 upcoming_shows.sort(key=lambda x: x["start"])
@@ -428,32 +489,38 @@ def get_current_movie_occupancy_status(
                 time_until_next_seconds = (next_show["start"] - target_dt).total_seconds()
                 time_until_next_minutes = math.ceil(time_until_next_seconds / 60)
                 
-                if (operating_window and
-                    operating_window['first_movie_start'] <= target_dt < operating_window['last_movie_end']):
+                if (reference_operating_window and
+                    reference_operating_window['first_movie_start'] <= target_dt < reference_operating_window['last_movie_end']):
                     result[screen] = {
                         "status": 0,
                         "is_inter_show": True,
                         "time_until_next_movie": time_until_next_minutes,
                         "next_movie_name": next_show["movie_name"],
-                        "operating_window_start": operating_window['first_movie_start'].strftime("%H:%M"),
-                        "operating_window_end": operating_window['last_movie_end'].strftime("%H:%M")
+                        "operating_window_start": reference_operating_window['first_movie_start'].strftime("%H:%M"),
+                        "operating_window_end": reference_operating_window['last_movie_end'].strftime("%H:%M"),
+                        "setpoint_reference_date": reference_context.get("setpoint_reference_date"),
+                        "setpoint_reference_source": reference_context.get("setpoint_reference_source")
                     }
                     log.info(f"Screen {screen}: INTER-SHOW gap (within operating window "
-                             f"{operating_window['first_movie_start'].strftime('%H:%M')}-"
-                             f"{operating_window['last_movie_end'].strftime('%H:%M')}), "
+                             f"{reference_operating_window['first_movie_start'].strftime('%H:%M')}-"
+                             f"{reference_operating_window['last_movie_end'].strftime('%H:%M')}), "
                              f"next movie in {time_until_next_minutes} min")
                 else:
                     result[screen] = {
                         "status": 0,
                         "is_inter_show": False,
                         "time_until_next_movie": time_until_next_minutes,
-                        "next_movie_name": next_show["movie_name"]
+                        "next_movie_name": next_show["movie_name"],
+                        "setpoint_reference_date": reference_context.get("setpoint_reference_date"),
+                        "setpoint_reference_source": reference_context.get("setpoint_reference_source")
                     }
             else:
                 result[screen] = {
                     "status": 0,
                     "is_inter_show": False,
-                    "time_until_next_movie": "No upcoming shows"
+                    "time_until_next_movie": "No upcoming shows",
+                    "setpoint_reference_date": reference_context.get("setpoint_reference_date"),
+                    "setpoint_reference_source": reference_context.get("setpoint_reference_source")
                 }
 
     return result
@@ -607,7 +674,9 @@ def get_occupancy_status_for_timestamp(
                                 "instance_used": instance_idx,
                                 "cinema_name": cinema_name,
                                 "schedule_range": date_range,
-                                "is_overnight_from_previous_schedule": check_overnight_from_previous_day
+                                "is_overnight_from_previous_schedule": check_overnight_from_previous_day,
+                                "setpoint_reference_date": show_start.date().isoformat(),
+                                "setpoint_reference_source": "occupied_show_start"
                             }
                         
                         if collect_upcoming and show_start > timestamp_sharjah:
@@ -662,6 +731,16 @@ def get_occupancy_status_for_timestamp(
         best_schedule = matching_instances[0][1] if matching_instances else None
         is_inter_show = False
         operating_window = None
+        reference_context = resolve_setpoint_reference_context(
+            schedule=best_schedule,
+            screen=screen,
+            target_dt=timestamp_sharjah,
+            upcoming_shows=all_upcoming_shows
+        ) if best_schedule else {
+            "setpoint_reference_date": next_show["start"].date().isoformat(),
+            "setpoint_reference_source": "next_movie",
+            "operating_window": None
+        }
         
         if best_schedule:
             operating_window = get_screen_operating_window(
@@ -670,13 +749,14 @@ def get_occupancy_status_for_timestamp(
                 target_date=timestamp_sharjah.date(),
                 day_key=day_key
             )
-            if (operating_window and
-                operating_window['first_movie_start'] <= timestamp_sharjah < operating_window['last_movie_end']):
+            reference_operating_window = reference_context.get("operating_window")
+            if (reference_operating_window and
+                reference_operating_window['first_movie_start'] <= timestamp_sharjah < reference_operating_window['last_movie_end']):
                 is_inter_show = True
                 log.info(f"Screen {screen}: INTER-SHOW gap at {timestamp_sharjah.strftime('%H:%M')} "
                          f"(within operating window "
-                         f"{operating_window['first_movie_start'].strftime('%H:%M')}-"
-                         f"{operating_window['last_movie_end'].strftime('%H:%M')})")
+                         f"{reference_operating_window['first_movie_start'].strftime('%H:%M')}-"
+                         f"{reference_operating_window['last_movie_end'].strftime('%H:%M')})")
         
         result_dict = {
             "status": 0,
@@ -687,11 +767,16 @@ def get_occupancy_status_for_timestamp(
             "next_movie_start": next_show["start"].strftime("%Y-%m-%d %H:%M:%S"),
             "timestamp_sharjah": timestamp_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
             "timestamp_utc": timestamp_utc.strftime("%Y-%m-%d %H:%M:%S"),
-            "instances_checked": [idx for idx, _ in matching_instances]
+            "instances_checked": [idx for idx, _ in matching_instances],
+            "setpoint_reference_date": reference_context.get("setpoint_reference_date") if best_schedule else next_show["start"].date().isoformat(),
+            "setpoint_reference_source": reference_context.get("setpoint_reference_source") if best_schedule else "next_movie"
         }
         if operating_window:
             result_dict["operating_window_start"] = operating_window['first_movie_start'].strftime("%H:%M")
             result_dict["operating_window_end"] = operating_window['last_movie_end'].strftime("%H:%M")
+        if reference_context.get("operating_window"):
+            result_dict["setpoint_operating_window_start"] = reference_context["operating_window"]["first_movie_start"].strftime("%Y-%m-%d %H:%M:%S")
+            result_dict["setpoint_operating_window_end"] = reference_context["operating_window"]["last_movie_end"].strftime("%Y-%m-%d %H:%M:%S")
         
         return result_dict
     
@@ -703,7 +788,9 @@ def get_occupancy_status_for_timestamp(
         "next_movie_name": None,
         "timestamp_sharjah": timestamp_sharjah.strftime("%Y-%m-%d %H:%M:%S"),
         "timestamp_utc": timestamp_utc.strftime("%Y-%m-%d %H:%M:%S"),
-        "instances_checked": [idx for idx, _ in matching_instances]
+        "instances_checked": [idx for idx, _ in matching_instances],
+        "setpoint_reference_date": None,
+        "setpoint_reference_source": "fallback"
     }
 
 
