@@ -10,4 +10,5 @@ cassandra-driver
 tensorflow==2.20.0
 scikit-optimize
 paho-mqtt
+concurrent_log_handler
 -e .
