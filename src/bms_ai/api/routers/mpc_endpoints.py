@@ -70,8 +70,11 @@ class MPCOptimizeRequest(BaseModel):
     system_type: str = Field("AHU", description="System type")
     equipment_id: str = Field("Ahu13", description="Equipment ID (e.g., 'Ahu13')")
     screen_id: str = Field("Screen 13", description="Screen ID for occupancy lookup (e.g., 'Screen 13')")
-    occupied_setpoint: float = Field(21.0, description="Target SpTREff when occupied (degC)")
+    occupied_setpoint: float = Field(21.0, description="Fallback occupied SpTREff when day-based setpoints are unavailable (degC)")
     unoccupied_setpoint: float = Field(24.0, description="SpTREff when unoccupied (degC)")
+    weekday_occupied_setpoint: Optional[float] = Field(None, description="Occupied setpoint to use when the selected schedule day maps to weekday")
+    weekend_occupied_setpoint: Optional[float] = Field(None, description="Occupied setpoint to use when the selected schedule day maps to weekend")
+    weekend_weekday_config: Optional[Dict[str, str]] = Field(None, description="Per-day mapping of monday..sunday to weekday or weekend")
 
 
 class MPCOptimizeResponse(BaseModel):
@@ -110,6 +113,13 @@ class MPCOptimizeResponse(BaseModel):
     hur1: Optional[float] = Field(None, description="Space air humidity (%)")
     occupied_setpoint: Optional[float] = Field(None, description="Occupied setpoint used for optimization")
     unoccupied_setpoint: Optional[float] = Field(None, description="Unoccupied setpoint used for optimization")
+    weekday_occupied_setpoint: Optional[float] = Field(None, description="Weekday occupied setpoint used for optimization")
+    weekend_occupied_setpoint: Optional[float] = Field(None, description="Weekend occupied setpoint used for optimization")
+    weekend_weekday_config: Optional[Dict[str, str]] = Field(None, description="Weekday/weekend mapping used for optimization")
+    effective_occupied_setpoint: Optional[float] = Field(None, description="Resolved occupied setpoint actually used by MPC")
+    occupied_setpoint_source: Optional[str] = Field(None, description="How the occupied setpoint was resolved")
+    occupied_setpoint_day_type: Optional[str] = Field(None, description="Resolved day type: weekday or weekend")
+    occupied_setpoint_reference_date: Optional[str] = Field(None, description="Date used to resolve the occupied setpoint")
 
 
 class MPCStatusResponse(BaseModel):
@@ -209,7 +219,10 @@ async def optimize_setpoint(
             building_id=request.building_id,
             ticket_type=request.ticket_type,
             occupied_setpoint=request.occupied_setpoint,
-            unoccupied_setpoint=request.unoccupied_setpoint
+            unoccupied_setpoint=request.unoccupied_setpoint,
+            weekday_occupied_setpoint=request.weekday_occupied_setpoint,
+            weekend_occupied_setpoint=request.weekend_occupied_setpoint,
+            weekend_weekday_config=request.weekend_weekday_config
         )
         
         if result.get('success'):

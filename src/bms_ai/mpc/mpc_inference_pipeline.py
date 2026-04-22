@@ -22,6 +22,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
 from cassandra.cluster import Session
+from fastapi import HTTPException
 
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.mpc.mpc_training_pipeline import MPCTrainingPipeline
@@ -75,6 +76,121 @@ class InferenceConfig:
                     'SpTREff', 'FbVFD', 'TempSu', 'TempSp1',
                     'FbFAD', 'Co2RA', 'HuR1'
                 ]
+
+
+VALID_WEEKEND_WEEKDAY_VALUES = {"weekday", "weekend"}
+WEEKEND_WEEKDAY_DAYS = [
+    "monday", "tuesday", "wednesday",
+    "thursday", "friday", "saturday", "sunday"
+]
+
+
+def _normalize_weekend_weekday_config(
+    weekend_weekday_config: Optional[Dict[str, str]]
+) -> Optional[Dict[str, str]]:
+    if weekend_weekday_config is None:
+        return None
+
+    if not isinstance(weekend_weekday_config, dict):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "success": False,
+                "error": "weekend_weekday_config must be an object with weekday/weekend values.",
+                "error_type": "INVALID_WEEKEND_WEEKDAY_CONFIG"
+            }
+        )
+
+    normalized = {str(key).lower(): str(value).lower() for key, value in weekend_weekday_config.items()}
+    missing_days = [day for day in WEEKEND_WEEKDAY_DAYS if day not in normalized]
+    invalid_values = {
+        day: value for day, value in normalized.items()
+        if day not in WEEKEND_WEEKDAY_DAYS or value not in VALID_WEEKEND_WEEKDAY_VALUES
+    }
+
+    if missing_days or invalid_values:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "success": False,
+                "error": "weekend_weekday_config must contain all seven days and only weekday/weekend values.",
+                "error_type": "INVALID_WEEKEND_WEEKDAY_CONFIG",
+                "missing_days": missing_days,
+                "invalid_values": invalid_values
+            }
+        )
+
+    return normalized
+
+
+def _parse_reference_date(reference_date: Optional[Any]) -> Optional[datetime.date]:
+    if reference_date is None:
+        return None
+
+    if isinstance(reference_date, datetime):
+        return reference_date.date()
+
+    if hasattr(reference_date, "isoformat") and not isinstance(reference_date, str):
+        try:
+            return datetime.fromisoformat(reference_date.isoformat()).date()
+        except Exception:
+            return None
+
+    if isinstance(reference_date, str):
+        try:
+            return datetime.fromisoformat(reference_date.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                return datetime.strptime(reference_date, "%Y-%m-%d %H:%M:%S").date()
+            except ValueError:
+                try:
+                    return datetime.strptime(reference_date, "%Y-%m-%d").date()
+                except ValueError:
+                    return None
+
+    return None
+
+
+def _resolve_day_based_occupied_setpoint(
+    *,
+    occupied_setpoint: float,
+    weekday_occupied_setpoint: Optional[float],
+    weekend_occupied_setpoint: Optional[float],
+    weekend_weekday_config: Optional[Dict[str, str]],
+    occupancy: Optional[Dict[str, Any]]
+) -> Tuple[float, Optional[str], Optional[str], Optional[str], Optional[Dict[str, str]]]:
+    normalized_config = _normalize_weekend_weekday_config(weekend_weekday_config)
+
+    if not occupancy:
+        return occupied_setpoint, "fallback_no_schedule", None, None, normalized_config
+
+    occupied = occupancy.get("status") == 1
+    time_until_next = occupancy.get("time_until_next_movie")
+    is_precooling = (not occupied and isinstance(time_until_next, (int, float)) and time_until_next <= 60)
+    is_inter_show = bool(occupancy.get("is_inter_show", False))
+    use_day_based = occupied or is_precooling or is_inter_show
+
+    if not use_day_based:
+        return occupied_setpoint, "fallback_unoccupied", None, occupancy.get("setpoint_reference_date"), normalized_config
+
+    if normalized_config is None or weekday_occupied_setpoint is None or weekend_occupied_setpoint is None:
+        return occupied_setpoint, "fallback_missing_day_config", None, occupancy.get("setpoint_reference_date"), normalized_config
+
+    reference_date = _parse_reference_date(
+        occupancy.get("setpoint_reference_date")
+        or occupancy.get("show_start_time")
+        or occupancy.get("next_movie_start")
+    )
+    if reference_date is None:
+        return occupied_setpoint, "fallback_no_reference_date", None, None, normalized_config
+
+    weekday_name = reference_date.strftime("%A").lower()
+    day_type = normalized_config.get(weekday_name)
+    if day_type not in VALID_WEEKEND_WEEKDAY_VALUES:
+        return occupied_setpoint, "fallback_invalid_day_mapping", None, reference_date.isoformat(), normalized_config
+
+    resolved_setpoint = weekday_occupied_setpoint if day_type == "weekday" else weekend_occupied_setpoint
+    return resolved_setpoint, day_type, day_type, reference_date.isoformat(), normalized_config
 
 
 # =============================================================================
@@ -505,9 +621,18 @@ class MPCInferencePipeline:
         weather: Optional[Dict] = None,
         occupancy: Optional[Dict] = None,
         occupied_setpoint: Optional[float] = None,
-        unoccupied_setpoint: Optional[float] = None
+        unoccupied_setpoint: Optional[float] = None,
+        setpoint_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Create a record for failed optimization to save to Cassandra."""
+        used_features_payload = {
+            'hur1': sensor_data.get('HuR1') if sensor_data else None,
+            'occupied_setpoint': occupied_setpoint,
+            'unoccupied_setpoint': unoccupied_setpoint
+        }
+        if setpoint_context:
+            used_features_payload.update(setpoint_context)
+
         return {
             'equipment_id': equipment_id,
             'timestamp_utc': now_utc.replace(tzinfo=None),
@@ -536,11 +661,7 @@ class MPCInferencePipeline:
             'next_sptreff_lag': None,
             'previous_setpoint': None,
             'screen_id': screen_id,
-            'used_features': json.dumps({
-                'hur1': sensor_data.get('HuR1') if sensor_data else None,
-                'occupied_setpoint': occupied_setpoint,
-                'unoccupied_setpoint': unoccupied_setpoint
-            }) if sensor_data or occupied_setpoint is not None else None
+            'used_features': json.dumps(used_features_payload) if sensor_data or occupied_setpoint is not None else None
         }
     
     def run_inference(
@@ -551,7 +672,10 @@ class MPCInferencePipeline:
         building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
         ticket_type: Optional[str] = None,
         occupied_setpoint: float = 21.0,
-        unoccupied_setpoint: float = 24.0
+        unoccupied_setpoint: float = 24.0,
+        weekday_occupied_setpoint: Optional[float] = None,
+        weekend_occupied_setpoint: Optional[float] = None,
+        weekend_weekday_config: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
         Run complete MPC inference pipeline.
@@ -564,6 +688,9 @@ class MPCInferencePipeline:
             ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
             occupied_setpoint: Target SpTREff when occupied (from API)
             unoccupied_setpoint: SpTREff when unoccupied (from API)
+            weekday_occupied_setpoint: Sub-setpoint for weekdays
+            weekend_occupied_setpoint: Sub-setpoint for weekends
+            weekend_weekday_config: Defines weekday vs weekend
             
         Returns:
             Dict with optimization result and all saved data
@@ -595,8 +722,6 @@ class MPCInferencePipeline:
                 'error_type': 'MODEL_NOT_LOADED',
                 'saved_to_cassandra': True
             }
-        
-        mpc_system.update_setpoints(occupied_setpoint, unoccupied_setpoint)
         
         sensor_data = self.bms_fetcher.fetch_last_10_minutes(equipment_id)
         if sensor_data is None:
@@ -706,25 +831,36 @@ class MPCInferencePipeline:
         else:
             occupancy = self.occupancy_fetcher.fetch_occupancy_status(screen_id, ticket, ticket_type)
             if occupancy is None or occupancy == {}:
-                log.error(f"[MPCInference] Schedule data unavailable for {screen_id} - cannot proceed")
-                fail_record = self._create_fail_record(
-                    equipment_id=equipment_id,
-                    screen_id=screen_id,
-                    now_utc=now_utc,
-                    now_sharjah=now_sharjah,
-                    reason='SCHEDULE_DATA_UNAVAILABLE',
-                    sensor_data=sensor_data,
-                    weather=weather,
-                    occupied_setpoint=occupied_setpoint,
-                    unoccupied_setpoint=unoccupied_setpoint
-                )
-                self.cassandra_handler.save_optimization_result(fail_record)
-                return {
-                    'success': False,
-                    'error': f'Failed to fetch schedule/occupancy status for {screen_id}. No valid schedule found for current date.',
-                    'error_type': 'SCHEDULE_DATA_UNAVAILABLE',
-                    'saved_to_cassandra': True
+                log.warning(f"[MPCInference] Schedule data unavailable for {screen_id}; using fallback occupied setpoint")
+                occupancy = {
+                    'status': 1,
+                    'movie_name': None,
+                    'time_until_next_movie': None,
+                    'is_inter_show': False,
+                    'setpoint_reference_date': None,
+                    'setpoint_reference_source': 'fallback'
                 }
+
+        effective_occupied_setpoint, occupied_setpoint_source, occupied_setpoint_day_type, occupied_setpoint_reference_date, normalized_weekend_weekday_config = _resolve_day_based_occupied_setpoint(
+            occupied_setpoint=occupied_setpoint,
+            weekday_occupied_setpoint=weekday_occupied_setpoint,
+            weekend_occupied_setpoint=weekend_occupied_setpoint,
+            weekend_weekday_config=weekend_weekday_config,
+            occupancy=occupancy
+        )
+
+        setpoint_context = {
+            'requested_occupied_setpoint': occupied_setpoint,
+            'weekday_occupied_setpoint': weekday_occupied_setpoint,
+            'weekend_occupied_setpoint': weekend_occupied_setpoint,
+            'weekend_weekday_config': normalized_weekend_weekday_config,
+            'effective_occupied_setpoint': effective_occupied_setpoint,
+            'occupied_setpoint_source': occupied_setpoint_source,
+            'occupied_setpoint_day_type': occupied_setpoint_day_type,
+            'occupied_setpoint_reference_date': occupied_setpoint_reference_date
+        }
+
+        mpc_system.update_setpoints(effective_occupied_setpoint, unoccupied_setpoint)
 
         last_optimization = self.cassandra_handler.get_last_optimization(equipment_id, timeout_minutes=10)
         cassandra_fallback_used = False
@@ -776,7 +912,7 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': occupied_setpoint if needs_comfort else unoccupied_setpoint,
+                    'target_temperature': effective_occupied_setpoint if needs_comfort else unoccupied_setpoint,
                     'setpoint_difference': None,
                     'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
@@ -795,7 +931,14 @@ class MPCInferencePipeline:
                     'used_features': json.dumps({
                         'hur1': sensor_data.get('HuR1'),
                         'occupied_setpoint': occupied_setpoint,
-                        'unoccupied_setpoint': unoccupied_setpoint
+                        'unoccupied_setpoint': unoccupied_setpoint,
+                        'weekday_occupied_setpoint': weekday_occupied_setpoint,
+                        'weekend_occupied_setpoint': weekend_occupied_setpoint,
+                        'weekend_weekday_config': normalized_weekend_weekday_config,
+                        'effective_occupied_setpoint': effective_occupied_setpoint,
+                        'occupied_setpoint_source': occupied_setpoint_source,
+                        'occupied_setpoint_day_type': occupied_setpoint_day_type,
+                        'occupied_setpoint_reference_date': occupied_setpoint_reference_date
                     }),
                     'next_tempsp1_lag': None,
                     'next_sptreff_lag': default_setpoint,
@@ -812,7 +955,7 @@ class MPCInferencePipeline:
                     'optimized_setpoint': default_setpoint,
                     'actual_sptreff': sensor_data.get('SpTREff'),
                     'actual_tempsp1': sensor_data.get('TempSp1'),
-                    'target_temperature': occupied_setpoint if needs_comfort else unoccupied_setpoint,
+                    'target_temperature': effective_occupied_setpoint if needs_comfort else unoccupied_setpoint,
                     'setpoint_difference': None,
                     'occupied': 1 if needs_comfort else 0,
                     'movie_name': occupancy.get('movie_name'),
@@ -828,7 +971,18 @@ class MPCInferencePipeline:
                     'co2_load_factor': 0.0,
                     'optimization_status': 'fail: NO_SENSOR_LAG_DATA',
                     'objective_value': None,
-                    'used_features': None,
+                    'used_features': {
+                        'hur1': sensor_data.get('HuR1'),
+                        'occupied_setpoint': occupied_setpoint,
+                        'unoccupied_setpoint': unoccupied_setpoint,
+                        'weekday_occupied_setpoint': weekday_occupied_setpoint,
+                        'weekend_occupied_setpoint': weekend_occupied_setpoint,
+                        'weekend_weekday_config': normalized_weekend_weekday_config,
+                        'effective_occupied_setpoint': effective_occupied_setpoint,
+                        'occupied_setpoint_source': occupied_setpoint_source,
+                        'occupied_setpoint_day_type': occupied_setpoint_day_type,
+                        'occupied_setpoint_reference_date': occupied_setpoint_reference_date
+                    },
                     'next_tempsp1_lag': None,
                     'next_sptreff_lag': default_setpoint,
                     'previous_setpoint': default_setpoint,
@@ -884,7 +1038,7 @@ class MPCInferencePipeline:
             is_occupied_now = occupancy.get('status') == 1
             time_until = occupancy.get('time_until_next_movie')
             is_precooling_now = not is_occupied_now and isinstance(time_until, (int, float)) and time_until <= 60
-            default_setpoint = occupied_setpoint if (is_occupied_now or is_precooling_now) else unoccupied_setpoint
+            default_setpoint = effective_occupied_setpoint if (is_occupied_now or is_precooling_now or occupancy.get('is_inter_show', False)) else unoccupied_setpoint
             fail_record = self._create_fail_record(
                 equipment_id=equipment_id,
                 screen_id=screen_id,
@@ -894,8 +1048,9 @@ class MPCInferencePipeline:
                 sensor_data=sensor_data,
                 weather=weather,
                 occupancy=occupancy,
-                occupied_setpoint=occupied_setpoint,
-                unoccupied_setpoint=unoccupied_setpoint
+                occupied_setpoint=effective_occupied_setpoint,
+                unoccupied_setpoint=unoccupied_setpoint,
+                setpoint_context=setpoint_context
             )
             self.cassandra_handler.save_optimization_result(fail_record)
             
@@ -910,7 +1065,15 @@ class MPCInferencePipeline:
                 'optimization_status': f'fail: OPTIMIZATION_FAILED: {str(e)}',
                 'saved_to_cassandra': True,
                 'error': f'MPC optimization failed: {str(e)}',
-                'error_type': 'OPTIMIZATION_FAILED'
+                'error_type': 'OPTIMIZATION_FAILED',
+                'occupied_setpoint': occupied_setpoint,
+                'weekday_occupied_setpoint': weekday_occupied_setpoint,
+                'weekend_occupied_setpoint': weekend_occupied_setpoint,
+                'weekend_weekday_config': normalized_weekend_weekday_config,
+                'effective_occupied_setpoint': effective_occupied_setpoint,
+                'occupied_setpoint_source': occupied_setpoint_source,
+                'occupied_setpoint_day_type': occupied_setpoint_day_type,
+                'occupied_setpoint_reference_date': occupied_setpoint_reference_date
             }
         
         is_precooling = False
@@ -938,7 +1101,15 @@ class MPCInferencePipeline:
             'day_cos': np.cos(2 * np.pi * now_sharjah.weekday() / 7),
             'FbVFD': current_measurements['FbVFD'],
             'FbFAD': current_measurements['FbFAD'],
-            'HuR1': current_measurements['HuR1']
+            'HuR1': current_measurements['HuR1'],
+            'requested_occupied_setpoint': occupied_setpoint,
+            'weekday_occupied_setpoint': weekday_occupied_setpoint,
+            'weekend_occupied_setpoint': weekend_occupied_setpoint,
+            'weekend_weekday_config': normalized_weekend_weekday_config,
+            'effective_occupied_setpoint': effective_occupied_setpoint,
+            'occupied_setpoint_source': occupied_setpoint_source,
+            'occupied_setpoint_day_type': occupied_setpoint_day_type,
+            'occupied_setpoint_reference_date': occupied_setpoint_reference_date
         }
         
         occupied = 1 if (occupancy.get('status') == 1 or is_precooling or is_inter_show) else 0
@@ -949,7 +1120,7 @@ class MPCInferencePipeline:
             'optimized_setpoint': mpc_result['optimal_setpoint'],
             'actual_sptreff': sensor_data.get('SpTREff'),
             'actual_tempsp1': sensor_data.get('TempSp1'),
-            'target_temperature': mpc_result.get('target_temperature', occupied_setpoint),
+            'target_temperature': mpc_result.get('target_temperature', effective_occupied_setpoint if occupied else unoccupied_setpoint),
             'setpoint_difference': mpc_result['optimal_setpoint'] - sensor_data.get('SpTREff', 0),
             'occupied': occupied,
             'movie_name': movie_name,
@@ -965,12 +1136,7 @@ class MPCInferencePipeline:
             'co2_load_factor': mpc_result.get('co2_load_factor', 0.0),
             'optimization_status': mpc_result['optimization_status'],
             'objective_value': mpc_result.get('objective_value'),
-            'used_features': json.dumps({
-                **used_features,
-                'hur1': sensor_data.get('HuR1'),
-                'occupied_setpoint': occupied_setpoint,
-                'unoccupied_setpoint': unoccupied_setpoint
-            }),
+            'used_features': json.dumps(used_features),
             'next_tempsp1_lag': sensor_data.get('TempSp1'),
             'next_sptreff_lag': mpc_result['optimal_setpoint'],
             'previous_setpoint': mpc_result['optimal_setpoint'],
@@ -1015,7 +1181,14 @@ class MPCInferencePipeline:
             'saved_to_cassandra': save_success,
             'hur1': storage_record.get('hur1'),
             'occupied_setpoint': occupied_setpoint,
-            'unoccupied_setpoint': unoccupied_setpoint
+            'unoccupied_setpoint': unoccupied_setpoint,
+            'weekday_occupied_setpoint': weekday_occupied_setpoint,
+            'weekend_occupied_setpoint': weekend_occupied_setpoint,
+            'weekend_weekday_config': normalized_weekend_weekday_config,
+            'effective_occupied_setpoint': effective_occupied_setpoint,
+            'occupied_setpoint_source': occupied_setpoint_source,
+            'occupied_setpoint_day_type': occupied_setpoint_day_type,
+            'occupied_setpoint_reference_date': occupied_setpoint_reference_date
         }
         
         log.info(f"[MPCInference] Inference complete: optimal_setpoint={response['optimized_setpoint']}, mode={response['mode']}")
@@ -1035,7 +1208,10 @@ def run_mpc_optimization(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2",
     ticket_type: Optional[str] = None,
     occupied_setpoint: float = 21.0,
-    unoccupied_setpoint: float = 24.0
+    unoccupied_setpoint: float = 24.0,
+    weekday_occupied_setpoint: Optional[float] = None,
+    weekend_occupied_setpoint: Optional[float] = None,
+    weekend_weekday_config: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """
     Convenience function to run MPC optimization.
@@ -1049,6 +1225,9 @@ def run_mpc_optimization(
         ticket_type: Optional ticket type (e.g., 'jobUser' to set User-Agent header)
         occupied_setpoint: Target SpTREff when occupied (from API)
         unoccupied_setpoint: SpTREff when unoccupied (from API)
+        weekday_occupied_setpoint: Occupied setpoint to use on weekday days
+        weekend_occupied_setpoint: Occupied setpoint to use on weekend days
+        weekend_weekday_config: Mapping of each weekday to either weekday or weekend
         
     Returns:
         Dict with optimization result
@@ -1061,5 +1240,8 @@ def run_mpc_optimization(
         building_id=building_id,
         ticket_type=ticket_type,
         occupied_setpoint=occupied_setpoint,
-        unoccupied_setpoint=unoccupied_setpoint
+        unoccupied_setpoint=unoccupied_setpoint,
+        weekday_occupied_setpoint=weekday_occupied_setpoint,
+        weekend_occupied_setpoint=weekend_occupied_setpoint,
+        weekend_weekday_config=weekend_weekday_config
     )
