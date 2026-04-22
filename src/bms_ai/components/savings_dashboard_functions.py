@@ -167,16 +167,31 @@ def dashboard_savings_data(
             {
                 "success": False,
                 "total_optimizations": 0,
-                "average_temperature_diff": 0.0
+                "average_temperature_diff": 0.0,
+                "ahu_optimization_counts": {}
             }
         
         total_optimizations = data["total_records"]
         average_temperature_diff = round(sum(record["tempsp1_diff"] for record in data["data"]) / total_optimizations, 4) if total_optimizations > 0 else 0.0 
+
+        if not data.get("success") or not data.get("data"):
+            log.warning(f"No optimization history found")
+            return {}
+
+        ahu_optimization_counts = {}
+        for record in data["data"]:
+            equipment_id = record.get("equipment_id")
+            if equipment_id:
+                if equipment_id not in ahu_optimization_counts:
+                    ahu_optimization_counts[equipment_id] = {"optimization": 0}
+                
+                ahu_optimization_counts[equipment_id]["optimization"] += 1
         
         return {
             "success": True,
             "total_optimizations": total_optimizations, 
-            "average_temperature_diff": average_temperature_diff
+            "average_temperature_diff": average_temperature_diff,
+            "ahu_optimization_counts": ahu_optimization_counts
         }
 
     except Exception as e:
