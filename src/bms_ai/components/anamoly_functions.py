@@ -5,10 +5,11 @@ import pandas as pd
 import joblib
 from fastapi import HTTPException
 from dateutil import parser, tz
+from sklearn.preprocessing import LabelEncoder
 from cassandra.cluster import Session, ConsistencyLevel
 from cassandra.query import SimpleStatement
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.utils.cassandra_utils import fetch_cassandra_data
+from src.bms_ai.utils.cassandra_utils import fetch_all_ahu_data, fetch_mahu_data
 from src.bms_ai.utils.ikon_apis import fetch_and_find_data_points
 import time
 import requests
@@ -50,59 +51,10 @@ CHART_AGGREGATION_MAP = {
     'FbVFD': ['FbVFD', 'FbVFDSf', 'FbVFDSf1']         
 }
 
-GLOBAL_MAPPING = {
-    'TempSu': 'TSu', 
-    'Co2Avg': 'Co2RA',
-    'RtCo2': 'Co2RA',
-    'HumRt': 'HuAvg1', 
-    'HuSu': 'HuAvg1', 
-    'HuRt': 'HuAvg1', 
-    'HuR1': 'HuAvg1',
-    'FbVFDSf': 'FbVFD', 
-    'FbVFDSf1': 'FbVFD'
-}
-
 KNOWN_MODEL_FILE_NAMES = [
     'TempSu', 'Co2Avg', 'HuR1', 'HuRt',
     'FbVFDSf', 'FbVFDSf1', 'HumRt', 'HuSu'
 ]
-def add_open_meteo_weather(df, lat, lon):
-    """Fetches weather regressors required by the Prophet model."""
-    if df.empty: return df
-    
-    start_date = df[STANDARD_DATE_COLUMN].min().strftime('%Y-%m-%d')
-    end_date = df[STANDARD_DATE_COLUMN].max().strftime('%Y-%m-%d')
-    
-    base_url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": lat, "longitude": lon,
-        "start_date": start_date, "end_date": end_date,
-        "hourly": "temperature_2m,relative_humidity_2m",
-        "timezone": "auto"
-    }
-    
-    try:
-        response = requests.get(base_url, params=params, timeout=10)
-        data = response.json()
-        weather_df = pd.DataFrame({
-            'ds_weather': pd.to_datetime(data['hourly']['time']),
-            'outside_temp': data['hourly']['temperature_2m'],
-            'outside_humidity': data['hourly']['relative_humidity_2m']
-        })
-        
-        df = df.sort_values(STANDARD_DATE_COLUMN)
-        combined_df = pd.merge_asof(
-            df, weather_df.sort_values('ds_weather'), 
-            left_on=STANDARD_DATE_COLUMN, right_on='ds_weather', 
-            direction='nearest'
-        )
-        return combined_df.drop(columns=['ds_weather'])
-    except Exception as e:
-        log.error(f"Weather API failed: {e}. Using zero-regressors.")
-        df['outside_temp'] = 0.0
-        df['outside_humidity'] = 0.0
-        return df
-
 def wrap_data_list(data_list: List[Dict]) -> Dict[str, Any]:
     """Wraps the list of datapoint records into the dictionary structure expected by build_dynamic_features."""
     return {"success": True, "data": data_list, "count": len(data_list)}
@@ -121,10 +73,6 @@ def build_dynamic_features(json_record: Dict[str, Any]) -> Tuple[List[str], Dict
         physical_name = record.get('dataPointName')
         tags = set(record.get('queryTags', []))
         if not physical_name: continue
-
-        phys_lower = physical_name.lower()
-        if any(sub in phys_lower for sub in ['sp', 'alm', 'cmd', 'flt', 'st']):
-            continue
             
         master_feature = None
 
@@ -212,7 +160,7 @@ def initialize_anomaly_detection_models(building_id: str,
 
     models_loaded_count = 0
     for model_key_in_file in all_model_keys_to_load:
-        model_file = f"artifacts/Anamoly_Prophet_Models/{model_key_in_file}_package.joblib"
+        model_file = f"artifacts/generic_anamoly_models/{model_key_in_file}_model.joblib"
         master_key = model_key_in_file
 
         if master_key is None: continue
@@ -245,72 +193,89 @@ def initialize_anomaly_detection_models(building_id: str,
     global anamoly_model 
     anamoly_model = MASTER_ANAMOLY_MODELS
 
-def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, physical_feature: str, model_key: str) -> List[Dict[str, Any]]:
-    if model_key not in anamoly_model:
-        log.warning(f"AI Skip: Model category '{model_key}' is completely missing from anamoly_model.")
-        raise HTTPException(status_code=503, detail=f"Model for '{model_key}' unavailable.")
+def anomaly_detection(raw_data: List[Dict[str, Any]], asset_code: str, feature: str) -> List[Dict[str, Any]]:
+    """Runs the loaded model prediction pipeline on raw data for a specific asset and feature."""
+    if feature not in anamoly_model: #type:ignore
+        raise HTTPException(status_code=503, detail=f"Anomaly Detection model for master feature '{feature}' is unavailable. Please check service initialization.")
 
-    model_package = anamoly_model[model_key].get(asset_code)
-    
-    if model_package is None and "_" in asset_code:
-        site_id, eq_id = asset_code.split('_', 1)
-        model_package = anamoly_model[model_key].get(eq_id)
-        if model_package is not None:
-            log.info(f"AI Model Lookup: Found model using fallback equipment ID '{eq_id}'.")
+    try:
+        model_package = anamoly_model[feature].get(asset_code) #type:ignore
+        if model_package is None: 
+            log.warning(f"[{asset_code}/{feature}] No specific model found for this asset. Returning empty list.")
+            return []
 
-    if model_package is None: 
-        log.warning(f"AI Skip: Model found for '{model_key}', but NO asset model found for asset_code: '{asset_code}'.")
-        return []
-
-    df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package)
-    if df_wide.empty:
-        log.warning(f"AI Skip: anamoly_data_pipeline returned an empty DataFrame for {asset_code} / {physical_feature}.")
-        return []
-        
-    if physical_feature not in df_wide.columns: 
-        log.warning(f"AI Skip: Column '{physical_feature}' is missing from the preprocessed DataFrame for {asset_code}.")
-        return []
-
-    X_prophet = df_wide.rename(columns={STANDARD_DATE_COLUMN: 'ds', physical_feature: 'y'})
+        model_features = model_package.get('feature_cols', [feature]) 
+    except KeyError as e:
+        log.warning(f"[{asset_code}/{feature}] Model package key error: {e}. Returning empty list.")
+        return [] 
     
     try:
-        forecast = model_package['model'].predict(X_prophet)
-        res = X_prophet[['ds', 'y']].merge(forecast[['ds', 'yhat_lower', 'yhat_upper']], on='ds')
-        
-        res['yhat_lower'] = res['yhat_lower'].clip(lower=0)
-        res['is_outlier'] = (res['y'] > res['yhat_upper']) | (res['y'] < res['yhat_lower'])
-        
-        window_size = min(3, len(res))
-        if window_size > 0:
-            res['anomaly'] = res['is_outlier'].rolling(window=window_size, min_periods=1).sum() == window_size
-        else:
-            res['anomaly'] = False
-            
-        res['Anomaly_Flag'] = res['anomaly'].map({True: -1, False: 1})
-        log.info(f"AI Success: Successfully ran prediction for {asset_code} / {physical_feature}.")
-        
+        df_wide = anamoly_data_pipeline(raw_data, asset_code, model_package, feature)
+        if df_wide.empty: 
+            log.info(f"[{asset_code}/{feature}] Data pipeline returned empty DataFrame.")
+            return []
     except Exception as e:
-        log.error(f"AI Inference failed for {asset_code}/{physical_feature}: {e}")
+        log.error(f"[{asset_code}/{feature}] Data pipeline error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal data pipeline failure for asset {asset_code}/{feature}: {e}")
+        
+    data_column = model_features[0] 
+
+    physical_name = raw_data[0].get('datapoint', feature) if raw_data else feature
+    
+    if physical_name != data_column and physical_name in df_wide.columns:
+        df_wide.rename(columns={physical_name: data_column}, inplace=True)
+
+    cols_to_select = [col for col in model_features if col in df_wide.columns] + [STANDARD_DATE_COLUMN]
+    
+    X_df = df_wide[cols_to_select].copy().dropna(subset=[data_column])
+    
+    if X_df.empty:
+        log.info(f"[{asset_code}/{feature}] No valid data points left after dropping NaN from primary column.")
         return []
+        
+    X_for_model = X_df[[col for col in model_features if col in X_df.columns]].copy()
 
-    if physical_feature == 'Co2RA' or model_key == 'Co2RA':
-        res.loc[res['y'] > CO2RA_CEILING_THRESHOLD, 'Anomaly_Flag'] = -1
-    
-    res = res.sort_values(by='ds')
-    latest_row = res.iloc[-1]
-    
-    report = [{
-        "data_received_on": latest_row['ds'].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + ' UTC',
-        "Anomaly_Flag": str(int(latest_row['Anomaly_Flag'])),
-        physical_feature: str(float(latest_row['y'])),
-        "prophet_expected_min": str(round(float(latest_row['yhat_lower']), 2)),
-        "prophet_expected_max": str(round(float(latest_row['yhat_upper']), 2))
-    }]
-    
-    return report
+    try:
+        X_scaled = model_package['scaler'].transform(X_for_model)
+        predictions = model_package['model'].predict(X_scaled)
+    except Exception as e:
+        log.error(f"[{asset_code}/{feature}] Prediction scaling/run failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Model prediction failed for asset {asset_code}/{feature}: {e}")
 
-def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_package: Dict[str, Any]) -> pd.DataFrame:
-    """Preprocesses raw data into the format required for Prophet inference."""
+    X_df['Anomaly_Flag'] = predictions
+    
+    if feature == 'Co2RA' and data_column in X_df.columns:
+        co2_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
+        condition_high = co2_values_numeric > CO2RA_CEILING_THRESHOLD
+        condition_low = co2_values_numeric < CO2RA_CEILING_THRESHOLD
+        X_df.loc[condition_high, 'Anomaly_Flag'] = -1
+        X_df.loc[condition_low, 'Anomaly_Flag'] = 1 
+
+    if feature == 'FbVFD' and data_column in X_df.columns:
+        fbvfd_values_numeric = pd.to_numeric(X_df[data_column], errors='coerce')
+        normal_fbvfd_condition = (fbvfd_values_numeric >= 0) & (fbvfd_values_numeric <= FBVFD_NORMAL_MAX)
+        X_df.loc[normal_fbvfd_condition, 'Anomaly_Flag'] = 1
+    
+    final_df = X_df.copy() 
+    if final_df.empty: return []
+    
+    final_df['data_received_on_str'] = final_df[STANDARD_DATE_COLUMN].dt.strftime('%Y-%m-%d %H:%M:%S.%f') #type:ignore
+
+    physical_name = raw_data[0].get('datapoint', feature) if raw_data else feature
+
+    report_list = []
+    for _, row in final_df.iterrows():
+        record = {
+            "data_received_on": row['data_received_on_str'],
+            "Anomaly_Flag": str(int(row['Anomaly_Flag'])),
+            # Use physical_name as the key instead of the master logical feature
+            physical_name: str(float(row[data_column]))
+        }
+        report_list.append(record)
+    return report_list
+
+def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_package: Dict[str, Any], feature_name: str) -> pd.DataFrame:
+    """Preprocesses raw data into a wide format DataFrame suitable for model prediction."""
     if not records: return pd.DataFrame()
     df = pd.DataFrame(records)
     
@@ -319,23 +284,42 @@ def anamoly_data_pipeline(records: List[Dict[str, Any]], asset_code: str, model_
         df['monitoring_data'] = df['monitoring_data'].replace(mapping, regex=False)
         df['monitoring_data'] = pd.to_numeric(df['monitoring_data'], errors='coerce')
     
+    if 'site' in df.columns and 'equipment_name' in df.columns:
+        df['asset_code'] = df['site'].astype(str) + '_' + df['equipment_name'].astype(str)
+    elif 'asset_code' not in df.columns:
+        df['asset_code'] = asset_code 
+
     df[STANDARD_DATE_COLUMN] = pd.to_datetime(df[STANDARD_DATE_COLUMN], errors='coerce')
-    if df[STANDARD_DATE_COLUMN].dt.tz is not None:
-        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None)
-
-    df = add_open_meteo_weather(df, 25.33, 55.39) 
-
-    aggregated = df.groupby([STANDARD_DATE_COLUMN, 'datapoint'])['monitoring_data'].agg('first')
-    result_df = aggregated.unstack(level='datapoint').reset_index()
+    df = df[df['asset_code'] == asset_code].copy()
+    df = df.dropna(subset=[STANDARD_DATE_COLUMN, 'monitoring_data'])
     
-    weather = df[[STANDARD_DATE_COLUMN, 'outside_temp', 'outside_humidity']].drop_duplicates()
-    result_df = pd.merge(result_df, weather, on=STANDARD_DATE_COLUMN, how='left')
+    if df[STANDARD_DATE_COLUMN].dt.tz is not None: #type:ignore
+        df[STANDARD_DATE_COLUMN] = df[STANDARD_DATE_COLUMN].dt.tz_localize(None) #type:ignore
+        
+    if df.empty: return pd.DataFrame()
 
-    if 'scaler' in model_package:
-        reg_cols = ['outside_temp', 'outside_humidity']
-        if all(col in result_df.columns for col in reg_cols):
-            result_df[reg_cols] = model_package['scaler'].transform(result_df[reg_cols])
-            
+    aggregated_scores = df.groupby([STANDARD_DATE_COLUMN, 'asset_code', 'datapoint'])['monitoring_data'].agg('first')
+    result_df = aggregated_scores.unstack(level='datapoint').reset_index()
+    
+    result_df['hour'] = result_df[STANDARD_DATE_COLUMN].dt.hour #type:ignore
+    result_df['weekday_name'] = result_df[STANDARD_DATE_COLUMN].dt.day_name() #type:ignore
+    result_df['is_weekend'] = result_df[STANDARD_DATE_COLUMN].dt.dayofweek.isin([5, 6]).astype(int) #type:ignore
+    
+    if 'asset_code' in result_df.columns:
+        result_df[['site', 'equipment_id']] = result_df['asset_code'].str.split('_', n=1, expand=True)
+
+    label_encoders = model_package.get('label_encoders', {})
+    
+    for cat_col in ['site', 'equipment_id', 'weekday_name']:
+        if cat_col in result_df.columns and cat_col in label_encoders:
+            le: LabelEncoder = label_encoders[cat_col]
+            def transform_with_fallback(value):
+                try: return le.transform([value])[0] #type:ignore
+                except ValueError: return -1
+                except TypeError: return -1
+            result_df[cat_col + '_encoded'] = result_df[cat_col].apply(transform_with_fallback) #type:ignore
+        else:
+             result_df[cat_col + '_encoded'] = -1 
     return result_df
 
 def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: str, search_tags: List[List[str]], ticket_id: str, software_id: str, account_id: str, system_type: Optional[str] = None, env: Optional[str] = "prod", ticket_type: Optional[str] = None):
@@ -348,104 +332,29 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
     except Exception as e:
         log.error(f"Initialization error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-    now_utc = pd.Timestamp.now(tz='UTC')
-    to_date_str = now_utc.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + ' UTC'
-    from_date_20m = now_utc - pd.Timedelta(minutes=20)
-    from_date_20m_str = from_date_20m.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + ' UTC'
     
-    log.info(f"Fetching last 20 minutes of data for equipment: {equipment_id if equipment_id else 'ALL'}...")
-    log.info(f"Using Date Range: {from_date_20m_str} to {to_date_str}")
+    all_data_records = fetch_all_ahu_data(building_id=building_id or DEFAULT_BUILDING_ID)
     
-    log.info(f"Fetching last 20 minutes of data for equipment: {equipment_id if equipment_id else 'ALL'}...")
-    
-    all_data_records = []
-    
-    if equipment_id != "AhuMkp1":
-        ahu_records = fetch_cassandra_data(
-            building_id=building_id or DEFAULT_BUILDING_ID,
-            equipment_id=equipment_id,
-            datapoints=ALL_QUERY_FEATURES,
-            from_date=from_date_20m_str,
-            to_date=to_date_str
-        )
-        if ahu_records:
-            all_data_records.extend(ahu_records)
-            
-    if not equipment_id or equipment_id == "AhuMkp1":
-        mahu_records = fetch_cassandra_data(
-            building_id=building_id or DEFAULT_BUILDING_ID,
-            equipment_id="AhuMkp1",
-            system_type="", 
-            datapoints=ALL_QUERY_FEATURES,
-            from_date=from_date_20m_str,
-            to_date=to_date_str
-        )
-        if mahu_records:
-            for record in mahu_records:
-                record['site'] = "OS02"
-                record['equipment_id'] = "AhuMkp1"
-                record['system_type'] = "MAHU1"
-            all_data_records.extend(mahu_records)
-
-    needs_more_data = False
-    if all_data_records:
-        df_check = pd.DataFrame(all_data_records)
-        if 'equipment_name' not in df_check.columns and 'equipment_id' in df_check.columns:
-            df_check['equipment_name'] = df_check['equipment_id']
-            
-        if 'equipment_name' in df_check.columns:
-            counts = df_check.groupby(['equipment_name', 'datapoint']).size()
-            if (counts < 3).any():
-                needs_more_data = True
-        else:
-            needs_more_data = True
-    else:
-        needs_more_data = True
-
-    if needs_more_data:
-        log.info("Some sensors have < 3 records. Fetching an additional 10 minutes...")
-        from_date_30m = now_utc - pd.Timedelta(minutes=30)
-        from_date_30m_str = from_date_30m.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + ' UTC'
+    # Corrected MAHU fetch and merge
+    mahu_records = fetch_mahu_data(building_id=building_id or DEFAULT_BUILDING_ID, equipment_id="AhuMkp1")
+    if mahu_records:
+        for record in mahu_records:
+            record['site'] = "OS02"
+            record['equipment_name'] = "AhuMkp1"
+            record['system_type'] = "MAHU1" # Set to actual MAHU type
         
-        if equipment_id != "AhuMkp1":
-            extra_ahu = fetch_cassandra_data(
-                building_id=building_id or DEFAULT_BUILDING_ID,
-                equipment_id=equipment_id,
-                datapoints=ALL_QUERY_FEATURES,
-                from_date=from_date_30m_str,
-                to_date=from_date_20m_str
-            )
-
-            if extra_ahu:
-                all_data_records.extend(extra_ahu)
-                
-        if not equipment_id or equipment_id == "AhuMkp1":
-            extra_mahu = fetch_cassandra_data(
-                building_id=building_id or DEFAULT_BUILDING_ID,
-                equipment_id="AhuMkp1",
-                system_type="",
-                datapoints=ALL_QUERY_FEATURES,
-                from_date=from_date_30m_str,
-                to_date=from_date_20m_str
-            )
-            if extra_mahu:
-                for record in extra_mahu:
-                    record['site'] = "OS02"
-                    record['equipment_id'] = "AhuMkp1"
-                    record['system_type'] = "MAHU1"
-                all_data_records.extend(extra_mahu)
+        if not all_data_records:
+            all_data_records = mahu_records
+        else:
+            all_data_records.extend(mahu_records)
 
     if not all_data_records: 
         return {"data": {"all_anomalies_by_asset": {}}}
 
     grouped_data_by_asset = defaultdict(list)
     for record in all_data_records:
-        site = record.get('site')
-        eq_id = record.get('equipment_id')
-        if site and eq_id:
-            record['equipment_name'] = eq_id
-            asset_key = f"{site}_{eq_id}"
+        if record.get('site') and record.get('equipment_name'):
+            asset_key = f"{record['site']}_{record['equipment_name']}"
             record['asset_code'] = asset_key
             grouped_data_by_asset[asset_key].append(record)
 
@@ -463,11 +372,10 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
                 target_phys = logical_feat
                 if logical_feat in FEATURE_FALLBACKS:
                     target_phys = next((fb for fb in FEATURE_FALLBACKS[logical_feat] 
-                                      if any(r.get('datapoint') == fb for r in asset_records) and CONSOLIDATION_MAP.get(fb, fb) in anamoly_model), logical_feat)
+                                      if any(r.get('datapoint') == fb for r in asset_records)), logical_feat)
                 
-                master_key = CONSOLIDATION_MAP.get(target_phys, target_phys)
-                if any(r.get('datapoint') == target_phys for r in asset_records) and master_key in anamoly_model:
-                    active_physicals[group] = (target_phys, master_key)
+                if any(r.get('datapoint') == target_phys for r in asset_records):
+                    active_physicals[group] = (target_phys, logical_feat)
                     processed_in_groups.update(p_list) 
                     break
 
@@ -477,26 +385,28 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
             
             if final_model_key in anamoly_model:
                 try:
-                    feature_results = anomaly_detection(feature_raw_data, asset_code_key, physical_feature=phys_point, model_key=final_model_key) 
+                    feature_results = anomaly_detection(feature_raw_data, asset_code_key, final_model_key) #type:ignore
                     if feature_results:
+                        # FIX: Key by physical name (phys_point)
                         current_asset_anomalies[phys_point] = feature_results
                         if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
                             found_anomaly_for_asset = True
                 except Exception as e:
                     log.error(f"Error for {asset_code_key}/{phys_point}: {e}")
 
+        #Standalone features logic
         for feature in ALL_AVAILABLE_FEATURES:
             if feature in processed_in_groups: continue
-            datapoint_to_pull = next((fb for fb in FEATURE_FALLBACKS.get(feature, []) if any(r.get('datapoint') == fb for r in asset_records) and CONSOLIDATION_MAP.get(fb, fb) in anamoly_model), feature)
-            
-            master_key = CONSOLIDATION_MAP.get(datapoint_to_pull, feature)
-            if master_key not in anamoly_model: continue
+            datapoint_to_pull = next((fb for fb in FEATURE_FALLBACKS.get(feature, []) if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_to_pull]
             if not feature_raw_data: continue
 
+            model_key = CONSOLIDATION_MAP.get(datapoint_to_pull, feature)
+            if model_key not in anamoly_model: continue
+
             try:
-                feature_results = anomaly_detection(feature_raw_data, asset_code_key, physical_feature=datapoint_to_pull, model_key=master_key)
+                feature_results = anomaly_detection(feature_raw_data, asset_code_key, model_key)
                 if feature_results:
                     current_asset_anomalies[datapoint_to_pull] = feature_results 
                     if any(r.get('Anomaly_Flag') == "-1" for r in feature_results):
@@ -508,6 +418,7 @@ def anamoly_evaluation(building_id: str, floor_id: Optional[str], equipment_id: 
             reconciled_results[asset_code_key]['data'].update(current_asset_anomalies)
         elif current_asset_anomalies:
             site, eq_id = asset_code_key.split('_', 1) 
+            # Preserve MAHU system type
             orig_record = asset_records[0]
             sType = orig_record.get('system_type', FIXED_SYSTEM_TYPE)
             reconciled_results[asset_code_key] = {"data": current_asset_anomalies, "site": site, "equipment_id": eq_id, "system_type": sType}
@@ -534,10 +445,8 @@ def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> 
             for feat in p_list:
                 target = feat
                 if feat in FEATURE_FALLBACKS:
-                    target = next((fb for fb in FEATURE_FALLBACKS[feat] if any(r.get('datapoint') == fb for r in asset_records) and fb in anamoly_model), feat)
-                
-                master_key = CONSOLIDATION_MAP.get(target, target)
-                if any(r.get('datapoint') == target for r in asset_records) and master_key in anamoly_model:
+                    target = next((fb for fb in FEATURE_FALLBACKS[feat] if any(r.get('datapoint') == fb for r in asset_records)), feat)
+                if any(r.get('datapoint') == target for r in asset_records):
                     active_selections[group] = feat
                     break
 
@@ -550,16 +459,9 @@ def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> 
 
             datapoint_name = feature
             if feature in FEATURE_FALLBACKS:
-                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records) and fb in anamoly_model), feature)
+                datapoint_name = next((fb for fb in FEATURE_FALLBACKS[feature] if any(r.get('datapoint') == fb for r in asset_records)), feature)
             
             if datapoint_name in processed_physical_names: continue
-            
-            master_key = CONSOLIDATION_MAP.get(datapoint_name, feature)
-            if master_key not in anamoly_model: 
-                continue
-
-            if datapoint_name not in anamoly_model: 
-                continue
 
             feature_raw_data = [r for r in asset_records if r.get('datapoint') == datapoint_name]
             if feature_raw_data:
@@ -574,15 +476,7 @@ def create_safety_checker_json(grouped_data_by_asset: Dict[str, List[Dict]]) -> 
                     processed_physical_names.add(datapoint_name)
                  
         if asset_historical_data:
-            sys_type = asset_records[0].get('system_type', FIXED_SYSTEM_TYPE) if asset_records else FIXED_SYSTEM_TYPE
-            
-            safety_checker_results[asset_code_key] = {
-                "data": asset_historical_data, 
-                "site": site, 
-                "equipment_id": equipment_id, 
-                "system_type": sys_type
-            }
-            
+            safety_checker_results[asset_code_key] = {"data": asset_historical_data, "site": site, "equipment_id": equipment_id, "system_type": FIXED_SYSTEM_TYPE}
     return safety_checker_results
 
 def process_asset_anomalies_for_storage(asset_details: Dict[str, Any], asset_code: str) -> List[Dict]:

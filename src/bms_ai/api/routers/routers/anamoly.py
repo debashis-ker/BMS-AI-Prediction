@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 from src.bms_ai.logger_config import setup_logger
 from src.bms_ai.api.dependencies import get_cassandra_session
 from src.bms_ai.components.anamoly_functions import *
-# from src.bms_ai.components.anamoly_model_training import *
-from src.bms_ai.components.anamoly_prophet_model_training import training_pipeline
-from fastapi import BackgroundTasks
+from src.bms_ai.components.anamoly_model_training import *
 
 load_dotenv()
 log = setup_logger(__name__)
