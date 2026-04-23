@@ -340,30 +340,41 @@ async def get_energy_comparison_data(
         step_label = f"period_{i+1}"
         curr_a = base_a + (step * i)
         curr_b = base_b + (step * i)
-        
-        item_a = map_a.get(curr_a) if start_a <= curr_a <= end_a else None
-        item_b = map_b.get(curr_b) if start_b <= curr_b <= end_b else None
+
+        valid_a = start_a <= curr_a <= end_a
+        valid_b = start_b <= curr_b <= end_b
+
+        item_a = map_a.get(curr_a) if valid_a else None
+        item_b = map_b.get(curr_b) if valid_b else None
+
+        if f == "W" or f == "M" or f == "Q":
+            period_a_key = curr_a
+            period_b_key = curr_b
+        else:
+            period_a_key = curr_a if valid_a else None
+            period_b_key = curr_b if valid_b else None
+
 
         consumption_comparison_chart_data[step_label] = {
             "period_a_cost": item_a.get("estimated_cost_aed") if item_a else None,
             "period_b_cost": item_b.get("estimated_cost_aed") if item_b else None,
             "period_a_rth": item_a.get("rth_value") if item_a else None,
             "period_b_rth": item_b.get("rth_value") if item_b else None,
-            "period_a_key": curr_a,
-            "period_b_key": curr_b,
+            "period_a_key": period_a_key,
+            "period_b_key": period_b_key,
         }
         delta_t_chart_data[step_label] = {
             "period_a": item_a.get("delta_t") if item_a else None,
             "period_b": item_b.get("delta_t") if item_b else None,
-            "period_a_key": curr_a,
-            "period_b_key": curr_b,
+            "period_a_key": period_a_key,
+            "period_b_key": period_b_key,
         }
 
         flow_vs_consumption_chart_data[step_label] = {
             "period_a": item_a.get("avg_flow") if item_a else None,
             "period_b": item_b.get("avg_flow") if item_b else None,
-            "period_a_key": curr_a,
-            "period_b_key": curr_b,
+            "period_a_key": period_a_key,
+            "period_b_key": period_b_key,
         }
 
     total_a = data_a.get("total_rth", 0)
