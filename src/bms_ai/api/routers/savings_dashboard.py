@@ -25,6 +25,7 @@ class comparison_request(BaseModel):
     period_a : period_request = Field(..., description="Period A for comparison")
     period_b : period_request = Field(..., description="Period B for comparison")
     frequency: str = Field("D", description="Frequency: 'D' for Daily, 'H' for Hourly")
+    summary_needed : Optional[bool] = Field(False, description="Ai Summary Overview of the data for the given period")
 
 class EnergyComparisonResponse(BaseModel):
     consumption_comparison_chart_data: Dict[str, Any]
@@ -36,6 +37,8 @@ class EnergyComparisonResponse(BaseModel):
     avg_delta_t_data: Dict[str, float]
     rth_delta_data: Dict[str, float]
     avg_flow_data: Dict[str, float]
+    consumption_comparison_summary: Optional[str] = None
+    efficiency_metrics_summary: Optional[str] = None
 
 warnings.filterwarnings("ignore")
 
@@ -53,7 +56,8 @@ def fetch_dashboard_data(
             building_id=request.building_id, 
             from_date=request.from_date, 
             to_date=request.to_date,
-            session=session
+            session=session,
+            summary_needed=request.summary_needed
         )
         
         if not savings_data:
@@ -76,7 +80,8 @@ def fetch_occupancy_dashboard(
             building_id=request.building_id, 
             from_date=request.from_date, 
             to_date=request.to_date,
-            session=session
+            session=session,
+            summary_needed=request.summary_needed
         )
         
         if not occupancy_data:
@@ -103,7 +108,8 @@ async def compare_periods(
             period_a={"from_date": request.period_a.from_date, "to_date": request.period_a.to_date},
             period_b={"from_date": request.period_b.from_date, "to_date": request.period_b.to_date},
             frequency=request.frequency,
-            session=session
+            session=session,
+            summary_needed=request.summary_needed
         )
         
         if not comparison_data:

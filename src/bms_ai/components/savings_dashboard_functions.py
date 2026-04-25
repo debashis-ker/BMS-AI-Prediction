@@ -5,6 +5,7 @@ from dateutil import parser
 from datetime import datetime, timedelta, timezone
 import warnings
 from src.bms_ai.api.routers.energy_consumption import GetEnergyDataRequest, get_energy_data
+from src.bms_ai.components.setpoint_optimization_summarizer_functions import generate_optimization_summary_response
 from dateutil.relativedelta import relativedelta
 from src.bms_ai.logger_config import setup_logger
 from fastapi import HTTPException
@@ -12,6 +13,13 @@ from fastapi import HTTPException
 log = setup_logger(__name__)
 
 warnings.filterwarnings('ignore')
+
+prompts = {
+    'consumption_comparison_summary': """Role: Energy Financial Controller. Task: Compare two specific time periods. State the percentage change in consumption and cost. Identify the period with the highest peak cost from the chart data. Constraints: Objective tone, use AED and RTh units in every sentence, state 'Value is unavailable' for nulls, keep the answer concise in 2-3 sentences only.""",
+    'efficiency_metrics_summary': """"Role: Thermal Efficiency Engine. Task: Correlate Flow, Delta T, and RTh. Explain the relationship between Average Flow and Average Delta T across both periods. Determine if a higher flow resulted in a proportional increase in RTh delta. Constraints: Strictly technical data correlations, no introductory filler, replace underscores with spaces, , keep the answer concise in 2-3 sentences only.""",
+    'situation_analysis_summary': """Role: Building Environment Auditor. Task: Analyze thermal conditions based on occupancy. Compare maximum and minimum temperatures as well as count between occupied and unoccupied states. Explicitly mention the average chilled water feedback (chwfb diff) for both states to show the shift in cooling demand. Constraints: Clinical tone, no bolding, every sentence must contain a temperature value, keep the answer concise in 2-3 sentences only.""",
+    'AHU_performance_summary': """"Role: HVAC Operational Analyst. Task: Summarize AHU optimization activity. Identify the average count of number of optimization across all AHUs mentioned in the dictionary of ahu_optimization_counts. Identify the top AHU with the highest optimization counts. Constraints: Neutral tone, replace underscores with spaces, mention average of optimization every time, , keep the answer concise in 2-3 sentences only."""
+}
 
 def fetch_historical_setpoint_diff(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
@@ -144,7 +152,8 @@ def dashboard_savings_data(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
     session: Any = None, 
     from_date: Optional[str] = None, 
-    to_date: Optional[str] = None
+    to_date: Optional[str] = None,
+    summary_needed : bool = False
 ) -> Dict[str, Any]:
     """
     Fetches and processes setpoint override data for dashboard display.
@@ -186,12 +195,21 @@ def dashboard_savings_data(
                 
                 ahu_optimization_counts[equipment_id]["optimization"] += 1
         
-        return {
+        response = {
             "success": True,
             "total_optimizations": total_optimizations, 
             "average_temperature_diff": average_temperature_diff,
             "ahu_optimization_counts": ahu_optimization_counts
         }
+
+        if summary_needed:
+            AHU_performance_data = generate_optimization_summary_response(
+                data={"ahu_optimization_counts": response["ahu_optimization_counts"]}, 
+                prompt=prompts['AHU_performance_summary']
+            )
+            response["AHU_performance_summary"] = AHU_performance_data
+
+        return response
 
     except Exception as e:
         log.error(f"Dashboard Data Error: {str(e)}")
@@ -201,7 +219,8 @@ def occupancy_dashboard(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
     session: Any = None, 
     from_date: Optional[str] = None, 
-    to_date: Optional[str] = None
+    to_date: Optional[str] = None,
+    summary_needed : bool = False
 ) -> Dict[str, Any]:
     """
     Calculates occupancy counts and average ACTUAL temperatures for all equipment.
@@ -227,27 +246,35 @@ def occupancy_dashboard(
 
         occupied_chwfb_diffs = [r["chwfb_diff"] for r in setpoint_diff_data["data"] if r["mode"] in occ_modes and r["chwfb_diff"] is not None]
         unoccupied_chwfb_diffs = [r["chwfb_diff"] for r in setpoint_diff_data["data"] if r["mode"] == "unoccupied" and r["chwfb_diff"] is not None]
-        avg_occ_chwfb_diff = round(sum(occupied_chwfb_diffs) / len(occupied_chwfb_diffs), 4) if occupied_chwfb_diffs else 0.0
-        avg_unocc_chwfb_diff = round(sum(unoccupied_chwfb_diffs) / len(unoccupied_chwfb_diffs), 4) if unoccupied_chwfb_diffs else 0.0
+        avg_occ_chwfb_diff = round(sum(occupied_chwfb_diffs) / len(occupied_chwfb_diffs), 4) if occupied_chwfb_diffs else None
+        avg_unocc_chwfb_diff = round(sum(unoccupied_chwfb_diffs) / len(unoccupied_chwfb_diffs), 4) if unoccupied_chwfb_diffs else None
         
         occ_temps = [r["actual_temp"] for r in historical_data["data"] if r["mode"] in occ_modes and r["actual_temp"] is not None]
         unocc_temps = [r["actual_temp"] for r in historical_data["data"] if r["mode"] == "unoccupied" and r["actual_temp"] is not None]
+        occ_count = len([r for r in setpoint_diff_data["data"] if r["mode"] in occ_modes])
+        unocc_count = len([r for r in setpoint_diff_data["data"] if r["mode"] == "unoccupied"])
 
-        return {
+        response = {
             "success": True,
             "occupied_stats": {
-                "count": len([r for r in setpoint_diff_data["data"] if r["mode"] in occ_modes]),
-                "max_temp": max(occ_temps) if occ_temps else None,
-                "min_temp": min(occ_temps) if occ_temps else None,
+                "count": occ_count,
+                "max_temp": max(occ_temps) if occ_temps and occ_count > 0 else None,
+                "min_temp": min(occ_temps) if occ_temps and occ_count > 0 else None,
                 "average_chwfb_diff": avg_occ_chwfb_diff
             },
             "unoccupied_stats": {
-                "count": len([r for r in setpoint_diff_data["data"] if r["mode"] == "unoccupied"]),
-                "max_temp": max(unocc_temps) if unocc_temps else None,
-                "min_temp": min(unocc_temps) if unocc_temps else None,
+                "count": unocc_count,
+                "max_temp": max(unocc_temps) if unocc_temps and unocc_count > 0 else None,
+                "min_temp": min(unocc_temps) if unocc_temps and unocc_count > 0  else None,
                 "average_chwfb_diff": avg_unocc_chwfb_diff
             }
         }
+
+        if summary_needed:
+            situation_analysis_data = generate_optimization_summary_response(data={k: response[k] for k in ['occupied_stats','unoccupied_stats']}, prompt=prompts['situation_analysis_summary'])
+            response["situation_analysis_summary"] = situation_analysis_data
+
+        return response
 
     except Exception as e:
         log.error(f"Occupancy Dashboard Error: {str(e)}")
@@ -258,6 +285,7 @@ async def get_energy_comparison_data(
     period_a: Dict[str, Any] = None,
     period_b: Dict[str, Any] = None,
     frequency: str = "D",
+    summary_needed: bool = False,
     session: Any = None, 
 ) -> Dict[str, Any]:
     """
@@ -347,12 +375,8 @@ async def get_energy_comparison_data(
         item_a = map_a.get(curr_a) if valid_a else None
         item_b = map_b.get(curr_b) if valid_b else None
 
-        if f == "W" or f == "M" or f == "Q":
-            period_a_key = curr_a
-            period_b_key = curr_b
-        else:
-            period_a_key = curr_a if valid_a else None
-            period_b_key = curr_b if valid_b else None
+        period_a_key = curr_a.isoformat() if (f in ["W", "M", "Q","D"] or valid_a) else None
+        period_b_key = curr_b.isoformat() if (f in ["W", "M", "Q","D"] or valid_b) else None
 
 
         consumption_comparison_chart_data[step_label] = {
@@ -381,10 +405,10 @@ async def get_energy_comparison_data(
     total_b = data_b.get("total_rth", 0)
     total_cost_aed_a = data_a.get("total_cost_aed", 0)
     total_cost_aed_b = data_b.get("total_cost_aed", 0)
-    cost_change_data = ((total_cost_aed_b - total_cost_aed_a) / total_cost_aed_a) if total_cost_aed_a != 0 else 0
-    consumption_change_data = ((total_b - total_a) / total_a) if total_a != 0 else 0
+    cost_change_data = ((total_cost_aed_b - total_cost_aed_a) / total_cost_aed_a) * 100 if total_cost_aed_a != 0 else 0
+    consumption_change_data = ((total_b - total_a) / total_a) * 100 if total_a != 0 else 0
 
-    return {
+    response = {
         "consumption_comparison_chart_data": consumption_comparison_chart_data,
         "delta_t_chart_data": delta_t_chart_data,
         "flow_vs_consumption_chart_data": flow_vs_consumption_chart_data,
@@ -407,3 +431,14 @@ async def get_energy_comparison_data(
             "period_b": data_b.get("avg_flow") or 0.0
         }
     }
+
+    if summary_needed:
+            comparison_keys = ["consumption_comparison_chart_data", "total_consumption_data", "consumption_change_data", "cost_change_data"]
+            comp_data = {k: response.get(k) for k in comparison_keys}
+            response["consumption_comparison_summary"] = generate_optimization_summary_response(data=comp_data, prompt=prompts['consumption_comparison_summary'])
+
+            efficiency_keys = ["avg_delta_t_data", "rth_delta_data", "avg_flow_data", "delta_t_chart_data", "flow_vs_consumption_chart_data"]
+            eff_data = {k: response.get(k) for k in efficiency_keys}
+            response["efficiency_metrics_summary"] = generate_optimization_summary_response(data=eff_data, prompt=prompts['efficiency_metrics_summary'])
+
+    return response

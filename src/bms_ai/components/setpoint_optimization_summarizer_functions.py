@@ -1,7 +1,9 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
+from openai import OpenAI
 from src.bms_ai.components.setpoint_optimization_overriden_function import fetch_setpoint_diffs_averages, fetch_setpoint_diffs
 import json
 from src.bms_ai.logger_config import setup_logger
+import os
 
 log = setup_logger(__name__)
 
@@ -91,57 +93,65 @@ def get_overall_setpoint_optimization_summary(data_input: Dict, session: Any = N
             "evaluation_parameters": active_params if active_params else None
         }
     }
+    
+try:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        log.warning("OPENAI_API_KEY not found in environment variables. ChatGPT features will be limited.")
+        client = None
+    else:
+        client = OpenAI(api_key=openai_api_key)
+        log.info("OpenAI client initialized successfully")
+except Exception as e:
+    log.error(f"Failed to initialize OpenAI client: {e}")
+    client = None
 
+def generate_optimization_summary_response(data: Dict[str, Any], prompt : str = None) -> str:
+    """
+    Specifically handles data from get_overall_setpoint_optimization_summary 
+    to provide a high-level executive summary with using the AI narrator.
+    """
+    if not client:
+        return "Optimization summary is available, but the AI narrator is not configured."
 
-# def generate_optimization_summary_response(optimization_data: Dict[str, Any]) -> str:
-#     """
-#     Specifically handles data from get_overall_setpoint_optimization_summary 
-#     to provide a high-level executive summary with using the AI narrator.
-#     """
-#     if not client:
-#         return "Optimization summary is available, but the AI narrator is not configured."
+    try:
+        system_prompt = prompt
+        if not prompt:
+            system_prompt = """Role: Automated Data Analysis Engine.
 
-#     try:
-#         system_prompt = """Role: Automated Data Analysis Engine.
+    Task: Generate a non technical data summary based on the provided JSON input. 
 
-# Task: Generate a non technical data summary based on the provided JSON input. 
+    Operational Constraints:
+    1. Tone: Neutral, clinical, and strictly objective. 
+    2. Prohibited Terminology: Do not use "saved," "saving," "energy," "maintained," "achieved," "recorded," "comfort," "efficiency," "guest," or any words implying intent, feeling, or effort.
+    3. Content: Every sentence must include at least two numerical values or specific data keys.
+    4. Data Handling: If a value is null/None, state: "Value is unavailable" instead of leaving it out or making assumptions.
+    5. Formatting: Do not use bold (**) markdown. Replace all underscores (_) with spaces in the output.
+    6. Conciseness: Provide only raw data correlations. No introductory or concluding filler.
 
-# Operational Constraints:
-# 1. Tone: Neutral, clinical, and strictly objective. 
-# 2. Prohibited Terminology: Do not use "saved," "saving," "energy," "maintained," "achieved," "recorded," "comfort," "efficiency," "guest," or any words implying intent, feeling, or effort.
-# 3. Content: Every sentence must include at least two numerical values or specific data keys.
-# 4. Data Handling: If a value is null/None, state: "Value unavailable due to zero occupancy."
-# 5. Formatting: Do not use bold (**) markdown. Replace all underscores (_) with spaces in the output.
-# 6. Conciseness: Provide only raw data correlations. No introductory or concluding filler.
+    """
+        user_prompt = f"""Below is the data required for analysis:
+{json.dumps(data, indent=2)}
 
-# Analysis Logic:
-# - Correlate optimized_count with the specific from_date and to_date range.
-# - Map the occupancy_percentage against the evaluation_parameters used for the logic trigger.
-# - Report average_occupied_temperature and average_precooling_temperature as static setpoint states.
-# - Don't mention external factors, skip the line of external factors.
+Format as JSON:
+{{
+    "answer": "your executive summary here",
+}}
+"""
 
-# """
-#         user_prompt = f"""Below is the Setpoint Optimization Report for the equipment:
-# {json.dumps(optimization_data, indent=2)}
+        response = client.chat.completions.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
 
-# Format as JSON:
-# {{
-#     "answer": "your executive summary here",
-# }}
-# """
+        gpt_res = json.loads(response.choices[0].message.content)
+        return gpt_res.get("answer")
 
-#         response = client.chat.completions.create(
-#             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-#             messages=[
-#                 {"role": "system", "content": system_prompt},
-#                 {"role": "user", "content": user_prompt}
-#             ],
-#             response_format={"type": "json_object"}
-#         )
-
-#         gpt_res = json.loads(response.choices[0].message.content)
-#         return gpt_res.get("answer")
-
-#     except Exception as e:
-#         return "Error generating summary."
+    except Exception as e:
+        log.error(f"AI Summary Error: {str(e)}")
+        return "Error generating summary."
     
