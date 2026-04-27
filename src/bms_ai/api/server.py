@@ -7,7 +7,7 @@ import uvicorn
 # from bms_ai.api.routers import production_endpoints
 from src.bms_ai.pipelines.prescriptive_pipeline import PrescriptivePipeline
 from src.bms_ai.logger_config import setup_logger
-from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,production_endpoints,chatbot_ollama,fetch_datapoints_using_haystack,lstm_predictions,mpc_endpoints,energy_consumption,alert_system,movie_chat,setpoint_optimization_overriden_values,savings_dashboard
+from src.bms_ai.api.routers import optimize,predict,another_optimize,utils,heatlh_check,aggregation,chatbot,production_endpoints,chatbot_ollama,fetch_datapoints_using_haystack,lstm_predictions,mpc_endpoints,energy_consumption,alert_system,movie_chat,setpoint_optimization_overriden_values,savings_dashboard,lstm_prediction_occupancy
 import os
 from src.bms_ai.api.routers import mqtt
 from dotenv import load_dotenv
@@ -61,6 +61,7 @@ app.include_router(alert_system.router)
 app.include_router(movie_chat.router)
 app.include_router(setpoint_optimization_overriden_values.router)
 app.include_router(savings_dashboard.router)
+app.include_router(lstm_prediction_occupancy.router)
 
 @app.get("/")
 def root():
