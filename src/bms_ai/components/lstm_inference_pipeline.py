@@ -401,6 +401,7 @@ class AHUInferencePipeline:
                 params["dt"] = dates[0].strftime('%Y-%m-%d')
 
             response = requests.get(url, params=params, timeout=10)
+            
             data = response.json()
 
             hourly = []
