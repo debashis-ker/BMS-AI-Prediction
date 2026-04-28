@@ -18,7 +18,15 @@ prompts = {
     'consumption_comparison_summary': """Role: Energy Financial Controller. Task: Compare two specific time periods. State the percentage change in consumption and cost. Identify the period with the highest peak cost from the chart data. Constraints: Objective tone, use AED and RTh units in every sentence, state 'Value is unavailable' for nulls, keep the answer concise in 2-3 sentences only.""",
     'efficiency_metrics_summary': """"Role: Thermal Efficiency Engine. Task: Correlate Flow, Delta T, and RTh. Explain the relationship between Average Flow and Average Delta T across both periods. Determine if a higher flow resulted in a proportional increase in RTh delta. Constraints: Strictly technical data correlations, no introductory filler, replace underscores with spaces, , keep the answer concise in 2-3 sentences only.""",
     'situation_analysis_summary': """Role: Building Environment Auditor. Task: Analyze thermal conditions based on occupancy. Compare maximum and minimum temperatures as well as count between occupied and unoccupied states. Explicitly mention the average chilled water feedback (chwfb diff) for both states to show the shift in cooling demand. Constraints: Clinical tone, no bolding, every sentence must contain a temperature value, keep the answer concise in 2-3 sentences only.""",
-    'AHU_performance_summary': """"Role: HVAC Operational Analyst. Task: Summarize AHU optimization activity. Identify the average count of number of optimization across all AHUs mentioned in the dictionary of ahu_optimization_counts. Identify the top AHU with the highest optimization counts. Constraints: Neutral tone, replace underscores with spaces, mention average of optimization every time, , keep the answer concise in 2-3 sentences only."""
+    'AHU_performance_summary': """"Role: HVAC Operational Analyst. Task: Summarize AHU optimization activity. Identify the average count of number of optimization across all AHUs mentioned in the dictionary of ahu_optimization_counts. Identify the top AHU with the highest optimization counts. Constraints: Neutral tone, replace underscores with spaces, mention average of optimization every time, , keep the answer concise in 2-3 sentences only.""",
+    'main_progress_dashboard_summary': """Role: Executive Facilities Performance Analyst. 
+        Task: Summarize the building's optimization progress with a focus on operational excellence. 
+        Analysis: 
+        1. Use 'total_optimizations' to highlight active system engagement (e.g., "Optimization actions (X instances)"). 
+        2. Correlate 'average_chwfb_diff' as the primary mechanical driver for efficiency (e.g., "Achieving a X% Chilled Valve Difference"). 
+        3. Link 'average_temperature_diff' and 'comfort_level' to demonstrate thermal stability and tenant satisfaction (e.g., "Maintaining a X°C Space Temp Difference with X% comfort compliance").
+        Operational Context: If comfort_level is above 95%, describe it as "perfect compliance" or "high precision." If average_chwfb_diff is positive, frame it as "dynamic load-matching."
+        Constraints: Start with a brief positive opening. Use professional business terminology. Replace all underscores with spaces. Limit to 3 concise, impactful sentences."""
 }
 
 def fetch_historical_setpoint_diff(
@@ -148,6 +156,34 @@ def fetch_building_optimization_history(
         log.error(f"History Fetch Error: {str(e)}")
         return {"success": False, "error": str(e), "data": []}
 
+def comfort_savings_dashboard_data(
+    building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
+    session: Any = None, 
+    from_date: Optional[str] = None, 
+    to_date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Fetches and processes comfort-related data for dashboard display.
+    Currently a placeholder for future comfort metric implementations.
+    """
+    try:
+        data = fetch_building_optimization_history(building_id, session, from_date, to_date)
+
+        if not data["success"] or not data["data"]:
+            return {"success": False, "message": "No history data found."}
+
+        occ_temps = [r["actual_temp"] for r in data["data"] if r["mode"] == "occupied" and r["actual_temp"] is not None]
+
+        comfort_percentage = (sum(1 for temp in occ_temps if 20 <= temp <= 26) / len(occ_temps)) * 100 if occ_temps else None
+
+        return {
+            "comfort_percentage": round(comfort_percentage, 2) if comfort_percentage is not None else None
+        }              
+    
+    except Exception as e:
+        log.error(f"Comfort Dashboard Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing comfort dashboard data: {str(e)}")
+
 def dashboard_savings_data(
     building_id: str = "36c27828-d0b4-4f1e-8a94-d962d342e7c2", 
     session: Any = None, 
@@ -181,6 +217,9 @@ def dashboard_savings_data(
         
         total_optimizations = data["total_records"]
         average_temperature_diff = round(sum(record["tempsp1_diff"] for record in data["data"]) / total_optimizations, 4) if total_optimizations > 0 else 0.0 
+        comfort_percentage = comfort_savings_dashboard_data(building_id=building_id, session=session, from_date=from_date, to_date=to_date).get("comfort_percentage")
+        chwfb_diffs = [r["chwfb_diff"] for r in data["data"] if r["chwfb_diff"] is not None]
+        average_chwfb_diff = round(sum(r["chwfb_diff"] for r in data["data"] if r["chwfb_diff"] is not None) / len(chwfb_diffs), 4) if chwfb_diffs else None
 
         if not data.get("success") or not data.get("data"):
             log.warning(f"No optimization history found")
@@ -199,15 +238,24 @@ def dashboard_savings_data(
             "success": True,
             "total_optimizations": total_optimizations, 
             "average_temperature_diff": average_temperature_diff,
-            "ahu_optimization_counts": ahu_optimization_counts
+            "ahu_optimization_counts": ahu_optimization_counts,
+            "average_chwfb_diff": average_chwfb_diff
         }
+
+        if comfort_percentage is not None:
+            response["comfort_level"] = comfort_percentage
 
         if summary_needed:
             AHU_performance_data = generate_optimization_summary_response(
                 data={"ahu_optimization_counts": response["ahu_optimization_counts"]}, 
                 prompt=prompts['AHU_performance_summary']
             )
+            main_progress_dashboard_summary_data = generate_optimization_summary_response(
+                data={k: v for k, v in response.items() if k in ['total_optimizations', 'average_temperature_diff', 'comfort_level', 'average_chwfb_diff']}, 
+                prompt=prompts['main_progress_dashboard_summary']
+            )
             response["AHU_performance_summary"] = AHU_performance_data
+            response["main_progress_dashboard_summary"] = main_progress_dashboard_summary_data
 
         return response
 
